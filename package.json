@@ -1,5 +1,9 @@
 {
   "name": "scrawl",
   "private": true,
-  "workspaces": ["apps/*"]
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=@scrawl/ws-server & npm run dev --workspace=@scrawl/web",
+    "build": "npm run build --workspace=@scrawl/web"
+  }
 }
