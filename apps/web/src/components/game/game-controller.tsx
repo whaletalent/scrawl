@@ -3,10 +3,10 @@ import { useGameState } from "@/hooks/use-game-state";
 import { Lobby } from "@/components/lobby/lobby";
 import { TimerBar } from "@/components/game/timer-bar";
 import { Scoreboard } from "@/components/game/scoreboard";
+import { ThemeCreation } from "@/components/phases/theme-creation";
+import { ThemeVoting } from "@/components/phases/theme-voting";
 
-// These will be implemented in Tasks 12-15
-function ThemeCreation(props: any) { return <div>Theme Creation Phase</div>; }
-function ThemeVoting(props: any) { return <div>Theme Voting Phase</div>; }
+// These will be implemented in Tasks 14-15
 function DrawingPhase(props: any) { return <div>Drawing Phase</div>; }
 function DrawingVoting(props: any) { return <div>Drawing Voting Phase</div>; }
 function Reveal(props: any) { return <div>Reveal Phase</div>; }
