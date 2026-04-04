@@ -1,0 +1,5 @@
+{
+  "name": "scrawl",
+  "private": true,
+  "workspaces": ["apps/*"]
+}
