@@ -5,11 +5,9 @@ import { TimerBar } from "@/components/game/timer-bar";
 import { Scoreboard } from "@/components/game/scoreboard";
 import { ThemeCreation } from "@/components/phases/theme-creation";
 import { ThemeVoting } from "@/components/phases/theme-voting";
-
-// These will be implemented in Tasks 14-15
-function DrawingPhase(props: any) { return <div>Drawing Phase</div>; }
-function DrawingVoting(props: any) { return <div>Drawing Voting Phase</div>; }
-function Reveal(props: any) { return <div>Reveal Phase</div>; }
+import { DrawingPhase } from "@/components/phases/drawing-phase";
+import { DrawingVoting } from "@/components/phases/drawing-voting";
+import { Reveal } from "@/components/phases/reveal";
 
 type GameControllerProps = ReturnType<typeof useGameState>;
 
