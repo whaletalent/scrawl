@@ -1,7 +1,9 @@
+import { Hero } from "@/components/landing/hero";
+
 export default function Home() {
   return (
     <main className="flex items-center justify-center min-h-screen">
-      <h1 className="text-4xl font-bold">Scrawl</h1>
+      <Hero />
     </main>
   );
 }
