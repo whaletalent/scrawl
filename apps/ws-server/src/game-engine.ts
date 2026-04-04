@@ -119,11 +119,11 @@ function assignPairs(room: Room, themes: typeof room.themes) {
     };
 
     const playerA = room.players.get(pair.playerA);
-    if (playerA?.ws.readyState === playerA?.ws.OPEN) {
+    if (playerA && playerA.ws.readyState === playerA.ws.OPEN) {
       playerA.ws.send(JSON.stringify({ ...pairInfo, partnerId: pair.playerB, side: "left" }));
     }
     const playerB = room.players.get(pair.playerB);
-    if (playerB?.ws.readyState === playerB?.ws.OPEN) {
+    if (playerB && playerB.ws.readyState === playerB.ws.OPEN) {
       playerB.ws.send(JSON.stringify({ ...pairInfo, partnerId: pair.playerA, side: "right" }));
     }
   }
