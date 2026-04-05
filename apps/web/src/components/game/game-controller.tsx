@@ -8,6 +8,8 @@ import { ThemeVoting } from "@/components/phases/theme-voting";
 import { DrawingPhase } from "@/components/phases/drawing-phase";
 import { DrawingVoting } from "@/components/phases/drawing-voting";
 import { Reveal } from "@/components/phases/reveal";
+import { SplitDrawingPhase } from "@/components/phases/split-drawing-phase";
+import { SplitReveal } from "@/components/phases/split-reveal";
 
 type GameControllerProps = ReturnType<typeof useGameState>;
 
@@ -28,7 +30,7 @@ export function GameController(props: GameControllerProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {phase !== "lobby" && phase !== "final-results" && (
+      {phase !== "lobby" && phase !== "final-results" && phase !== "split-final" && (
         <div className="px-4 pt-4 flex items-center justify-between">
           <span className="text-sm text-gray-500">
             Round {roomState.round}/{roomState.totalRounds}
@@ -44,6 +46,7 @@ export function GameController(props: GameControllerProps) {
             players={roomState.players}
             playerId={playerId}
             isHost={isHost}
+            gameMode={roomState.gameMode ?? "party"}
             onStart={props.startGame}
             error={error}
           />
@@ -94,6 +97,20 @@ export function GameController(props: GameControllerProps) {
             isFinal={phase === "final-results"}
             drawings={drawings}
           />
+        )}
+
+        {phase === "split-drawing" && props.splitSide && props.silhouetteId && (
+          <SplitDrawingPhase
+            round={props.splitRound}
+            totalRounds={roomState.totalRounds}
+            side={props.splitSide}
+            silhouetteId={props.silhouetteId}
+            onSubmit={props.submitSplitDrawing}
+          />
+        )}
+
+        {phase === "split-final" && (
+          <SplitReveal drawings={props.splitDrawings} />
         )}
       </div>
     </div>

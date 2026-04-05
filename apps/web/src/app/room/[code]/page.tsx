@@ -15,7 +15,9 @@ export default function RoomPage() {
     const action = sessionStorage.getItem("scrawl-action") || "join";
 
     if (params.code === "new" || action === "create") {
-      gameState.createRoom(nickname);
+      const gameMode = (sessionStorage.getItem("scrawl-gameMode") as "party" | "split-body") || "party";
+      const totalRounds = parseInt(sessionStorage.getItem("scrawl-totalRounds") || "3", 10);
+      gameState.createRoom(nickname, gameMode, totalRounds);
     } else {
       gameState.joinRoom(params.code, nickname);
     }
