@@ -1,5 +1,6 @@
-import type { Room, Phase, Pair, DrawingResult } from "./types.js";
-import { broadcast } from "./room-manager.js";
+import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId } from "./types.js";
+import { SILHOUETTE_IDS } from "./types.js";
+import { broadcast, sendTo } from "./room-manager.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
   "theme-creation": 30_000,
@@ -8,12 +9,98 @@ const PHASE_DURATIONS: Record<string, number> = {
   "drawing-voting": 20_000,
   reveal: 10_000,
   scoreboard: 8_000,
+  "split-drawing": 90_000,
 };
 
 export function startGame(room: Room) {
   if (room.players.size < 4) return;
   room.round = 1;
   transitionTo(room, "theme-creation");
+}
+
+export function startSplitGame(room: Room) {
+  if (room.players.size !== 2) return;
+  room.round = 1;
+  room.splitDrawings = [];
+  startSplitRound(room);
+}
+
+function startSplitRound(room: Room) {
+  const playerIds = Array.from(room.players.keys());
+  const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id ?? playerIds[0];
+  const guestId = playerIds.find((id) => id !== hostId)!;
+
+  const isOddRound = room.round % 2 === 1;
+  const topPlayerId = isOddRound ? hostId : guestId;
+  const bottomPlayerId = isOddRound ? guestId : hostId;
+
+  const silhouetteId = SILHOUETTE_IDS[Math.floor(Math.random() * SILHOUETTE_IDS.length)];
+
+  const drawing: SplitDrawing = {
+    round: room.round,
+    topPlayerId,
+    bottomPlayerId,
+    topImageDataUrl: null,
+    bottomImageDataUrl: null,
+    silhouetteId,
+  };
+  room.splitDrawings.push(drawing);
+
+  sendTo(room, topPlayerId, {
+    type: "split-round-start",
+    round: room.round,
+    side: "top" as const,
+    silhouetteId,
+    totalRounds: room.totalRounds,
+  });
+  sendTo(room, bottomPlayerId, {
+    type: "split-round-start",
+    round: room.round,
+    side: "bottom" as const,
+    silhouetteId,
+    totalRounds: room.totalRounds,
+  });
+
+  transitionTo(room, "split-drawing");
+}
+
+export function handleSplitDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
+  if (room.phase !== "split-drawing") return;
+
+  const currentDrawing = room.splitDrawings.find((d) => d.round === room.round);
+  if (!currentDrawing) return;
+
+  if (playerId === currentDrawing.topPlayerId) {
+    if (currentDrawing.topImageDataUrl) return;
+    currentDrawing.topImageDataUrl = imageDataUrl;
+  } else if (playerId === currentDrawing.bottomPlayerId) {
+    if (currentDrawing.bottomImageDataUrl) return;
+    currentDrawing.bottomImageDataUrl = imageDataUrl;
+  } else {
+    return;
+  }
+
+  if (currentDrawing.topImageDataUrl && currentDrawing.bottomImageDataUrl) {
+    advanceSplitRound(room);
+  }
+}
+
+function advanceSplitRound(room: Room) {
+  if (room.round >= room.totalRounds) {
+    startSplitFinal(room);
+  } else {
+    broadcast(room, { type: "split-round-end", round: room.round });
+    room.round++;
+    startSplitRound(room);
+  }
+}
+
+function startSplitFinal(room: Room) {
+  broadcast(room, {
+    type: "split-final-results",
+    drawings: room.splitDrawings,
+  });
+  transitionTo(room, "split-final");
 }
 
 export function transitionTo(room: Room, phase: Phase) {
@@ -54,6 +141,13 @@ function onPhaseEnd(room: Room) {
     case "scoreboard":
       nextRoundOrEnd(room);
       break;
+    case "split-drawing": {
+      const currentDrawing = room.splitDrawings.find((d) => d.round === room.round);
+      if (currentDrawing) {
+        advanceSplitRound(room);
+      }
+      break;
+    }
   }
 }
 
