@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage } from "@/lib/ws-client";
-import type { RoomState, Phase, Player, Theme, DrawingResult } from "@/types/game";
+import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode } from "@/types/game";
 
 interface PairAssignment {
   pairId: string;
@@ -16,6 +16,10 @@ interface GameState {
   roomState: RoomState | null;
   pairAssignment: PairAssignment | null;
   drawings: DrawingResult[];
+  splitRound: number;
+  splitSide: "top" | "bottom" | null;
+  silhouetteId: SilhouetteId | null;
+  splitDrawings: SplitDrawing[];
   error: string | null;
 }
 
@@ -25,6 +29,10 @@ const initialState: GameState = {
   roomState: null,
   pairAssignment: null,
   drawings: [],
+  splitRound: 0,
+  splitSide: null,
+  silhouetteId: null,
+  splitDrawings: [],
   error: null,
 };
 
@@ -135,6 +143,30 @@ export function useGameState() {
         case "error":
           setState((s) => ({ ...s, error: data.message }));
           break;
+
+        case "split-round-start":
+          setState((s) => ({
+            ...s,
+            splitRound: data.round,
+            splitSide: data.side,
+            silhouetteId: data.silhouetteId,
+            error: null,
+          }));
+          break;
+
+        case "split-round-end":
+          setState((s) => ({
+            ...s,
+            splitSide: null,
+          }));
+          break;
+
+        case "split-final-results":
+          setState((s) => ({
+            ...s,
+            splitDrawings: data.drawings,
+          }));
+          break;
       }
     });
 
@@ -144,8 +176,8 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string) => {
-    send({ type: "create-room", nickname });
+  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number) => {
+    send({ type: "create-room", nickname, gameMode, totalRounds });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {
@@ -172,6 +204,10 @@ export function useGameState() {
     send({ type: "vote-drawing", pairId, rank });
   }, []);
 
+  const submitSplitDrawing = useCallback((imageDataUrl: string) => {
+    send({ type: "submit-split-drawing", imageDataUrl });
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -181,5 +217,6 @@ export function useGameState() {
     voteTheme,
     submitDrawing,
     voteDrawing,
+    submitSplitDrawing,
   };
 }
