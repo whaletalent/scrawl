@@ -6,7 +6,13 @@ export type Phase =
   | "drawing-voting"
   | "reveal"
   | "scoreboard"
-  | "final-results";
+  | "final-results"
+  | "split-drawing"
+  | "split-final";
+
+export type GameMode = "party" | "split-body";
+
+export type SilhouetteId = "man" | "woman" | "child" | "robot" | "alien" | "superhero";
 
 export interface Player {
   id: string;
@@ -38,8 +44,18 @@ export interface DrawingResult {
   votes: { first: number; second: number; third: number };
 }
 
+export interface SplitDrawing {
+  round: number;
+  topPlayerId: string;
+  bottomPlayerId: string;
+  topImageDataUrl: string | null;
+  bottomImageDataUrl: string | null;
+  silhouetteId: SilhouetteId;
+}
+
 export interface RoomState {
   code: string;
+  gameMode: GameMode;
   phase: Phase;
   round: number;
   totalRounds: number;
@@ -52,12 +68,13 @@ export interface RoomState {
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }
-  | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 };
+  | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 }
+  | { type: "submit-split-drawing"; imageDataUrl: string };
 
 export type ServerMessage =
   | { type: "room-state"; state: RoomState }
@@ -71,4 +88,7 @@ export type ServerMessage =
   | { type: "drawings-ready"; drawings: DrawingResult[] }
   | { type: "vote-update"; drawings: DrawingResult[] }
   | { type: "reveal-data"; drawings: DrawingResult[]; players: Player[] }
-  | { type: "final-results"; players: Player[]; drawings: DrawingResult[] };
+  | { type: "final-results"; players: Player[]; drawings: DrawingResult[] }
+  | { type: "split-round-start"; round: number; side: "top" | "bottom"; silhouetteId: SilhouetteId; totalRounds: number }
+  | { type: "split-round-end"; round: number }
+  | { type: "split-final-results"; drawings: SplitDrawing[] };
