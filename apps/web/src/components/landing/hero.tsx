@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
+import type { GameMode } from "@/types/game";
+import { ModeSelector } from "@/components/lobby/mode-selector";
 
 export function Hero() {
   const router = useRouter();
@@ -9,12 +11,16 @@ export function Hero() {
   const [roomCode, setRoomCode] = useState("");
   const [mode, setMode] = useState<"initial" | "create" | "join">("initial");
   const [error, setError] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>("party");
+  const [totalRounds, setTotalRounds] = useState(3);
 
   function handleCreate() {
     const err = validateNickname(nickname);
     if (err) { setError(err); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
     sessionStorage.setItem("scrawl-action", "create");
+    sessionStorage.setItem("scrawl-gameMode", gameMode);
+    sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
     router.push("/room/new");
   }
 
@@ -65,12 +71,20 @@ export function Hero() {
         )}
 
         {mode === "create" && (
-          <button
-            onClick={handleCreate}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
-          >
-            Create Party
-          </button>
+          <div className="flex flex-col gap-3">
+            <ModeSelector
+              gameMode={gameMode}
+              totalRounds={totalRounds}
+              onModeChange={setGameMode}
+              onRoundsChange={setTotalRounds}
+            />
+            <button
+              onClick={handleCreate}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
+            >
+              {gameMode === "party" ? "Create Party" : "Create Split Body"}
+            </button>
+          </div>
         )}
 
         {mode === "join" && (
