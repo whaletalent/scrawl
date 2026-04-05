@@ -1,7 +1,7 @@
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
 import { createRoom, joinRoom, removePlayer, getRoom, broadcast, sendTo } from "./room-manager.js";
-import { startGame } from "./game-engine.js";
+import { startGame, startSplitGame, handleSplitDrawingSubmit } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
 
@@ -30,7 +30,7 @@ export function handleConnection(ws: WebSocket) {
 function handleMessage(ws: WebSocket, msg: ClientMessage) {
   switch (msg.type) {
     case "create-room":
-      handleCreateRoom(ws, msg.nickname);
+      handleCreateRoom(ws, msg);
       break;
     case "join-room":
       handleJoinRoom(ws, msg.roomCode, msg.nickname);
@@ -50,11 +50,14 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
     case "vote-drawing":
       handleVoteDrawing(ws, msg.pairId, msg.rank);
       break;
+    case "submit-split-drawing":
+      handleSubmitSplitDrawing(ws, msg.imageDataUrl);
+      break;
   }
 }
 
-function handleCreateRoom(ws: WebSocket, nickname: string) {
-  const room = createRoom(nickname, ws);
+function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "create-room" }>) {
+  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds);
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
 
@@ -95,12 +98,19 @@ function handleStartGame(ws: WebSocket) {
     return;
   }
 
-  if (room.players.size < 4) {
-    ws.send(JSON.stringify({ type: "error", message: "Need at least 4 players to start" }));
-    return;
+  if (room.gameMode === "split-body") {
+    if (room.players.size !== 2) {
+      ws.send(JSON.stringify({ type: "error", message: "Split Body mode requires exactly 2 players" }));
+      return;
+    }
+    startSplitGame(room);
+  } else {
+    if (room.players.size < 4) {
+      ws.send(JSON.stringify({ type: "error", message: "Need at least 4 players to start" }));
+      return;
+    }
+    startGame(room);
   }
-
-  startGame(room);
 }
 
 function handleSubmitTheme(ws: WebSocket, text: string) {
@@ -188,6 +198,16 @@ function handleSubmitDrawing(ws: WebSocket, imageDataUrl: string) {
   broadcast(room, { type: "drawing-submitted", pairId: pair.id, side });
 }
 
+function handleSubmitSplitDrawing(ws: WebSocket, imageDataUrl: string) {
+  const info = wsToPlayer.get(ws);
+  if (!info) return;
+
+  const room = getRoom(info.roomCode);
+  if (!room || room.phase !== "split-drawing") return;
+
+  handleSplitDrawingSubmit(room, info.playerId, imageDataUrl);
+}
+
 function handleVoteDrawing(ws: WebSocket, pairId: string, rank: 1 | 2 | 3) {
   const info = wsToPlayer.get(ws);
   if (!info) return;
@@ -215,6 +235,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
   if (!room) return null;
   return {
     code: room.code,
+    gameMode: room.gameMode,
     phase: room.phase,
     round: room.round,
     totalRounds: room.totalRounds,
