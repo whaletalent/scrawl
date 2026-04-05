@@ -1,17 +1,21 @@
 "use client";
-import type { Player } from "@/types/game";
+import type { Player, GameMode } from "@/types/game";
 
 interface LobbyProps {
   roomCode: string;
   players: Player[];
   playerId: string;
   isHost: boolean;
+  gameMode: GameMode;
   onStart: () => void;
   error: string | null;
 }
 
-export function Lobby({ roomCode, players, playerId, isHost, onStart, error }: LobbyProps) {
-  const canStart = isHost && players.length >= 4;
+export function Lobby({ roomCode, players, playerId, isHost, gameMode, onStart, error }: LobbyProps) {
+  const isSplitBody = gameMode === "split-body";
+  const minPlayers = isSplitBody ? 2 : 4;
+  const maxPlayers = isSplitBody ? 2 : 10;
+  const canStart = isHost && players.length >= minPlayers;
 
   return (
     <div className="flex flex-col items-center gap-6 px-4 py-8">
@@ -24,11 +28,17 @@ export function Lobby({ roomCode, players, playerId, isHost, onStart, error }: L
         >
           Copy invite link
         </button>
+        {isSplitBody && (
+          <span className="inline-block mt-2 text-xs bg-blue-600/30 text-blue-400 px-3 py-1 rounded-full">
+            Split Body Mode
+          </span>
+        )}
       </div>
 
       <div className="w-full max-w-sm">
         <p className="text-gray-400 text-sm mb-2">
-          Players ({players.length}/10) {players.length < 4 && "— need at least 4"}
+          Players ({players.length}/{maxPlayers})
+          {players.length < minPlayers && ` — need ${isSplitBody ? "exactly 2" : "at least 4"}`}
         </p>
         <div className="flex flex-col gap-2">
           {players.map((p) => (
@@ -61,7 +71,9 @@ export function Lobby({ roomCode, players, playerId, isHost, onStart, error }: L
               : "bg-gray-700 text-gray-500 cursor-not-allowed"
           }`}
         >
-          {players.length < 4 ? `Waiting for players (${players.length}/4)...` : "Start Game"}
+          {players.length < minPlayers
+            ? `Waiting for players (${players.length}/${minPlayers})...`
+            : isSplitBody ? "Start Split Body" : "Start Game"}
         </button>
       ) : (
         <p className="text-gray-500">Waiting for the host to start...</p>
