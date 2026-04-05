@@ -11,18 +11,25 @@ export interface CanvasTool {
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 
-export function useCanvas(side: "left" | "right" | "full") {
+export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const [tool, setTool] = useState<CanvasTool>({ type: "brush", color: "#000000", size: 4 });
 
   const halfWidth = CANVAS_WIDTH / 2;
-  const drawableArea = side === "full"
-    ? { x: 0, width: CANVAS_WIDTH }
-    : side === "left"
-    ? { x: 0, width: halfWidth }
-    : { x: halfWidth, width: halfWidth };
+  const halfHeight = CANVAS_HEIGHT / 2;
+
+  const drawableArea =
+    side === "full"
+      ? { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT }
+      : side === "left"
+      ? { x: 0, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
+      : side === "right"
+      ? { x: halfWidth, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
+      : side === "top"
+      ? { x: 0, y: 0, width: CANVAS_WIDTH, height: halfHeight }
+      : { x: 0, y: halfHeight, width: CANVAS_WIDTH, height: halfHeight };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,6 +61,7 @@ export function useCanvas(side: "left" | "right" | "full") {
       const y = (clientY - rect.top) * scaleY;
 
       if (x < drawableArea.x || x > drawableArea.x + drawableArea.width) return null;
+      if (y < drawableArea.y || y > drawableArea.y + drawableArea.height) return null;
 
       return { x, y };
     },
@@ -104,7 +112,7 @@ export function useCanvas(side: "left" | "right" | "full") {
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(drawableArea.x, 0, drawableArea.width, CANVAS_HEIGHT);
+    ctx.fillRect(drawableArea.x, drawableArea.y, drawableArea.width, drawableArea.height);
   }, [drawableArea]);
 
   return {
