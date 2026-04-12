@@ -1,5 +1,5 @@
-import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId } from "./types.js";
-import { SILHOUETTE_IDS } from "./types.js";
+import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId, FaceDrawing } from "./types.js";
+import { SILHOUETTE_IDS, FACE_REGION_IDS } from "./types.js";
 import { broadcast, sendTo } from "./room-manager.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
@@ -11,7 +11,7 @@ const PHASE_DURATIONS: Record<string, number> = {
 };
 
 function getPhaseDuration(phase: string, room: Room): number {
-  if (phase === "drawing" || phase === "split-drawing") {
+  if (phase === "drawing" || phase === "split-drawing" || phase === "face-drawing") {
     return room.turnDuration * 1000;
   }
   return PHASE_DURATIONS[phase] ?? 0;
@@ -67,6 +67,106 @@ function startSplitRound(room: Room) {
   });
 
   transitionTo(room, "split-drawing");
+}
+
+export function startFaceGame(room: Room) {
+  if (room.players.size !== 2) return;
+  room.round = 1;
+  room.faceDrawings = [];
+  startFaceRound(room);
+}
+
+function startFaceRound(room: Room) {
+  const playerIds = Array.from(room.players.keys());
+  const [player1Id, player2Id] = playerIds;
+
+  const shuffled = shuffleArray([...FACE_REGION_IDS]);
+  const player1Regions = shuffled.slice(0, 3);
+  const player2Regions = shuffled.slice(3, 6);
+
+  const assignments = [
+    ...player1Regions.map((regionId) => ({ regionId, playerId: player1Id })),
+    ...player2Regions.map((regionId) => ({ regionId, playerId: player2Id })),
+  ];
+
+  const drawing: FaceDrawing = {
+    round: room.round,
+    faceTemplate: room.faceTemplate,
+    assignments,
+    player1Id,
+    player2Id,
+    player1ImageDataUrl: null,
+    player2ImageDataUrl: null,
+  };
+  room.faceDrawings.push(drawing);
+
+  sendTo(room, player1Id, {
+    type: "face-round-start",
+    round: room.round,
+    regions: player1Regions,
+    faceTemplate: room.faceTemplate,
+    totalRounds: room.totalRounds,
+  });
+  sendTo(room, player2Id, {
+    type: "face-round-start",
+    round: room.round,
+    regions: player2Regions,
+    faceTemplate: room.faceTemplate,
+    totalRounds: room.totalRounds,
+  });
+
+  transitionTo(room, "face-drawing");
+}
+
+export function handleFaceDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
+  if (room.phase !== "face-drawing") {
+    console.log(`[face] submit rejected: phase is ${room.phase}`);
+    return;
+  }
+
+  const currentDrawing = room.faceDrawings.find((d) => d.round === room.round);
+  if (!currentDrawing) return;
+
+  if (playerId === currentDrawing.player1Id) {
+    if (currentDrawing.player1ImageDataUrl) return;
+    currentDrawing.player1ImageDataUrl = imageDataUrl;
+    console.log(`[face] round ${room.round}: P1 submitted (${imageDataUrl.length} chars)`);
+  } else if (playerId === currentDrawing.player2Id) {
+    if (currentDrawing.player2ImageDataUrl) return;
+    currentDrawing.player2ImageDataUrl = imageDataUrl;
+    console.log(`[face] round ${room.round}: P2 submitted (${imageDataUrl.length} chars)`);
+  } else {
+    return;
+  }
+
+  if (currentDrawing.player1ImageDataUrl && currentDrawing.player2ImageDataUrl) {
+    console.log(`[face] round ${room.round}: BOTH submitted, advancing`);
+    advanceFaceRound(room);
+  }
+}
+
+function advanceFaceRound(room: Room) {
+  if (room.round >= room.totalRounds) {
+    startFaceFinal(room);
+  } else {
+    broadcast(room, { type: "face-round-end", round: room.round });
+    room.round++;
+    startFaceRound(room);
+  }
+}
+
+function startFaceFinal(room: Room) {
+  const summary = room.faceDrawings.map((d) => ({
+    round: d.round,
+    hasP1: !!d.player1ImageDataUrl,
+    hasP2: !!d.player2ImageDataUrl,
+  }));
+  console.log(`[face] FINAL REVEAL:`, JSON.stringify(summary));
+  broadcast(room, {
+    type: "face-final-results",
+    drawings: room.faceDrawings,
+  });
+  transitionTo(room, "face-final");
 }
 
 export function handleSplitDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
@@ -169,6 +269,14 @@ function onPhaseEnd(room: Room) {
       if (currentDrawing) {
         console.log(`[split] TIMER EXPIRED round ${room.round}: top=${!!currentDrawing.topImageDataUrl}, bottom=${!!currentDrawing.bottomImageDataUrl}`);
         advanceSplitRound(room);
+      }
+      break;
+    }
+    case "face-drawing": {
+      const currentDrawing = room.faceDrawings.find((d) => d.round === room.round);
+      if (currentDrawing) {
+        console.log(`[face] TIMER EXPIRED round ${room.round}: p1=${!!currentDrawing.player1ImageDataUrl}, p2=${!!currentDrawing.player2ImageDataUrl}`);
+        advanceFaceRound(room);
       }
       break;
     }
