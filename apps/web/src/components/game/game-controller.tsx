@@ -125,6 +125,7 @@ export function GameController(props: GameControllerProps) {
             totalRounds={roomState.totalRounds}
             regions={props.faceRegions}
             faceTemplate={props.faceTemplate}
+            skinTone={roomState.skinTone}
             endsAt={roomState.phaseEndsAt}
             onSubmit={props.submitFaceDrawing}
           />

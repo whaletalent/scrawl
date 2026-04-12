@@ -208,8 +208,8 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId) => {
-    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration, faceTemplate });
+  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId, skinTone?: string) => {
+    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration, faceTemplate, skinTone });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {

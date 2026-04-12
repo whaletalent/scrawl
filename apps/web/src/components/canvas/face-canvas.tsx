@@ -9,6 +9,7 @@ import type { FaceRegionId, FaceTemplateId } from "@/types/game";
 interface FaceCanvasProps {
   assignedRegions: FaceRegionId[];
   faceTemplate: FaceTemplateId;
+  skinTone: string;
 }
 
 export interface FaceCanvasHandle {
@@ -16,7 +17,7 @@ export interface FaceCanvasHandle {
 }
 
 export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
-  function FaceCanvas({ assignedRegions, faceTemplate }, ref) {
+  function FaceCanvas({ assignedRegions, faceTemplate, skinTone }, ref) {
     const {
       canvasRef, tool, setTool, startDrawing, draw, stopDrawing, clear,
       exportImage, canvasWidth, canvasHeight,
@@ -41,9 +42,9 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             className="w-full rounded-xl border-2 border-gray-700 cursor-crosshair touch-none"
             style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
           />
-          {/* Face template outline */}
-          <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.15 }}>
-            <Template className="w-full h-full" />
+          {/* Face template with skin tone */}
+          <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.25 }}>
+            <Template className="w-full h-full" fillColor={skinTone} />
           </div>
           {/* Region overlay: darken non-assigned areas, label assigned ones */}
           <svg

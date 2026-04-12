@@ -92,6 +92,7 @@ function startFaceRound(room: Room) {
   const drawing: FaceDrawing = {
     round: room.round,
     faceTemplate: room.faceTemplate,
+    skinTone: room.skinTone,
     assignments,
     player1Id,
     player2Id,

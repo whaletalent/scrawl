@@ -19,7 +19,8 @@ export default function RoomPage() {
       const totalRounds = parseInt(sessionStorage.getItem("scrawl-totalRounds") || "3", 10);
       const turnDuration = parseInt(sessionStorage.getItem("scrawl-turnDuration") || "90", 10);
       const faceTemplate = (sessionStorage.getItem("scrawl-faceTemplate") || "masculine") as import("@/types/game").FaceTemplateId;
-      gameState.createRoom(nickname, gameMode, totalRounds, turnDuration, faceTemplate);
+      const skinTone = sessionStorage.getItem("scrawl-skinTone") || "#FDDCB5";
+      gameState.createRoom(nickname, gameMode, totalRounds, turnDuration, faceTemplate, skinTone);
     } else {
       gameState.joinRoom(params.code, nickname);
     }

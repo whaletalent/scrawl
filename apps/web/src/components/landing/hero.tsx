@@ -15,6 +15,7 @@ export function Hero() {
   const [totalRounds, setTotalRounds] = useState(3);
   const [turnDuration, setTurnDuration] = useState(90);
   const [faceTemplate, setFaceTemplate] = useState<FaceTemplateId>("masculine");
+  const [skinTone, setSkinTone] = useState("#FDDCB5");
 
   function handleCreate() {
     const err = validateNickname(nickname);
@@ -25,6 +26,7 @@ export function Hero() {
     sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
     sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
     sessionStorage.setItem("scrawl-faceTemplate", faceTemplate);
+    sessionStorage.setItem("scrawl-skinTone", skinTone);
     router.push("/room/new");
   }
 
@@ -85,6 +87,8 @@ export function Hero() {
               onRoundsChange={setTotalRounds}
               onDurationChange={setTurnDuration}
               onFaceTemplateChange={setFaceTemplate}
+              skinTone={skinTone}
+              onSkinToneChange={setSkinTone}
             />
             <button
               onClick={handleCreate}

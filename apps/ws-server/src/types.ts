@@ -75,6 +75,7 @@ export type FaceRegionId = (typeof FACE_REGION_IDS)[number];
 export interface FaceDrawing {
   round: number;
   faceTemplate: FaceTemplateId;
+  skinTone: string;
   assignments: { regionId: FaceRegionId; playerId: string }[];
   player1Id: string;
   player2Id: string;
@@ -91,6 +92,7 @@ export interface Room {
   turnDuration: number;
   splitDrawings: SplitDrawing[];
   faceTemplate: FaceTemplateId;
+  skinTone: string;
   faceDrawings: FaceDrawing[];
   players: Map<string, Player>;
   themes: Theme[];
@@ -103,7 +105,7 @@ export interface Room {
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId; skinTone?: string }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }

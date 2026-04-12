@@ -9,11 +9,12 @@ interface FaceDrawingPhaseProps {
   totalRounds: number;
   regions: FaceRegionId[];
   faceTemplate: FaceTemplateId;
+  skinTone: string;
   endsAt: number;
   onSubmit: (imageDataUrl: string) => void;
 }
 
-export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, endsAt, onSubmit }: FaceDrawingPhaseProps) {
+export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, skinTone, endsAt, onSubmit }: FaceDrawingPhaseProps) {
   const canvasRef = useRef<FaceCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -51,7 +52,7 @@ export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, en
         </div>
       </div>
 
-      <FaceCanvas ref={canvasRef} assignedRegions={regions} faceTemplate={faceTemplate} />
+      <FaceCanvas ref={canvasRef} assignedRegions={regions} faceTemplate={faceTemplate} skinTone={skinTone} />
 
       {!submitted ? (
         <button

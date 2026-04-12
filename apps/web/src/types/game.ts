@@ -61,6 +61,7 @@ export type FaceRegionId = "hair" | "ears" | "eyes" | "nose" | "mouth" | "should
 export interface FaceDrawing {
   round: number;
   faceTemplate: FaceTemplateId;
+  skinTone: string;
   assignments: { regionId: FaceRegionId; playerId: string }[];
   player1Id: string;
   player2Id: string;
@@ -81,11 +82,12 @@ export interface RoomState {
   drawings: DrawingResult[];
   phaseEndsAt: number;
   faceTemplate: FaceTemplateId;
+  skinTone: string;
 }
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId; skinTone?: string }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }

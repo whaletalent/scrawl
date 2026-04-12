@@ -60,7 +60,7 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
 }
 
 function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "create-room" }>) {
-  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration, msg.faceTemplate);
+  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration, msg.faceTemplate, msg.skinTone);
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
 
@@ -254,6 +254,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     code: room.code,
     gameMode: room.gameMode,
     faceTemplate: room.faceTemplate,
+    skinTone: room.skinTone,
     turnDuration: room.turnDuration,
     phase: room.phase,
     round: room.round,

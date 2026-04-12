@@ -1,21 +1,23 @@
 "use client";
 import type { FaceTemplateId, GameMode } from "@/types/game";
-import { FACE_TEMPLATE_LABELS } from "@/components/face-templates";
+import { FACE_TEMPLATE_LABELS, SKIN_TONES } from "@/components/face-templates";
 
 interface ModeSelectorProps {
   gameMode: GameMode;
   totalRounds: number;
   turnDuration: number;
   faceTemplate: FaceTemplateId;
+  skinTone: string;
   onModeChange: (mode: GameMode) => void;
   onRoundsChange: (rounds: number) => void;
   onDurationChange: (seconds: number) => void;
   onFaceTemplateChange: (template: FaceTemplateId) => void;
+  onSkinToneChange: (tone: string) => void;
 }
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 180];
 
-export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate, onModeChange, onRoundsChange, onDurationChange, onFaceTemplateChange }: ModeSelectorProps) {
+export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate, skinTone, onModeChange, onRoundsChange, onDurationChange, onFaceTemplateChange, onSkinToneChange }: ModeSelectorProps) {
   return (
     <div className="flex flex-col gap-3 w-full">
       <div className="flex gap-2">
@@ -88,6 +90,25 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
               >
                 {label}
               </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {gameMode === "face-builder" && (
+        <div className="flex items-center justify-between px-2">
+          <span className="text-sm text-gray-400">Tom de pele</span>
+          <div className="flex gap-1.5">
+            {SKIN_TONES.map((tone) => (
+              <button
+                key={tone.id}
+                onClick={() => onSkinToneChange(tone.color)}
+                title={tone.label}
+                className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                  skinTone === tone.color ? "border-white scale-110" : "border-gray-600"
+                }`}
+                style={{ backgroundColor: tone.color }}
+              />
             ))}
           </div>
         </div>

@@ -12,7 +12,7 @@ function generateCode(): string {
   return rooms.has(code) ? generateCode() : code;
 }
 
-export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId): Room {
+export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId, skinTone?: string): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
   const host: Player = { id: playerId, nickname, score: 0, isHost: true, ws };
@@ -34,6 +34,7 @@ export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode =
     turnDuration: clampedTurnDuration,
     splitDrawings: [],
     faceTemplate: validatedTemplate,
+    skinTone: skinTone ?? "#FDDCB5",
     faceDrawings: [],
     players: new Map([[playerId, host]]),
     themes: [],

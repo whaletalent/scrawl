@@ -39,10 +39,11 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
 
   return (
     <div className="relative w-full bg-white rounded-xl overflow-hidden" style={{ aspectRatio: "800 / 600" }}>
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.06 }}>
-        <Template className="w-full h-full" />
+      {/* Skin tone background at full opacity BEHIND drawings */}
+      <div className="absolute inset-0 pointer-events-none">
+        <Template className="w-full h-full" fillColor={drawing.skinTone} />
       </div>
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
     </div>
   );
 }
