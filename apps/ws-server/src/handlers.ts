@@ -1,7 +1,7 @@
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
 import { createRoom, joinRoom, removePlayer, getRoom, broadcast, sendTo } from "./room-manager.js";
-import { startGame, startSplitGame, handleSplitDrawingSubmit } from "./game-engine.js";
+import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
 
@@ -53,11 +53,14 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
     case "submit-split-drawing":
       handleSubmitSplitDrawing(ws, msg.imageDataUrl);
       break;
+    case "submit-face-drawing":
+      handleSubmitFaceDrawing(ws, msg.imageDataUrl);
+      break;
   }
 }
 
 function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "create-room" }>) {
-  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration);
+  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration, msg.faceTemplate);
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
 
@@ -104,6 +107,12 @@ function handleStartGame(ws: WebSocket) {
       return;
     }
     startSplitGame(room);
+  } else if (room.gameMode === "face-builder") {
+    if (room.players.size !== 2) {
+      ws.send(JSON.stringify({ type: "error", message: "Face Builder mode requires exactly 2 players" }));
+      return;
+    }
+    startFaceGame(room);
   } else {
     if (room.players.size < 4) {
       ws.send(JSON.stringify({ type: "error", message: "Need at least 4 players to start" }));
@@ -198,6 +207,14 @@ function handleSubmitDrawing(ws: WebSocket, imageDataUrl: string) {
   broadcast(room, { type: "drawing-submitted", pairId: pair.id, side });
 }
 
+function handleSubmitFaceDrawing(ws: WebSocket, imageDataUrl: string) {
+  const info = wsToPlayer.get(ws);
+  if (!info) return;
+  const room = getRoom(info.roomCode);
+  if (!room || room.phase !== "face-drawing") return;
+  handleFaceDrawingSubmit(room, info.playerId, imageDataUrl);
+}
+
 function handleSubmitSplitDrawing(ws: WebSocket, imageDataUrl: string) {
   const info = wsToPlayer.get(ws);
   if (!info) return;
@@ -236,6 +253,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
   return {
     code: room.code,
     gameMode: room.gameMode,
+    faceTemplate: room.faceTemplate,
     turnDuration: room.turnDuration,
     phase: room.phase,
     round: room.round,
