@@ -2,9 +2,23 @@
 import { useState, useRef, useEffect } from "react";
 import { getFaceTemplate } from "@/components/face-templates";
 import type { FaceDrawing } from "@/types/game";
+import { renderToStaticMarkup } from "react-dom/server";
 
 interface FaceRevealProps {
   drawings: FaceDrawing[];
+}
+
+function svgToDataUrl(svgMarkup: string): string {
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup);
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
 function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
@@ -18,32 +32,42 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
 
     canvas.width = 800;
     canvas.height = 600;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, 800, 600);
 
-    const loadAndDraw = async () => {
+    const compose = async () => {
+      // 1. White background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 800, 600);
+
+      // 2. Render face template with skin tone at full opacity
+      const Template = getFaceTemplate(drawing.faceTemplate);
+      const svgMarkup = renderToStaticMarkup(
+        <Template className="" fillColor={drawing.skinTone} />
+      );
+      try {
+        const templateImg = await loadImage(svgToDataUrl(svgMarkup));
+        ctx.drawImage(templateImg, 0, 0, 800, 600);
+      } catch {
+        // fallback: skip template if SVG rendering fails
+      }
+
+      // 3. Draw player images on top (they have transparent backgrounds)
       for (const src of [drawing.player1ImageDataUrl, drawing.player2ImageDataUrl]) {
         if (!src) continue;
-        const img = new Image();
-        img.src = src;
-        await new Promise<void>((resolve) => {
-          img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
-          img.onerror = () => resolve();
-        });
+        try {
+          const img = await loadImage(src);
+          ctx.drawImage(img, 0, 0);
+        } catch {
+          // skip failed images
+        }
       }
     };
-    loadAndDraw();
-  }, [drawing]);
 
-  const Template = getFaceTemplate(drawing.faceTemplate);
+    compose();
+  }, [drawing]);
 
   return (
     <div className="relative w-full bg-white rounded-xl overflow-hidden" style={{ aspectRatio: "800 / 600" }}>
-      {/* Skin tone background at full opacity BEHIND drawings */}
-      <div className="absolute inset-0 pointer-events-none">
-        <Template className="w-full h-full" fillColor={drawing.skinTone} />
-      </div>
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
 }
