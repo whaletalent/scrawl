@@ -8,9 +8,11 @@ export type Phase =
   | "scoreboard"
   | "final-results"
   | "split-drawing"
-  | "split-final";
+  | "split-final"
+  | "face-drawing"
+  | "face-final";
 
-export type GameMode = "party" | "split-body";
+export type GameMode = "party" | "split-body" | "face-builder";
 
 export type SilhouetteId = "man" | "woman" | "child" | "robot" | "alien" | "superhero";
 
@@ -53,9 +55,23 @@ export interface SplitDrawing {
   silhouetteId: SilhouetteId;
 }
 
+export type FaceTemplateId = "masculine" | "feminine" | "monster" | "alien-face" | "robot-face";
+export type FaceRegionId = "hair" | "ears" | "eyes" | "nose" | "mouth" | "shoulders";
+
+export interface FaceDrawing {
+  round: number;
+  faceTemplate: FaceTemplateId;
+  assignments: { regionId: FaceRegionId; playerId: string }[];
+  player1Id: string;
+  player2Id: string;
+  player1ImageDataUrl: string | null;
+  player2ImageDataUrl: string | null;
+}
+
 export interface RoomState {
   code: string;
   gameMode: GameMode;
+  turnDuration: number;
   phase: Phase;
   round: number;
   totalRounds: number;
@@ -64,17 +80,19 @@ export interface RoomState {
   pairs: Pair[];
   drawings: DrawingResult[];
   phaseEndsAt: number;
+  faceTemplate: FaceTemplateId;
 }
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }
   | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 }
-  | { type: "submit-split-drawing"; imageDataUrl: string };
+  | { type: "submit-split-drawing"; imageDataUrl: string }
+  | { type: "submit-face-drawing"; imageDataUrl: string };
 
 export type ServerMessage =
   | { type: "room-state"; state: RoomState }
@@ -91,4 +109,7 @@ export type ServerMessage =
   | { type: "final-results"; players: Player[]; drawings: DrawingResult[] }
   | { type: "split-round-start"; round: number; side: "top" | "bottom"; silhouetteId: SilhouetteId; totalRounds: number }
   | { type: "split-round-end"; round: number }
-  | { type: "split-final-results"; drawings: SplitDrawing[] };
+  | { type: "split-final-results"; drawings: SplitDrawing[] }
+  | { type: "face-round-start"; round: number; regions: FaceRegionId[]; faceTemplate: FaceTemplateId; totalRounds: number }
+  | { type: "face-round-end"; round: number }
+  | { type: "face-final-results"; drawings: FaceDrawing[] };
