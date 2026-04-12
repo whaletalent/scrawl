@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { DrawingCanvas, type DrawingCanvasHandle } from "@/components/canvas/drawing-canvas";
 import { getSilhouette } from "@/components/silhouettes";
 import type { SilhouetteId } from "@/types/game";
@@ -9,20 +9,33 @@ interface SplitDrawingPhaseProps {
   totalRounds: number;
   side: "top" | "bottom";
   silhouetteId: SilhouetteId;
+  endsAt: number;
   onSubmit: (imageDataUrl: string) => void;
 }
 
-export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, onSubmit }: SplitDrawingPhaseProps) {
+export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, endsAt, onSubmit }: SplitDrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit() {
+  const doSubmit = useCallback(() => {
     if (submitted) return;
     const image = canvasRef.current?.exportImage();
     if (image) {
       onSubmit(image);
       setSubmitted(true);
     }
+  }, [submitted, onSubmit]);
+
+  useEffect(() => {
+    if (!endsAt || submitted) return;
+    const ms = endsAt - Date.now() - 500; // submit 500ms before server timer
+    if (ms <= 0) { doSubmit(); return; }
+    const timer = setTimeout(doSubmit, ms);
+    return () => clearTimeout(timer);
+  }, [endsAt, submitted, doSubmit]);
+
+  function handleSubmit() {
+    doSubmit();
   }
 
   const Silhouette = getSilhouette(silhouetteId);

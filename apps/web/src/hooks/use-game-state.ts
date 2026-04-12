@@ -176,8 +176,8 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number) => {
-    send({ type: "create-room", nickname, gameMode, totalRounds });
+  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number) => {
+    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {

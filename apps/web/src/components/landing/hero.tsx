@@ -13,6 +13,7 @@ export function Hero() {
   const [error, setError] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>("party");
   const [totalRounds, setTotalRounds] = useState(3);
+  const [turnDuration, setTurnDuration] = useState(90);
 
   function handleCreate() {
     const err = validateNickname(nickname);
@@ -21,6 +22,7 @@ export function Hero() {
     sessionStorage.setItem("scrawl-action", "create");
     sessionStorage.setItem("scrawl-gameMode", gameMode);
     sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
+    sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
     router.push("/room/new");
   }
 
@@ -75,8 +77,10 @@ export function Hero() {
             <ModeSelector
               gameMode={gameMode}
               totalRounds={totalRounds}
+              turnDuration={turnDuration}
               onModeChange={setGameMode}
               onRoundsChange={setTotalRounds}
+              onDurationChange={setTurnDuration}
             />
             <button
               onClick={handleCreate}

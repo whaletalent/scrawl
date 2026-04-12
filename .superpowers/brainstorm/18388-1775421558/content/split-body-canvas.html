@@ -1,0 +1,98 @@
+<h2>Split Body — Canvas Layout</h2>
+<p class="subtitle">Como o canvas fica durante a fase de desenho. Cada jogador vê apenas sua metade habilitada.</p>
+
+<div class="split">
+  <!-- Player drawing TOP -->
+  <div class="mockup">
+    <div class="mockup-header">Jogador A — Desenha: Cabeça + Tronco</div>
+    <div class="mockup-body" style="padding:0;overflow:hidden;">
+      <div style="position:relative;width:100%;height:400px;background:#fff;">
+        <!-- Silhouette guide -->
+        <svg viewBox="0 0 400 600" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:100%;opacity:0.08;">
+          <!-- Head -->
+          <ellipse cx="200" cy="80" rx="50" ry="60" fill="#000"/>
+          <!-- Neck -->
+          <rect x="185" y="135" width="30" height="30" fill="#000"/>
+          <!-- Torso -->
+          <path d="M140,165 L260,165 L250,320 L150,320 Z" fill="#000"/>
+          <!-- Arms -->
+          <path d="M140,170 L90,260 L110,265 L155,185 Z" fill="#000"/>
+          <path d="M260,170 L310,260 L290,265 L245,185 Z" fill="#000"/>
+          <!-- Legs -->
+          <path d="M155,320 L170,480 L195,480 L200,320 Z" fill="#000"/>
+          <path d="M200,320 L205,480 L230,480 L245,320 Z" fill="#000"/>
+          <!-- Feet -->
+          <path d="M165,480 L165,500 L200,500 L195,480 Z" fill="#000"/>
+          <path d="M205,480 L210,500 L245,500 L235,480 Z" fill="#000"/>
+        </svg>
+        <!-- Active zone (top half) -->
+        <div style="position:absolute;top:0;left:0;width:100%;height:50%;border-bottom:2px dashed #3b82f6;z-index:2;">
+          <div style="position:absolute;bottom:4px;right:8px;font-size:11px;color:#3b82f6;font-weight:600;">SUA ÁREA</div>
+        </div>
+        <!-- Blocked zone (bottom half) -->
+        <div style="position:absolute;bottom:0;left:0;width:100%;height:50%;background:rgba(0,0,0,0.06);z-index:2;">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:13px;">
+            Área do parceiro
+          </div>
+        </div>
+        <!-- Sample drawing strokes on top half -->
+        <svg viewBox="0 0 400 600" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:100%;z-index:3;">
+          <ellipse cx="200" cy="75" rx="55" ry="55" fill="none" stroke="#e74c3c" stroke-width="3"/>
+          <circle cx="180" cy="65" r="5" fill="#333"/>
+          <circle cx="220" cy="65" r="5" fill="#333"/>
+          <path d="M185,90 Q200,105 215,90" fill="none" stroke="#333" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player drawing BOTTOM -->
+  <div class="mockup">
+    <div class="mockup-header">Jogador B — Desenha: Pernas + Pés</div>
+    <div class="mockup-body" style="padding:0;overflow:hidden;">
+      <div style="position:relative;width:100%;height:400px;background:#fff;">
+        <!-- Same silhouette guide -->
+        <svg viewBox="0 0 400 600" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:100%;opacity:0.08;">
+          <ellipse cx="200" cy="80" rx="50" ry="60" fill="#000"/>
+          <rect x="185" y="135" width="30" height="30" fill="#000"/>
+          <path d="M140,165 L260,165 L250,320 L150,320 Z" fill="#000"/>
+          <path d="M140,170 L90,260 L110,265 L155,185 Z" fill="#000"/>
+          <path d="M260,170 L310,260 L290,265 L245,185 Z" fill="#000"/>
+          <path d="M155,320 L170,480 L195,480 L200,320 Z" fill="#000"/>
+          <path d="M200,320 L205,480 L230,480 L245,320 Z" fill="#000"/>
+          <path d="M165,480 L165,500 L200,500 L195,480 Z" fill="#000"/>
+          <path d="M205,480 L210,500 L245,500 L235,480 Z" fill="#000"/>
+        </svg>
+        <!-- Blocked zone (top half) -->
+        <div style="position:absolute;top:0;left:0;width:100%;height:50%;background:rgba(0,0,0,0.06);z-index:2;">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:13px;">
+            Área do parceiro
+          </div>
+        </div>
+        <!-- Active zone (bottom half) -->
+        <div style="position:absolute;bottom:0;left:0;width:100%;height:50%;border-top:2px dashed #3b82f6;z-index:2;">
+          <div style="position:absolute;top:4px;right:8px;font-size:11px;color:#3b82f6;font-weight:600;">SUA ÁREA</div>
+        </div>
+        <!-- Sample drawing strokes on bottom half -->
+        <svg viewBox="0 0 400 600" style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:60%;height:100%;z-index:3;">
+          <path d="M165,330 L175,470 L200,470 L195,330" fill="none" stroke="#2ecc71" stroke-width="3"/>
+          <path d="M205,330 L215,470 L240,470 L235,330" fill="none" stroke="#2ecc71" stroke-width="3"/>
+          <path d="M170,470 L160,490 L200,490 L195,470" fill="none" stroke="#2ecc71" stroke-width="2"/>
+          <path d="M210,470 L215,490 L250,490 L240,470" fill="none" stroke="#2ecc71" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Detalhes</h3>
+  <ul style="line-height:1.8;color:#ccc;">
+    <li><strong>Silhueta:</strong> SVG de corpo inteiro com ~8% opacidade, visível nas duas metades como guia</li>
+    <li><strong>Divisão:</strong> Linha tracejada azul no meio horizontal do canvas (50/50)</li>
+    <li><strong>Área bloqueada:</strong> Overlay escurecido com texto "Área do parceiro"</li>
+    <li><strong>Área ativa:</strong> Label "SUA ÁREA" em azul, interação de desenho limitada a essa metade</li>
+    <li><strong>Silhuetas variam:</strong> Pool de 5-8 SVGs (homem, mulher, criança, robô, etc.) sorteados por rodada</li>
+    <li><strong>Canvas:</strong> 800x600px (mesmo do modo party), divisão horizontal em y=300</li>
+  </ul>
+</div>

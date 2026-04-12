@@ -3,11 +3,18 @@ type MessageHandler = (data: any) => void;
 let ws: WebSocket | null = null;
 let handlers: MessageHandler[] = [];
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+let intentionalClose = false;
 
 export function connect(url: string) {
-  if (ws?.readyState === WebSocket.OPEN) return;
+  // Skip if already open or currently connecting
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
+  intentionalClose = false;
   ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    console.log("[ws] connected");
+  };
 
   ws.onmessage = (event) => {
     try {
@@ -19,23 +26,44 @@ export function connect(url: string) {
   };
 
   ws.onclose = () => {
-    reconnectTimeout = setTimeout(() => connect(url), 2000);
+    console.log("[ws] closed");
+    if (!intentionalClose) {
+      reconnectTimeout = setTimeout(() => connect(url), 2000);
+    }
   };
 
-  ws.onerror = () => {
+  ws.onerror = (err) => {
+    console.log("[ws] error, closing");
     ws?.close();
   };
 }
 
 export function disconnect() {
+  intentionalClose = true;
   if (reconnectTimeout) clearTimeout(reconnectTimeout);
-  ws?.close();
-  ws = null;
+  reconnectTimeout = null;
+  if (ws) {
+    ws.onclose = null;
+    ws.onerror = null;
+    ws.onmessage = null;
+    ws.close();
+    ws = null;
+  }
 }
 
 export function send(message: object) {
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message));
+  } else if (ws?.readyState === WebSocket.CONNECTING) {
+    // Queue send until connection opens
+    const current = ws;
+    const onOpen = () => {
+      current.removeEventListener("open", onOpen);
+      if (current.readyState === WebSocket.OPEN) {
+        current.send(JSON.stringify(message));
+      }
+    };
+    current.addEventListener("open", onOpen);
   }
 }
 

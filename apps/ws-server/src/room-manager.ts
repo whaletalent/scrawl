@@ -1,4 +1,4 @@
-import type { Room, Player, GameMode } from "./types.js";
+import type { Room, Player, GameMode, FaceTemplateId } from "./types.js";
 import type { WebSocket } from "ws";
 
 const rooms = new Map<string, Room>();
@@ -12,7 +12,7 @@ function generateCode(): string {
   return rooms.has(code) ? generateCode() : code;
 }
 
-export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode = "party", totalRounds?: number): Room {
+export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
   const host: Player = { id: playerId, nickname, score: 0, isHost: true, ws };
@@ -21,13 +21,20 @@ export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode =
     ? Math.min(Math.max(totalRounds ?? 3, 1), 5)
     : totalRounds ?? 3;
 
+  const clampedTurnDuration = Math.min(Math.max(turnDuration ?? 90, 15), 300);
+
+  const validatedTemplate = faceTemplate ?? "masculine";
+
   const room: Room = {
     code,
     phase: "lobby",
     round: 0,
     totalRounds: clampedRounds,
     gameMode,
+    turnDuration: clampedTurnDuration,
     splitDrawings: [],
+    faceTemplate: validatedTemplate,
+    faceDrawings: [],
     players: new Map([[playerId, host]]),
     themes: [],
     pairs: [],

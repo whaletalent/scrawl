@@ -1,0 +1,69 @@
+<h2>Split Body — Revelação Final</h2>
+<p class="subtitle">Após todas as rodadas, os desenhos combinados são revelados um por um.</p>
+
+<div class="mockup" style="max-width:500px;margin:0 auto;">
+  <div class="mockup-header">Rodada 1 de 3</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;">
+    <div style="position:relative;width:100%;height:420px;background:#fff;">
+      <!-- Silhouette ghost behind -->
+      <svg viewBox="0 0 200 400" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:50%;height:95%;opacity:0.04;">
+        <ellipse cx="100" cy="45" rx="28" ry="32" fill="#000"/>
+        <rect x="90" y="75" width="20" height="18" fill="#000"/>
+        <path d="M70,93 L130,93 L125,200 L75,200 Z" fill="#000"/>
+        <path d="M70,96 L45,155 L55,158 L78,105 Z" fill="#000"/>
+        <path d="M130,96 L155,155 L145,158 L122,105 Z" fill="#000"/>
+        <path d="M78,200 L85,310 L100,310 L100,200 Z" fill="#000"/>
+        <path d="M100,200 L100,310 L115,310 L122,200 Z" fill="#000"/>
+        <path d="M82,310 L78,330 L103,330 L100,310 Z" fill="#000"/>
+        <path d="M100,310 L100,330 L125,330 L118,310 Z" fill="#000"/>
+      </svg>
+
+      <!-- Top half drawing (Player A) -->
+      <div style="position:absolute;top:0;left:0;width:100%;height:50%;z-index:2;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 400 300" width="90%" height="90%">
+          <ellipse cx="200" cy="100" rx="70" ry="65" fill="none" stroke="#e74c3c" stroke-width="3"/>
+          <circle cx="175" cy="85" r="8" fill="#333"/>
+          <circle cx="225" cy="85" r="8" fill="#333"/>
+          <path d="M185,125 Q200,145 215,125" fill="none" stroke="#333" stroke-width="3"/>
+          <path d="M140,160 L260,160 L250,280 L150,280 Z" fill="none" stroke="#e74c3c" stroke-width="3"/>
+          <line x1="200" y1="180" x2="200" y2="260" stroke="#3498db" stroke-width="2"/>
+          <line x1="180" y1="200" x2="220" y2="200" stroke="#3498db" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <!-- Merge line -->
+      <div style="position:absolute;top:50%;left:0;width:100%;border-top:1px dashed #ddd;z-index:3;"></div>
+
+      <!-- Bottom half drawing (Player B) -->
+      <div style="position:absolute;bottom:0;left:0;width:100%;height:50%;z-index:2;display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 400 300" width="90%" height="90%">
+          <path d="M155,10 L170,200 L200,200 L195,10" fill="none" stroke="#2ecc71" stroke-width="3"/>
+          <path d="M205,10 L215,200 L245,200 L235,10" fill="none" stroke="#2ecc71" stroke-width="3"/>
+          <ellipse cx="185" cy="230" rx="30" ry="12" fill="none" stroke="#2ecc71" stroke-width="2"/>
+          <ellipse cx="225" cy="230" rx="30" ry="12" fill="none" stroke="#2ecc71" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:center;gap:12px;margin-top:20px;">
+  <div style="background:#2a2a3a;border-radius:8px;padding:8px 20px;color:#888;font-size:14px;">← Anterior</div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <div style="width:10px;height:10px;border-radius:50%;background:#6366f1;"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#444;"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#444;"></div>
+  </div>
+  <div style="background:#6366f1;border-radius:8px;padding:8px 20px;color:#fff;font-size:14px;">Próximo →</div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Comportamento</h3>
+  <ul style="line-height:1.8;color:#ccc;">
+    <li>Navega entre rodadas com botões ou swipe</li>
+    <li>Dots indicam rodada atual</li>
+    <li>Silhueta aparece bem fraca (4% opacidade) atrás do resultado</li>
+    <li>Linha tracejada sutil marca onde as metades se encontram</li>
+    <li>Sem votação, sem score — só diversão</li>
+  </ul>
+</div>

@@ -31,13 +31,17 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
         </div>
 
         {/* Top half */}
-        {drawing.topImageDataUrl && (
+        {drawing.topImageDataUrl ? (
           <img
             src={drawing.topImageDataUrl}
             alt="Top half"
             className="absolute top-0 left-0 w-full"
             style={{ height: "50%", objectFit: "fill" }}
           />
+        ) : (
+          <div className="absolute top-0 left-0 w-full flex items-center justify-center bg-gray-100" style={{ height: "50%" }}>
+            <span className="text-gray-400 text-sm">Não enviado</span>
+          </div>
         )}
 
         {/* Merge line */}
@@ -47,13 +51,17 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
         />
 
         {/* Bottom half */}
-        {drawing.bottomImageDataUrl && (
+        {drawing.bottomImageDataUrl ? (
           <img
             src={drawing.bottomImageDataUrl}
             alt="Bottom half"
             className="absolute bottom-0 left-0 w-full"
             style={{ height: "50%", objectFit: "fill" }}
           />
+        ) : (
+          <div className="absolute bottom-0 left-0 w-full flex items-center justify-center bg-gray-100" style={{ height: "50%" }}>
+            <span className="text-gray-400 text-sm">Não enviado</span>
+          </div>
         )}
       </div>
 

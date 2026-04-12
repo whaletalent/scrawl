@@ -1,0 +1,105 @@
+<h2>Layout atualizado - Cabelo como area externa</h2>
+<p class="subtitle">A area "cabelo" agora eh toda a regiao FORA da moldura do rosto. Permite cabelos longos, chapeus, etc.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Preview: Canvas com areas editaveis</div>
+  <div class="mockup-body" style="background:#fff; position:relative; width:100%; aspect-ratio:800/600; max-width:600px; margin:0 auto; overflow:hidden; border-radius:8px;">
+
+    <svg viewBox="0 0 800 600" style="position:absolute;inset:0;width:100%;height:100%;">
+      <defs>
+        <!-- Mask: everything OUTSIDE the face ellipse -->
+        <mask id="hair-mask">
+          <rect x="0" y="0" width="800" height="600" fill="white"/>
+          <ellipse cx="400" cy="280" rx="200" ry="250" fill="black"/>
+          <!-- Also cut out the shoulders region -->
+          <rect x="120" y="520" width="560" height="80" fill="black"/>
+        </mask>
+      </defs>
+
+      <!-- CABELO: everything outside the face (purple tint) -->
+      <rect x="0" y="0" width="800" height="600" fill="rgba(139,92,246,0.12)" mask="url(#hair-mask)"/>
+      <rect x="0" y="0" width="800" height="600" fill="none" stroke="none" mask="url(#hair-mask)"/>
+      <!-- Label in top area -->
+      <text x="400" y="60" text-anchor="middle" fill="#8b5cf6" font-size="16" font-weight="bold">CABELO (area externa)</text>
+      <!-- Small indicators on sides -->
+      <text x="80" y="300" text-anchor="middle" fill="#8b5cf6" font-size="11" opacity="0.7">CABELO</text>
+      <text x="720" y="300" text-anchor="middle" fill="#8b5cf6" font-size="11" opacity="0.7">CABELO</text>
+
+      <!-- Face outline (dashed) -->
+      <ellipse cx="400" cy="280" rx="200" ry="250" fill="rgba(255,255,255,0.6)" stroke="#999" stroke-width="2" stroke-dasharray="8 4"/>
+      <!-- Neck -->
+      <rect x="355" y="510" width="90" height="20" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="6 3"/>
+
+      <!-- ORELHA ESQ -->
+      <rect x="165" y="200" width="50" height="120" rx="8" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="2"/>
+      <text x="190" y="265" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">ORELHA</text>
+
+      <!-- ORELHA DIR -->
+      <rect x="585" y="200" width="50" height="120" rx="8" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="2"/>
+      <text x="610" y="265" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">ORELHA</text>
+
+      <!-- OLHOS -->
+      <rect x="250" y="200" width="300" height="80" rx="8" fill="rgba(34,197,94,0.15)" stroke="#22c55e" stroke-width="2"/>
+      <text x="400" y="245" text-anchor="middle" fill="#22c55e" font-size="16" font-weight="bold">OLHOS</text>
+
+      <!-- NARIZ -->
+      <rect x="340" y="290" width="120" height="100" rx="8" fill="rgba(249,115,22,0.15)" stroke="#f97316" stroke-width="2"/>
+      <text x="400" y="345" text-anchor="middle" fill="#f97316" font-size="14" font-weight="bold">NARIZ</text>
+
+      <!-- BOCA -->
+      <rect x="300" y="400" width="200" height="70" rx="8" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="2"/>
+      <text x="400" y="440" text-anchor="middle" fill="#ef4444" font-size="16" font-weight="bold">BOCA</text>
+
+      <!-- OMBROS -->
+      <rect x="120" y="520" width="560" height="70" rx="8" fill="rgba(234,179,8,0.15)" stroke="#eab308" stroke-width="2"/>
+      <text x="400" y="560" text-anchor="middle" fill="#eab308" font-size="16" font-weight="bold">OMBROS</text>
+    </svg>
+  </div>
+</div>
+
+<div style="margin-top:20px; padding:16px; background:rgba(139,92,246,0.08); border-radius:12px; border:1px solid rgba(139,92,246,0.2);">
+  <p style="font-size:14px; color:#ccc; margin:0;">
+    <strong style="color:#a78bfa;">Cabelo = area externa:</strong> Tudo que esta fora da elipse do rosto e fora dos ombros.
+    Isso permite cabelos longos, penteados elaborados, chapeus, chifres, etc.
+    As orelhas ficam DENTRO da elipse, entao o cabelo nao sobrepoe elas.
+  </p>
+</div>
+
+<div style="margin-top:24px;">
+  <h3>Distribuicao exemplo</h3>
+  <div style="display:flex;gap:24px;margin-top:12px;">
+    <div style="flex:1;padding:16px;background:rgba(139,92,246,0.1);border-radius:12px;border:1px solid rgba(139,92,246,0.3);">
+      <p style="font-weight:bold;color:#a78bfa;margin-bottom:8px;">Jogador 1</p>
+      <ul style="color:#ccc;font-size:14px;list-style:none;padding:0;">
+        <li style="margin-bottom:4px;">&#x1f7e3; Cabelo (area externa)</li>
+        <li style="margin-bottom:4px;">&#x1f7e0; Nariz</li>
+        <li>&#x1f7e1; Ombros</li>
+      </ul>
+    </div>
+    <div style="flex:1;padding:16px;background:rgba(59,130,246,0.1);border-radius:12px;border:1px solid rgba(59,130,246,0.3);">
+      <p style="font-weight:bold;color:#60a5fa;margin-bottom:8px;">Jogador 2</p>
+      <ul style="color:#ccc;font-size:14px;list-style:none;padding:0;">
+        <li style="margin-bottom:4px;">&#x1f535; Orelhas (ambas)</li>
+        <li style="margin-bottom:4px;">&#x1f7e2; Olhos</li>
+        <li>&#x1f534; Boca</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:24px;">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Aprovado!</h3>
+      <p>Layout com cabelo externo esta otimo, vamos prosseguir</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Mais ajustes</h3>
+      <p>Preciso mudar algo no posicionamento ou areas</p>
+    </div>
+  </div>
+</div>

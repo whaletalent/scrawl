@@ -5,12 +5,17 @@ import { broadcast, sendTo } from "./room-manager.js";
 const PHASE_DURATIONS: Record<string, number> = {
   "theme-creation": 30_000,
   "theme-voting": 20_000,
-  drawing: 90_000,
   "drawing-voting": 20_000,
   reveal: 10_000,
   scoreboard: 8_000,
-  "split-drawing": 90_000,
 };
+
+function getPhaseDuration(phase: string, room: Room): number {
+  if (phase === "drawing" || phase === "split-drawing") {
+    return room.turnDuration * 1000;
+  }
+  return PHASE_DURATIONS[phase] ?? 0;
+}
 
 export function startGame(room: Room) {
   if (room.players.size < 4) return;
@@ -65,22 +70,32 @@ function startSplitRound(room: Room) {
 }
 
 export function handleSplitDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
-  if (room.phase !== "split-drawing") return;
+  if (room.phase !== "split-drawing") {
+    console.log(`[split] submit rejected: phase is ${room.phase}, not split-drawing`);
+    return;
+  }
 
   const currentDrawing = room.splitDrawings.find((d) => d.round === room.round);
-  if (!currentDrawing) return;
+  if (!currentDrawing) {
+    console.log(`[split] submit rejected: no drawing for round ${room.round}`);
+    return;
+  }
 
   if (playerId === currentDrawing.topPlayerId) {
     if (currentDrawing.topImageDataUrl) return;
     currentDrawing.topImageDataUrl = imageDataUrl;
+    console.log(`[split] round ${room.round}: TOP submitted (${imageDataUrl.length} chars)`);
   } else if (playerId === currentDrawing.bottomPlayerId) {
     if (currentDrawing.bottomImageDataUrl) return;
     currentDrawing.bottomImageDataUrl = imageDataUrl;
+    console.log(`[split] round ${room.round}: BOTTOM submitted (${imageDataUrl.length} chars)`);
   } else {
+    console.log(`[split] submit rejected: player ${playerId} not in current drawing`);
     return;
   }
 
   if (currentDrawing.topImageDataUrl && currentDrawing.bottomImageDataUrl) {
+    console.log(`[split] round ${room.round}: BOTH submitted, advancing`);
     advanceSplitRound(room);
   }
 }
@@ -96,6 +111,14 @@ function advanceSplitRound(room: Room) {
 }
 
 function startSplitFinal(room: Room) {
+  const summary = room.splitDrawings.map((d) => ({
+    round: d.round,
+    hasTop: !!d.topImageDataUrl,
+    hasBottom: !!d.bottomImageDataUrl,
+    topLen: d.topImageDataUrl?.length ?? 0,
+    bottomLen: d.bottomImageDataUrl?.length ?? 0,
+  }));
+  console.log(`[split] FINAL REVEAL:`, JSON.stringify(summary));
   broadcast(room, {
     type: "split-final-results",
     drawings: room.splitDrawings,
@@ -107,7 +130,7 @@ export function transitionTo(room: Room, phase: Phase) {
   if (room.phaseTimer) clearTimeout(room.phaseTimer);
 
   room.phase = phase;
-  const duration = PHASE_DURATIONS[phase] ?? 0;
+  const duration = getPhaseDuration(phase, room);
   room.phaseEndsAt = duration > 0 ? Date.now() + duration : 0;
 
   broadcast(room, {
@@ -144,6 +167,7 @@ function onPhaseEnd(room: Room) {
     case "split-drawing": {
       const currentDrawing = room.splitDrawings.find((d) => d.round === room.round);
       if (currentDrawing) {
+        console.log(`[split] TIMER EXPIRED round ${room.round}: top=${!!currentDrawing.topImageDataUrl}, bottom=${!!currentDrawing.bottomImageDataUrl}`);
         advanceSplitRound(room);
       }
       break;

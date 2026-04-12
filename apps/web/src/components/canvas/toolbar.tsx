@@ -1,5 +1,5 @@
 "use client";
-import type { CanvasTool } from "@/hooks/use-canvas";
+import type { CanvasTool, ToolType } from "@/hooks/use-canvas";
 
 const COLORS = [
   "#000000", "#ffffff", "#ef4444", "#f97316", "#eab308",
@@ -9,6 +9,13 @@ const COLORS = [
 
 const SIZES = [2, 4, 8, 16];
 
+const SHAPE_TOOLS: { type: ToolType; label: string; icon: string }[] = [
+  { type: "fill", label: "Balde", icon: "🪣" },
+  { type: "line", label: "Linha", icon: "╱" },
+  { type: "rectangle", label: "Retângulo", icon: "▭" },
+  { type: "circle", label: "Círculo", icon: "○" },
+];
+
 interface ToolbarProps {
   tool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
@@ -16,15 +23,18 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ tool, onToolChange, onClear }: ToolbarProps) {
+  const isBrushOrEraser = tool.type === "brush" || tool.type === "eraser";
+
   return (
     <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-800 rounded-xl">
+      {/* Colors */}
       <div className="flex gap-1 flex-wrap">
         {COLORS.map((color) => (
           <button
             key={color}
             onClick={() => onToolChange({ ...tool, type: "brush", color })}
             className={`w-7 h-7 rounded-full border-2 transition-transform ${
-              tool.type === "brush" && tool.color === color
+              tool.type !== "eraser" && tool.color === color
                 ? "border-white scale-110"
                 : "border-gray-600"
             }`}
@@ -35,13 +45,14 @@ export function Toolbar({ tool, onToolChange, onClear }: ToolbarProps) {
 
       <div className="w-px h-8 bg-gray-600" />
 
+      {/* Sizes */}
       <div className="flex gap-1 items-center">
         {SIZES.map((size) => (
           <button
             key={size}
             onClick={() => onToolChange({ ...tool, size })}
             className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
-              tool.size === size && tool.type === "brush" ? "bg-gray-600" : "hover:bg-gray-700"
+              tool.size === size ? "bg-gray-600" : "hover:bg-gray-700"
             }`}
           >
             <div
@@ -54,20 +65,51 @@ export function Toolbar({ tool, onToolChange, onClear }: ToolbarProps) {
 
       <div className="w-px h-8 bg-gray-600" />
 
+      {/* Brush */}
       <button
-        onClick={() => onToolChange({ ...tool, type: tool.type === "eraser" ? "brush" : "eraser" })}
+        onClick={() => onToolChange({ ...tool, type: "brush" })}
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          tool.type === "brush" ? "bg-purple-600" : "bg-gray-700 hover:bg-gray-600"
+        }`}
+      >
+        Pincel
+      </button>
+
+      {/* Eraser */}
+      <button
+        onClick={() => onToolChange({ ...tool, type: "eraser" })}
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
           tool.type === "eraser" ? "bg-purple-600" : "bg-gray-700 hover:bg-gray-600"
         }`}
       >
-        Eraser
+        Borracha
       </button>
+
+      <div className="w-px h-8 bg-gray-600" />
+
+      {/* Shape tools */}
+      <div className="flex gap-1">
+        {SHAPE_TOOLS.map(({ type, label, icon }) => (
+          <button
+            key={type}
+            onClick={() => onToolChange({ ...tool, type })}
+            title={label}
+            className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
+              tool.type === type ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
+
+      <div className="w-px h-8 bg-gray-600" />
 
       <button
         onClick={onClear}
         className="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg text-sm font-medium transition-colors"
       >
-        Clear
+        Limpar
       </button>
     </div>
   );

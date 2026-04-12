@@ -101,10 +101,12 @@ export function GameController(props: GameControllerProps) {
 
         {phase === "split-drawing" && props.splitSide && props.silhouetteId && (
           <SplitDrawingPhase
+            key={`split-${props.splitRound}-${props.splitSide}`}
             round={props.splitRound}
             totalRounds={roomState.totalRounds}
             side={props.splitSide}
             silhouetteId={props.silhouetteId}
+            endsAt={roomState.phaseEndsAt}
             onSubmit={props.submitSplitDrawing}
           />
         )}

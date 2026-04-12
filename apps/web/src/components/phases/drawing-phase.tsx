@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { DrawingCanvas, type DrawingCanvasHandle } from "@/components/canvas/drawing-canvas";
 
 interface DrawingPhaseProps {
@@ -13,13 +13,25 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt }: DrawingPhaseProp
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit() {
+  const doSubmit = useCallback(() => {
     if (submitted) return;
     const image = canvasRef.current?.exportImage();
     if (image) {
       onSubmit(image);
       setSubmitted(true);
     }
+  }, [submitted, onSubmit]);
+
+  useEffect(() => {
+    if (!endsAt || submitted) return;
+    const ms = endsAt - Date.now() - 500;
+    if (ms <= 0) { doSubmit(); return; }
+    const timer = setTimeout(doSubmit, ms);
+    return () => clearTimeout(timer);
+  }, [endsAt, submitted, doSubmit]);
+
+  function handleSubmit() {
+    doSubmit();
   }
 
   return (
