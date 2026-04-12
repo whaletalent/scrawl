@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage } from "@/lib/ws-client";
-import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode } from "@/types/game";
+import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode, FaceDrawing, FaceRegionId, FaceTemplateId } from "@/types/game";
 
 interface PairAssignment {
   pairId: string;
@@ -20,6 +20,10 @@ interface GameState {
   splitSide: "top" | "bottom" | null;
   silhouetteId: SilhouetteId | null;
   splitDrawings: SplitDrawing[];
+  faceRegions: FaceRegionId[];
+  faceTemplate: FaceTemplateId | null;
+  faceRound: number;
+  faceDrawings: FaceDrawing[];
   error: string | null;
 }
 
@@ -33,6 +37,10 @@ const initialState: GameState = {
   splitSide: null,
   silhouetteId: null,
   splitDrawings: [],
+  faceRegions: [],
+  faceTemplate: null,
+  faceRound: 0,
+  faceDrawings: [],
   error: null,
 };
 
@@ -167,6 +175,30 @@ export function useGameState() {
             splitDrawings: data.drawings,
           }));
           break;
+
+        case "face-round-start":
+          setState((s) => ({
+            ...s,
+            faceRound: data.round,
+            faceRegions: data.regions,
+            faceTemplate: data.faceTemplate,
+            error: null,
+          }));
+          break;
+
+        case "face-round-end":
+          setState((s) => ({
+            ...s,
+            faceRegions: [],
+          }));
+          break;
+
+        case "face-final-results":
+          setState((s) => ({
+            ...s,
+            faceDrawings: data.drawings,
+          }));
+          break;
       }
     });
 
@@ -176,8 +208,8 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number) => {
-    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration });
+  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId) => {
+    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration, faceTemplate });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {
@@ -208,6 +240,10 @@ export function useGameState() {
     send({ type: "submit-split-drawing", imageDataUrl });
   }, []);
 
+  const submitFaceDrawing = useCallback((imageDataUrl: string) => {
+    send({ type: "submit-face-drawing", imageDataUrl });
+  }, []);
+
   return {
     ...state,
     createRoom,
@@ -218,5 +254,6 @@ export function useGameState() {
     submitDrawing,
     voteDrawing,
     submitSplitDrawing,
+    submitFaceDrawing,
   };
 }

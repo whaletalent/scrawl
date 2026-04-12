@@ -1,18 +1,21 @@
 "use client";
-import type { GameMode } from "@/types/game";
+import type { FaceTemplateId, GameMode } from "@/types/game";
+import { FACE_TEMPLATE_LABELS } from "@/components/face-templates";
 
 interface ModeSelectorProps {
   gameMode: GameMode;
   totalRounds: number;
   turnDuration: number;
+  faceTemplate: FaceTemplateId;
   onModeChange: (mode: GameMode) => void;
   onRoundsChange: (rounds: number) => void;
   onDurationChange: (seconds: number) => void;
+  onFaceTemplateChange: (template: FaceTemplateId) => void;
 }
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 180];
 
-export function ModeSelector({ gameMode, totalRounds, turnDuration, onModeChange, onRoundsChange, onDurationChange }: ModeSelectorProps) {
+export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate, onModeChange, onRoundsChange, onDurationChange, onFaceTemplateChange }: ModeSelectorProps) {
   return (
     <div className="flex flex-col gap-3 w-full">
       <div className="flex gap-2">
@@ -36,9 +39,19 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, onModeChange
         >
           Split Body (2)
         </button>
+        <button
+          onClick={() => onModeChange("face-builder")}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+            gameMode === "face-builder"
+              ? "bg-green-600 text-white"
+              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+          }`}
+        >
+          Face Builder (2)
+        </button>
       </div>
 
-      {gameMode === "split-body" && (
+      {(gameMode === "split-body" || gameMode === "face-builder") && (
         <div className="flex items-center justify-between px-2">
           <span className="text-sm text-gray-400">Rounds</span>
           <div className="flex gap-1">
@@ -53,6 +66,27 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, onModeChange
                 }`}
               >
                 {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {gameMode === "face-builder" && (
+        <div className="flex items-center justify-between px-2">
+          <span className="text-sm text-gray-400">Moldura</span>
+          <div className="flex gap-1">
+            {(Object.entries(FACE_TEMPLATE_LABELS) as [FaceTemplateId, string][]).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => onFaceTemplateChange(id)}
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                  faceTemplate === id
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                }`}
+              >
+                {label}
               </button>
             ))}
           </div>

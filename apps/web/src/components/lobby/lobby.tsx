@@ -1,5 +1,5 @@
 "use client";
-import type { Player, GameMode } from "@/types/game";
+import type { FaceTemplateId, Player, GameMode } from "@/types/game";
 
 interface LobbyProps {
   roomCode: string;
@@ -7,14 +7,17 @@ interface LobbyProps {
   playerId: string;
   isHost: boolean;
   gameMode: GameMode;
+  faceTemplate?: FaceTemplateId;
   onStart: () => void;
   error: string | null;
 }
 
-export function Lobby({ roomCode, players, playerId, isHost, gameMode, onStart, error }: LobbyProps) {
+export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTemplate, onStart, error }: LobbyProps) {
   const isSplitBody = gameMode === "split-body";
-  const minPlayers = isSplitBody ? 2 : 4;
-  const maxPlayers = isSplitBody ? 2 : 10;
+  const isFaceBuilder = gameMode === "face-builder";
+  const isTwoPlayerMode = isSplitBody || isFaceBuilder;
+  const minPlayers = isTwoPlayerMode ? 2 : 4;
+  const maxPlayers = isTwoPlayerMode ? 2 : 10;
   const canStart = isHost && players.length >= minPlayers;
 
   return (
@@ -33,12 +36,19 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, onStart, 
             Split Body Mode
           </span>
         )}
+        {isFaceBuilder && (
+          <div className="text-center">
+            <span className="inline-block px-3 py-1 bg-green-600/20 text-green-400 rounded-full text-sm font-medium">
+              Face Builder Mode
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-sm">
         <p className="text-gray-400 text-sm mb-2">
           Players ({players.length}/{maxPlayers})
-          {players.length < minPlayers && ` — need ${isSplitBody ? "exactly 2" : "at least 4"}`}
+          {players.length < minPlayers && ` — need ${isTwoPlayerMode ? "exactly 2" : "at least 4"}`}
         </p>
         <div className="flex flex-col gap-2">
           {players.map((p) => (
@@ -73,7 +83,7 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, onStart, 
         >
           {players.length < minPlayers
             ? `Waiting for players (${players.length}/${minPlayers})...`
-            : isSplitBody ? "Start Split Body" : "Start Game"}
+            : isFaceBuilder ? "Start Face Builder" : isSplitBody ? "Start Split Body" : "Start Game"}
         </button>
       ) : (
         <p className="text-gray-500">Waiting for the host to start...</p>

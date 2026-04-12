@@ -10,6 +10,8 @@ import { DrawingVoting } from "@/components/phases/drawing-voting";
 import { Reveal } from "@/components/phases/reveal";
 import { SplitDrawingPhase } from "@/components/phases/split-drawing-phase";
 import { SplitReveal } from "@/components/phases/split-reveal";
+import { FaceDrawingPhase } from "@/components/phases/face-drawing-phase";
+import { FaceReveal } from "@/components/phases/face-reveal";
 
 type GameControllerProps = ReturnType<typeof useGameState>;
 
@@ -30,7 +32,7 @@ export function GameController(props: GameControllerProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {phase !== "lobby" && phase !== "final-results" && phase !== "split-final" && (
+      {phase !== "lobby" && phase !== "final-results" && phase !== "split-final" && phase !== "face-final" && (
         <div className="px-4 pt-4 flex items-center justify-between">
           <span className="text-sm text-gray-500">
             Round {roomState.round}/{roomState.totalRounds}
@@ -47,6 +49,7 @@ export function GameController(props: GameControllerProps) {
             playerId={playerId}
             isHost={isHost}
             gameMode={roomState.gameMode ?? "party"}
+            faceTemplate={roomState.faceTemplate}
             onStart={props.startGame}
             error={error}
           />
@@ -113,6 +116,22 @@ export function GameController(props: GameControllerProps) {
 
         {phase === "split-final" && (
           <SplitReveal drawings={props.splitDrawings} />
+        )}
+
+        {phase === "face-drawing" && props.faceRegions.length > 0 && props.faceTemplate && (
+          <FaceDrawingPhase
+            key={`face-${props.faceRound}`}
+            round={props.faceRound}
+            totalRounds={roomState.totalRounds}
+            regions={props.faceRegions}
+            faceTemplate={props.faceTemplate}
+            endsAt={roomState.phaseEndsAt}
+            onSubmit={props.submitFaceDrawing}
+          />
+        )}
+
+        {phase === "face-final" && (
+          <FaceReveal drawings={props.faceDrawings} />
         )}
       </div>
     </div>

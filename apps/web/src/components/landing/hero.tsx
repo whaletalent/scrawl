@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
-import type { GameMode } from "@/types/game";
+import type { FaceTemplateId, GameMode } from "@/types/game";
 import { ModeSelector } from "@/components/lobby/mode-selector";
 
 export function Hero() {
@@ -14,6 +14,7 @@ export function Hero() {
   const [gameMode, setGameMode] = useState<GameMode>("party");
   const [totalRounds, setTotalRounds] = useState(3);
   const [turnDuration, setTurnDuration] = useState(90);
+  const [faceTemplate, setFaceTemplate] = useState<FaceTemplateId>("masculine");
 
   function handleCreate() {
     const err = validateNickname(nickname);
@@ -23,6 +24,7 @@ export function Hero() {
     sessionStorage.setItem("scrawl-gameMode", gameMode);
     sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
     sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
+    sessionStorage.setItem("scrawl-faceTemplate", faceTemplate);
     router.push("/room/new");
   }
 
@@ -78,15 +80,17 @@ export function Hero() {
               gameMode={gameMode}
               totalRounds={totalRounds}
               turnDuration={turnDuration}
+              faceTemplate={faceTemplate}
               onModeChange={setGameMode}
               onRoundsChange={setTotalRounds}
               onDurationChange={setTurnDuration}
+              onFaceTemplateChange={setFaceTemplate}
             />
             <button
               onClick={handleCreate}
               className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
             >
-              {gameMode === "party" ? "Create Party" : "Create Split Body"}
+              {gameMode === "party" ? "Create Party" : gameMode === "split-body" ? "Create Split Body" : "Create Face Builder"}
             </button>
           </div>
         )}

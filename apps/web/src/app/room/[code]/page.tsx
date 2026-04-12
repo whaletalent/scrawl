@@ -15,10 +15,11 @@ export default function RoomPage() {
     const action = sessionStorage.getItem("scrawl-action") || "join";
 
     if (params.code === "new" || action === "create") {
-      const gameMode = (sessionStorage.getItem("scrawl-gameMode") as "party" | "split-body") || "party";
+      const gameMode = (sessionStorage.getItem("scrawl-gameMode") as "party" | "split-body" | "face-builder") || "party";
       const totalRounds = parseInt(sessionStorage.getItem("scrawl-totalRounds") || "3", 10);
       const turnDuration = parseInt(sessionStorage.getItem("scrawl-turnDuration") || "90", 10);
-      gameState.createRoom(nickname, gameMode, totalRounds, turnDuration);
+      const faceTemplate = (sessionStorage.getItem("scrawl-faceTemplate") || "masculine") as import("@/types/game").FaceTemplateId;
+      gameState.createRoom(nickname, gameMode, totalRounds, turnDuration, faceTemplate);
     } else {
       gameState.joinRoom(params.code, nickname);
     }
