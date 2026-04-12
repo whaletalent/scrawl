@@ -10,9 +10,11 @@ export type Phase =
   | "scoreboard"
   | "final-results"
   | "split-drawing"
-  | "split-final";
+  | "split-final"
+  | "face-drawing"
+  | "face-final";
 
-export type GameMode = "party" | "split-body";
+export type GameMode = "party" | "split-body" | "face-builder";
 
 export const SILHOUETTE_IDS = ["man", "woman", "child", "robot", "alien", "superhero"] as const;
 export type SilhouetteId = (typeof SILHOUETTE_IDS)[number];
@@ -64,13 +66,32 @@ export interface SplitDrawing {
   silhouetteId: SilhouetteId;
 }
 
+export const FACE_TEMPLATE_IDS = ["masculine", "feminine", "monster", "alien-face", "robot-face"] as const;
+export type FaceTemplateId = (typeof FACE_TEMPLATE_IDS)[number];
+
+export const FACE_REGION_IDS = ["hair", "ears", "eyes", "nose", "mouth", "shoulders"] as const;
+export type FaceRegionId = (typeof FACE_REGION_IDS)[number];
+
+export interface FaceDrawing {
+  round: number;
+  faceTemplate: FaceTemplateId;
+  assignments: { regionId: FaceRegionId; playerId: string }[];
+  player1Id: string;
+  player2Id: string;
+  player1ImageDataUrl: string | null;
+  player2ImageDataUrl: string | null;
+}
+
 export interface Room {
   code: string;
   phase: Phase;
   round: number;
   totalRounds: number;
   gameMode: GameMode;
+  turnDuration: number;
   splitDrawings: SplitDrawing[];
+  faceTemplate: FaceTemplateId;
+  faceDrawings: FaceDrawing[];
   players: Map<string, Player>;
   themes: Theme[];
   pairs: Pair[];
@@ -82,8 +103,9 @@ export interface Room {
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId }
   | { type: "submit-split-drawing"; imageDataUrl: string }
+  | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
