@@ -1,4 +1,5 @@
 import type { Room, Player, GameMode, FaceTemplateOption } from "./types.js";
+import { FACE_TEMPLATE_IDS } from "./types.js";
 import type { WebSocket } from "ws";
 
 const rooms = new Map<string, Room>();
@@ -12,18 +13,34 @@ function generateCode(): string {
   return rooms.has(code) ? generateCode() : code;
 }
 
-export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string): Room {
+const GAME_MODES: GameMode[] = ["party", "split-body", "face-builder"];
+
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
+export function sanitizeNickname(nickname: unknown): string {
+  const trimmed = typeof nickname === "string" ? nickname.trim().slice(0, 16) : "";
+  return trimmed || "Player";
+}
+
+export function createRoom(nickname: string, ws: WebSocket, requestedMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
-  const host: Player = { id: playerId, nickname, score: 0, isHost: true, ws };
+  const host: Player = { id: playerId, nickname: sanitizeNickname(nickname), score: 0, isHost: true, ws };
 
-  const clampedRounds = gameMode === "split-body"
-    ? Math.min(Math.max(totalRounds ?? 3, 1), 5)
-    : totalRounds ?? 3;
+  // Everything below comes straight from the client — never trust it.
+  const gameMode = GAME_MODES.includes(requestedMode) ? requestedMode : "party";
+  const clampedRounds = clampInt(totalRounds, 3, 1, 5);
+  const clampedTurnDuration = clampInt(turnDuration, 90, 15, 300);
 
-  const clampedTurnDuration = Math.min(Math.max(turnDuration ?? 90, 15), 300);
-
-  const validatedTemplate = faceTemplate ?? "masculine";
+  const validatedTemplate: FaceTemplateOption =
+    faceTemplate === "random" || FACE_TEMPLATE_IDS.includes(faceTemplate as never)
+      ? (faceTemplate as FaceTemplateOption)
+      : "random";
+  const validatedSkinTone =
+    typeof skinTone === "string" && /^#[0-9a-fA-F]{6}$/.test(skinTone) ? skinTone : "#FDDCB5";
 
   const room: Room = {
     code,
@@ -34,13 +51,15 @@ export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode =
     turnDuration: clampedTurnDuration,
     splitDrawings: [],
     faceTemplate: validatedTemplate,
-    skinTone: skinTone ?? "#FDDCB5",
+    skinTone: validatedSkinTone,
     faceDrawings: [],
     players: new Map([[playerId, host]]),
     themes: [],
     pairs: [],
     drawings: [],
     results: [],
+    allResults: [],
+    sitOutCounts: new Map(),
     phaseTimer: null,
     phaseEndsAt: 0,
   };
@@ -50,13 +69,14 @@ export function createRoom(nickname: string, ws: WebSocket, gameMode: GameMode =
 }
 
 export function joinRoom(code: string, nickname: string, ws: WebSocket): { room: Room; playerId: string } | null {
-  const room = rooms.get(code);
+  const room = rooms.get(String(code).trim().toUpperCase());
   if (!room) return null;
   if (room.phase !== "lobby") return null;
-  if (room.players.size >= 10) return null;
+  const maxPlayers = room.gameMode === "party" ? 10 : 2;
+  if (room.players.size >= maxPlayers) return null;
 
   const playerId = crypto.randomUUID();
-  const player: Player = { id: playerId, nickname, score: 0, isHost: false, ws };
+  const player: Player = { id: playerId, nickname: sanitizeNickname(nickname), score: 0, isHost: false, ws };
   room.players.set(playerId, player);
 
   return { room, playerId };

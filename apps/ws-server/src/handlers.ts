@@ -1,7 +1,7 @@
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
 import { createRoom, joinRoom, removePlayer, getRoom, broadcast, sendTo } from "./room-manager.js";
-import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit } from "./game-engine.js";
+import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit, handlePlayerLeft } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
 
@@ -11,7 +11,7 @@ export function handleConnection(ws: WebSocket) {
       const msg = JSON.parse(raw.toString()) as ClientMessage;
       handleMessage(ws, msg);
     } catch {
-      ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
+      ws.send(JSON.stringify({ type: "error", message: "Mensagem inválida" }));
     }
   });
 
@@ -20,7 +20,10 @@ export function handleConnection(ws: WebSocket) {
     if (info) {
       const room = removePlayer(info.roomCode, info.playerId);
       if (room) {
-        broadcast(room, { type: "player-left", playerId: info.playerId });
+        // removePlayer may have promoted a new host — tell the clients who.
+        const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id;
+        broadcast(room, { type: "player-left", playerId: info.playerId, hostId });
+        handlePlayerLeft(room);
       }
       wsToPlayer.delete(ws);
     }
@@ -71,7 +74,7 @@ function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "cr
 function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
   const result = joinRoom(roomCode, nickname, ws);
   if (!result) {
-    ws.send(JSON.stringify({ type: "error", message: "Room not found, full, or already started" }));
+    ws.send(JSON.stringify({ type: "error", message: "Sala não encontrada, cheia ou já iniciada" }));
     return;
   }
 
@@ -97,25 +100,25 @@ function handleStartGame(ws: WebSocket) {
 
   const player = room.players.get(info.playerId);
   if (!player?.isHost) {
-    ws.send(JSON.stringify({ type: "error", message: "Only the host can start the game" }));
+    ws.send(JSON.stringify({ type: "error", message: "Só o host pode iniciar o jogo" }));
     return;
   }
 
   if (room.gameMode === "split-body") {
     if (room.players.size !== 2) {
-      ws.send(JSON.stringify({ type: "error", message: "Split Body mode requires exactly 2 players" }));
+      ws.send(JSON.stringify({ type: "error", message: "O modo Split Body precisa de exatamente 2 jogadores" }));
       return;
     }
     startSplitGame(room);
   } else if (room.gameMode === "face-builder") {
     if (room.players.size !== 2) {
-      ws.send(JSON.stringify({ type: "error", message: "Face Builder mode requires exactly 2 players" }));
+      ws.send(JSON.stringify({ type: "error", message: "O modo Face Builder precisa de exatamente 2 jogadores" }));
       return;
     }
     startFaceGame(room);
   } else {
     if (room.players.size < 4) {
-      ws.send(JSON.stringify({ type: "error", message: "Need at least 4 players to start" }));
+      ws.send(JSON.stringify({ type: "error", message: "São necessários pelo menos 4 jogadores para começar" }));
       return;
     }
     startGame(room);

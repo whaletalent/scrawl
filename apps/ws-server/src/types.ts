@@ -53,7 +53,8 @@ export interface DrawingResult {
   themeText: string;
   imageLeftDataUrl: string;
   imageRightDataUrl: string;
-  combinedImageDataUrl: string;
+  round: number;
+  playerNames: [string, string];
   votes: Record<string, { first: string; second: string; third: string }>;
 }
 
@@ -100,6 +101,10 @@ export interface Room {
   pairs: Pair[];
   drawings: DrawingSubmission[];
   results: DrawingResult[];
+  /** Party mode: results of every finished round, sent with final-results. */
+  allResults: DrawingResult[];
+  /** Party mode: how many rounds each player sat out (odd player counts). */
+  sitOutCounts: Map<string, number>;
   phaseTimer: ReturnType<typeof setTimeout> | null;
   phaseEndsAt: number;
 }

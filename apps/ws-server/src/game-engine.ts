@@ -19,9 +19,13 @@ function getPhaseDuration(phase: string, room: Room): number {
   return PHASE_DURATIONS[phase] ?? 0;
 }
 
+const MIN_PARTY_PLAYERS = 4;
+
 export function startGame(room: Room) {
-  if (room.players.size < 4) return;
+  if (room.players.size < MIN_PARTY_PLAYERS) return;
   room.round = 1;
+  room.allResults = [];
+  room.sitOutCounts = new Map();
   transitionTo(room, "theme-creation");
 }
 
@@ -300,7 +304,7 @@ function processThemes(room: Room) {
   if (room.themes.length === 0) {
     room.themes.push({
       id: crypto.randomUUID(),
-      text: "A cat riding a unicorn",
+      text: "Um gato montado em um unicórnio",
       authorId: "system",
       votes: [],
     });
@@ -332,6 +336,16 @@ function selectTopThemesAndPair(room: Room) {
 
 function assignPairs(room: Room, themes: typeof room.themes) {
   const playerIds = shuffleArray(Array.from(room.players.keys()));
+
+  // Odd player count: one player sits this round out (and judges every
+  // drawing). Pick whoever has sat out the least so it rotates.
+  if (playerIds.length % 2 === 1) {
+    const count = (id: string) => room.sitOutCounts.get(id) ?? 0;
+    const sitOutId = playerIds.reduce((best, id) => (count(id) < count(best) ? id : best));
+    playerIds.splice(playerIds.indexOf(sitOutId), 1);
+    room.sitOutCounts.set(sitOutId, count(sitOutId) + 1);
+  }
+
   const numPairs = Math.floor(playerIds.length / 2);
   room.pairs = [];
   room.drawings = [];
@@ -354,7 +368,7 @@ function assignPairs(room: Room, themes: typeof room.themes) {
       pairId: pair.id,
       partnerId: "",
       side: "" as "left" | "right",
-      theme: theme?.text ?? "Free draw",
+      theme: theme?.text ?? "Desenho livre",
     };
 
     const playerA = room.players.get(pair.playerA);
@@ -379,7 +393,11 @@ function processDrawings(room: Room) {
       themeText: theme?.text ?? "",
       imageLeftDataUrl: leftDrawing?.imageDataUrl ?? "",
       imageRightDataUrl: rightDrawing?.imageDataUrl ?? "",
-      combinedImageDataUrl: "",
+      round: room.round,
+      playerNames: [
+        room.players.get(pair.playerA)?.nickname ?? "?",
+        room.players.get(pair.playerB)?.nickname ?? "?",
+      ] as [string, string],
       votes: {},
     };
   });
@@ -414,6 +432,8 @@ function processDrawingVotes(room: Room) {
     id, nickname, score, isHost,
   }));
 
+  room.allResults.push(...room.results);
+
   broadcast(room, {
     type: "reveal-data",
     drawings: serializeResults(room.results),
@@ -423,17 +443,51 @@ function processDrawingVotes(room: Room) {
   transitionTo(room, "reveal");
 }
 
+function endPartyGame(room: Room) {
+  const players = Array.from(room.players.values()).map(({ id, nickname, score, isHost }) => ({
+    id, nickname, score, isHost,
+  }));
+  broadcast(room, {
+    type: "final-results",
+    players: players.sort((a, b) => b.score - a.score),
+    drawings: serializeResults(room.allResults),
+  });
+  transitionTo(room, "final-results");
+}
+
+const IDLE_PHASES: Phase[] = ["lobby", "final-results", "split-final", "face-final"];
+
+/**
+ * Called after a player has been removed from the room. A running game that
+ * can no longer continue is wrapped up with whatever was finished so far.
+ */
+export function handlePlayerLeft(room: Room) {
+  if (IDLE_PHASES.includes(room.phase)) return;
+
+  if (room.gameMode === "split-body") {
+    broadcast(room, { type: "notice", message: "Seu parceiro saiu. O jogo foi encerrado." });
+    room.splitDrawings = room.splitDrawings.filter(
+      (d) => d.round !== room.round || (d.topImageDataUrl && d.bottomImageDataUrl)
+    );
+    startSplitFinal(room);
+  } else if (room.gameMode === "face-builder") {
+    broadcast(room, { type: "notice", message: "Seu parceiro saiu. O jogo foi encerrado." });
+    room.faceDrawings = room.faceDrawings.filter(
+      (d) => d.round !== room.round || (d.player1ImageDataUrl && d.player2ImageDataUrl)
+    );
+    startFaceFinal(room);
+  } else if (room.players.size < MIN_PARTY_PLAYERS) {
+    broadcast(room, {
+      type: "notice",
+      message: `Jogadores insuficientes (mínimo ${MIN_PARTY_PLAYERS}). O jogo foi encerrado.`,
+    });
+    endPartyGame(room);
+  }
+}
+
 function nextRoundOrEnd(room: Room) {
   if (room.round >= room.totalRounds) {
-    const players = Array.from(room.players.values()).map(({ id, nickname, score, isHost }) => ({
-      id, nickname, score, isHost,
-    }));
-    broadcast(room, {
-      type: "final-results",
-      players: players.sort((a, b) => b.score - a.score),
-      drawings: serializeResults(room.results),
-    });
-    transitionTo(room, "final-results");
+    endPartyGame(room);
   } else {
     room.round++;
     room.themes = [];
