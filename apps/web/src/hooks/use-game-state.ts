@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { connect, disconnect, send, onMessage } from "@/lib/ws-client";
+import { connect, disconnect, send, onMessage, onOpen } from "@/lib/ws-client";
 import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode, FaceDrawing, FaceRegionId, FaceTemplateId, FaceTemplateOption } from "@/types/game";
 
 interface PairAssignment {
@@ -10,11 +10,34 @@ interface PairAssignment {
   theme: string;
 }
 
+const SESSION_KEY = "scrawl-session";
+
+interface Session {
+  code: string;
+  token: string;
+}
+
+/** The slot this tab holds in a room, kept across reloads so it can be reclaimed. */
+export function readSession(): Session | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
 interface GameState {
   connected: boolean;
   playerId: string | null;
   roomState: RoomState | null;
   pairAssignment: PairAssignment | null;
+  /** Whether the server already has this player's drawing for the current round. */
+  roundSubmitted: boolean;
+  /** A `rejoin` was refused — the old slot is gone. */
+  rejoinFailed: boolean;
+  /** This page was playing and lost its slot for good; don't auto-join anything. */
+  sessionLost: boolean;
   drawings: DrawingResult[];
   splitRound: number;
   splitSide: "top" | "bottom" | null;
@@ -34,6 +57,9 @@ const initialState: GameState = {
   playerId: null,
   roomState: null,
   pairAssignment: null,
+  roundSubmitted: false,
+  rejoinFailed: false,
+  sessionLost: false,
   drawings: [],
   splitRound: 0,
   splitSide: null,
@@ -50,20 +76,90 @@ const initialState: GameState = {
 
 export function useGameState() {
   const [state, setState] = useState<GameState>(initialState);
+  // The session this page is actually playing with (set once the server accepts us).
+  const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
+
+    // The socket auto-reconnects after a drop; a fresh socket is anonymous to
+    // the server, so reclaim our slot every time it (re)opens mid-session.
+    const unsubscribeOpen = onOpen(() => {
+      const session = sessionRef.current;
+      if (session) send({ type: "rejoin", roomCode: session.code, token: session.token });
+    });
+
     connect(wsUrl);
     setState((s) => ({ ...s, connected: true }));
 
     const unsubscribe = onMessage((data: any) => {
       switch (data.type) {
         case "room-state":
+          if (data.sessionToken) {
+            sessionRef.current = { code: data.state.code, token: data.sessionToken };
+            try {
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionRef.current));
+            } catch {
+              // storage unavailable: reconnect still works, reload won't
+            }
+          }
           setState((s) => ({
             ...s,
             roomState: data.state,
             playerId: data.playerId ?? s.playerId,
             error: null,
+            rejoinFailed: false,
+          }));
+          break;
+
+        case "rejoin-failed": {
+          const wasPlaying = sessionRef.current !== null;
+          sessionRef.current = null;
+          try {
+            sessionStorage.removeItem(SESSION_KEY);
+          } catch {
+            // ignore
+          }
+          setState((s) => ({
+            ...s,
+            rejoinFailed: true,
+            // Dropped mid-session and the grace period ran out: nothing to go back to.
+            ...(wasPlaying
+              ? { roomState: null, sessionLost: true, error: "Você foi desconectado e sua vaga na sala expirou." }
+              : {}),
+          }));
+          break;
+        }
+
+        case "session-replaced":
+          // Another tab took over this slot (e.g. a duplicated tab). Stop
+          // reconnecting, otherwise the two tabs would steal it back and forth.
+          sessionRef.current = null;
+          try {
+            sessionStorage.removeItem(SESSION_KEY);
+          } catch {
+            // ignore
+          }
+          disconnect();
+          setState((s) => ({
+            ...s,
+            roomState: null,
+            sessionLost: true,
+            error: "Esta sala foi aberta em outra aba.",
+          }));
+          break;
+
+        case "player-connection":
+          setState((s) => ({
+            ...s,
+            roomState: s.roomState
+              ? {
+                  ...s.roomState,
+                  players: s.roomState.players.map((p: Player) =>
+                    p.id === data.playerId ? { ...p, connected: data.connected } : p
+                  ),
+                }
+              : null,
           }));
           break;
 
@@ -74,7 +170,7 @@ export function useGameState() {
             // who sits this one out doesn't keep the stale assignment.
             pairAssignment: data.phase === "theme-creation" ? null : s.pairAssignment,
             roomState: s.roomState
-              ? { ...s.roomState, phase: data.phase, phaseEndsAt: data.phaseEndsAt }
+              ? { ...s.roomState, phase: data.phase, phaseEndsAt: data.phaseEndsAt, round: data.round ?? s.roomState.round }
               : null,
           }));
           break;
@@ -129,6 +225,7 @@ export function useGameState() {
               side: data.side,
               theme: data.theme,
             },
+            roundSubmitted: !!data.submitted,
           }));
           break;
         }
@@ -171,6 +268,7 @@ export function useGameState() {
             splitRound: data.round,
             splitSide: data.side,
             silhouetteId: data.silhouetteId,
+            roundSubmitted: !!data.submitted,
             error: null,
           }));
           break;
@@ -196,6 +294,7 @@ export function useGameState() {
             faceRegions: data.regions,
             faceTemplate: data.faceTemplate,
             faceSkinTone: data.skinTone,
+            roundSubmitted: !!data.submitted,
             error: null,
           }));
           break;
@@ -218,6 +317,7 @@ export function useGameState() {
 
     return () => {
       unsubscribe();
+      unsubscribeOpen();
       disconnect();
     };
   }, []);
@@ -228,6 +328,10 @@ export function useGameState() {
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {
     send({ type: "join-room", roomCode, nickname });
+  }, []);
+
+  const rejoinRoom = useCallback((session: Session) => {
+    send({ type: "rejoin", roomCode: session.code, token: session.token });
   }, []);
 
   const startGame = useCallback(() => {
@@ -262,6 +366,7 @@ export function useGameState() {
     ...state,
     createRoom,
     joinRoom,
+    rejoinRoom,
     startGame,
     submitTheme,
     voteTheme,

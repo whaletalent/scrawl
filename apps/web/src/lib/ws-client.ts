@@ -2,6 +2,7 @@ type MessageHandler = (data: any) => void;
 
 let ws: WebSocket | null = null;
 let handlers: MessageHandler[] = [];
+let openHandlers: (() => void)[] = [];
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
 
@@ -14,6 +15,7 @@ export function connect(url: string) {
 
   ws.onopen = () => {
     console.log("[ws] connected");
+    openHandlers.forEach((handler) => handler());
   };
 
   ws.onmessage = (event) => {
@@ -65,6 +67,14 @@ export function send(message: object) {
     };
     current.addEventListener("open", onOpen);
   }
+}
+
+/** Fires every time the socket opens — including after an automatic reconnect. */
+export function onOpen(handler: () => void): () => void {
+  openHandlers.push(handler);
+  return () => {
+    openHandlers = openHandlers.filter((h) => h !== handler);
+  };
 }
 
 export function onMessage(handler: MessageHandler): () => void {

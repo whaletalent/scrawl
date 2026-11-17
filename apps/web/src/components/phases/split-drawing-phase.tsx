@@ -11,11 +11,13 @@ interface SplitDrawingPhaseProps {
   silhouetteId: SilhouetteId;
   endsAt: number;
   onSubmit: (imageDataUrl: string) => void;
+  /** True when rejoining a round the server already has our drawing for. */
+  initialSubmitted?: boolean;
 }
 
-export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, endsAt, onSubmit }: SplitDrawingPhaseProps) {
+export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, endsAt, onSubmit, initialSubmitted }: SplitDrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
   const doSubmit = useCallback(() => {
     if (submitted) return;

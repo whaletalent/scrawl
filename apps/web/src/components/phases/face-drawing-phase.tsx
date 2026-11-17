@@ -12,11 +12,13 @@ interface FaceDrawingPhaseProps {
   skinTone: string;
   endsAt: number;
   onSubmit: (imageDataUrl: string) => void;
+  /** True when rejoining a round the server already has our drawing for. */
+  initialSubmitted?: boolean;
 }
 
-export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, skinTone, endsAt, onSubmit }: FaceDrawingPhaseProps) {
+export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, skinTone, endsAt, onSubmit, initialSubmitted }: FaceDrawingPhaseProps) {
   const canvasRef = useRef<FaceCanvasHandle>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
   const doSubmit = useCallback(() => {
     if (submitted) return;

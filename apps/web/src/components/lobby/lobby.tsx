@@ -64,6 +64,7 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
             >
               <span className="font-medium">
                 {p.nickname} {p.id === playerId && "(você)"}
+                {p.connected === false && <span className="text-gray-500 text-sm"> (reconectando...)</span>}
               </span>
               {p.isHost && (
                 <span className="text-xs bg-yellow-600/30 text-yellow-400 px-2 py-0.5 rounded-full">

@@ -34,6 +34,7 @@ export function GameController(props: GameControllerProps) {
   }
 
   const currentPlayer = roomState.players.find((p) => p.id === playerId);
+  const away = roomState.players.filter((p) => p.connected === false).map((p) => p.nickname);
   const isHost = currentPlayer?.isHost ?? false;
   const phase = roomState.phase;
 
@@ -51,6 +52,12 @@ export function GameController(props: GameControllerProps) {
       {notice && (
         <p className="mx-4 mt-4 px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-300 text-sm text-center">
           {notice}
+        </p>
+      )}
+
+      {away.length > 0 && phase !== "lobby" && (
+        <p className="mx-4 mt-4 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm text-center">
+          {away.join(", ")} {away.length === 1 ? "desconectou" : "desconectaram"} — aguardando reconexão...
         </p>
       )}
 
@@ -87,6 +94,7 @@ export function GameController(props: GameControllerProps) {
 
         {phase === "drawing" && pairAssignment && (
           <DrawingPhase
+            initialSubmitted={props.roundSubmitted}
             theme={pairAssignment.theme}
             side={pairAssignment.side}
             onSubmit={props.submitDrawing}
@@ -128,6 +136,7 @@ export function GameController(props: GameControllerProps) {
         {phase === "split-drawing" && props.splitSide && props.silhouetteId && (
           <SplitDrawingPhase
             key={`split-${props.splitRound}-${props.splitSide}`}
+            initialSubmitted={props.roundSubmitted}
             round={props.splitRound}
             totalRounds={roomState.totalRounds}
             side={props.splitSide}
@@ -144,6 +153,7 @@ export function GameController(props: GameControllerProps) {
         {phase === "face-drawing" && props.faceRegions.length > 0 && props.faceTemplate && (
           <FaceDrawingPhase
             key={`face-${props.faceRound}`}
+            initialSubmitted={props.roundSubmitted}
             round={props.faceRound}
             totalRounds={roomState.totalRounds}
             regions={props.faceRegions}

@@ -6,12 +6,14 @@ interface DrawingPhaseProps {
   theme: string;
   side: "left" | "right";
   onSubmit: (imageDataUrl: string) => void;
+  /** True when rejoining a round the server already has our drawing for. */
+  initialSubmitted?: boolean;
   endsAt: number;
 }
 
-export function DrawingPhase({ theme, side, onSubmit, endsAt }: DrawingPhaseProps) {
+export function DrawingPhase({ theme, side, onSubmit, endsAt, initialSubmitted }: DrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
   const doSubmit = useCallback(() => {
     if (submitted) return;
