@@ -240,12 +240,18 @@ function handleVoteDrawing(ws: WebSocket, pairId: string, rank: 1 | 2 | 3) {
   const result = room.results.find((r) => r.pairId === pairId);
   if (!result) return;
 
-  if (!result.votes[info.playerId]) {
-    result.votes[info.playerId] = { first: "", second: "", third: "" };
+  const rankKey = rank === 1 ? "first" : rank === 2 ? "second" : "third";
+
+  // Each rank goes to a single pair: take it away from whoever held it.
+  for (const other of room.results) {
+    const vote = other.votes[info.playerId];
+    if (vote) vote[rankKey] = "";
   }
 
-  const rankKey = rank === 1 ? "first" : rank === 2 ? "second" : "third";
-  result.votes[info.playerId][rankKey] = pairId;
+  // Each pair holds a single rank: replace any rank this pair had before.
+  const vote = { first: "", second: "", third: "" };
+  vote[rankKey] = pairId;
+  result.votes[info.playerId] = vote;
 }
 
 function serializeRoomState(room: ReturnType<typeof getRoom>) {
