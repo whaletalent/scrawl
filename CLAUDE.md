@@ -28,7 +28,7 @@ npm run lint  --workspace=@scrawl/web         # only web has lint
 npm run build --workspace=@scrawl/ws-server   # tsc -> dist/
 ```
 
-There is **no test suite**, no root-level lint, and no typecheck script — rely on `tsc --noEmit` (web `tsconfig.json` already sets `noEmit: true`, so `npx tsc -p apps/web` works for typechecking).
+There is **no test suite** (server changes have been verified with throwaway WebSocket client scripts driving a real server on another `PORT`), no root-level lint, and no typecheck script — rely on `tsc --noEmit` (web `tsconfig.json` already sets `noEmit: true`, so `npx tsc -p apps/web` works for typechecking).
 
 Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL` and the Firebase `NEXT_PUBLIC_*` vars. The ws-server reads only `PORT` (defaults to 8080) — no other env vars.
 
@@ -51,11 +51,13 @@ All realtime is JSON over a single WebSocket. The message contract is duplicated
 
 `GameMode = "party" | "split-body" | "face-builder"` — each drives a different phase graph in `apps/ws-server/src/game-engine.ts`:
 
-- **party** (4–10 players): `theme-creation → [theme-voting if >4] → drawing → drawing-voting → reveal → scoreboard → …` repeats for `totalRounds`, then `final-results`. Pairs are shuffled each round; final round scoring doubles.
+- **party** (4–10 players): `theme-creation → [theme-voting if >4] → drawing → drawing-voting → reveal → scoreboard → …` repeats for `totalRounds`, then `final-results` (which carries the drawings of **every** round via `room.allResults`). Pairs are shuffled each round; final round scoring doubles. With an odd player count one player sits out per round (no `pair-assigned` for them — the client shows a "jurado" screen); `room.sitOutCounts` rotates who.
 - **split-body** (exactly 2 players): alternating top/bottom halves on a shared silhouette; advances when both halves are submitted OR the per-turn timer expires. Ends in `split-final`.
 - **face-builder** (exactly 2 players): 6 face regions (`hair`, `ears`, `eyes`, `nose`, `mouth`, `shoulders`) are shuffled and split 3-and-3; each player draws only their assigned regions. Ends in `face-final`. Supports `faceTemplate: "random" | FaceTemplateId` and a `skinTone` hex.
 
 Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts`; per-turn drawing phases use `room.turnDuration` (clamped 15–300s). `transitionTo` is the only allowed phase mutator — it broadcasts `phase-change` and arms the timeout.
+
+**Players leaving mid-game**: the socket `close` handler calls `handlePlayerLeft` (game-engine). 2-player modes end immediately in their final phase with only the completed rounds; party ends in `final-results` once fewer than 4 players remain, otherwise it carries on. Clients get a `notice` message explaining why. `player-left` carries `hostId` because `removePlayer` may promote a new host.
 
 ### Module imports in ws-server
 
@@ -83,5 +85,5 @@ Canvases are a fixed **800×600 logical coordinate space**; pointer events are r
 - Path alias `@/*` maps to `apps/web/src/*` (web only).
 - Strict TypeScript via `tsconfig.base.json` (`strict: true`, `target: ES2022`).
 - Room codes are 5 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no 0/O/1/I/L confusion).
-- Rounds clamp: split-body 1–5; other modes use the client-supplied `totalRounds` unchanged. Turn duration clamps 15–300s.
+- `createRoom` sanitizes everything the client sends: rounds clamp 1–5 (all modes), turn duration 15–300s, unknown `gameMode` → `party`, unknown `faceTemplate` → `random`, non-hex `skinTone` → default. 2-player modes cap the room at 2 players.
 - `docs/game-mode-ideas.md` is a Portuguese brainstorm list of 40 proposed modes — useful context for mode-related work; not a spec.
