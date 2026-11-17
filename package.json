@@ -1,9 +1,17 @@
 {
   "name": "scrawl",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace=@scrawl/ws-server & npm run dev --workspace=@scrawl/web",
-    "build": "npm run build --workspace=@scrawl/web"
+    "build": "npm run build --workspace=@scrawl/web",
+    "test": "npm test --workspace=@scrawl/ws-server",
+    "test:e2e": "playwright test",
+    "typecheck": "npm run typecheck --workspace=@scrawl/ws-server && tsc --noEmit -p apps/web && tsc --noEmit -p e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }
