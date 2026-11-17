@@ -1,7 +1,6 @@
 "use client";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { clearCanvas } from "@/lib/canvas-utils";
-import { FACE_REGIONS, isPointInRegion, getRegionDef, type FaceRegionDef } from "@/lib/face-regions";
+import { FACE_ELLIPSE, isPointInRegion, getRegionDef, type FaceRegionDef } from "@/lib/face-regions";
 import type { FaceRegionId } from "@/types/game";
 import type { CanvasTool, ToolType } from "./use-canvas";
 
@@ -22,6 +21,53 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
   const activeRegion = useRef<FaceRegionDef | null>(null);
   const [tool, setTool] = useState<CanvasTool>({ type: "brush", color: "#000000", size: 4 });
 
+  // Undo/redo history
+  const historyRef = useRef<ImageData[]>([]);
+  const historyIndexRef = useRef(-1);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateUndoRedoState = useCallback(() => {
+    setCanUndo(historyIndexRef.current > 0);
+    setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+  }, []);
+
+  const pushHistory = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !canvas) return;
+    const snapshot = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    // Discard any redo states ahead of current index
+    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current.push(snapshot);
+    // Cap history at 50 entries
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    }
+    historyIndexRef.current = historyRef.current.length - 1;
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    historyIndexRef.current--;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
+    ctx.putImageData(historyRef.current[historyIndexRef.current], 0, 0);
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    historyIndexRef.current++;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx) return;
+    ctx.putImageData(historyRef.current[historyIndexRef.current], 0, 0);
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
+
   const assignedRegions = assignedRegionIds.map(getRegionDef);
 
   useEffect(() => {
@@ -29,8 +75,9 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
     if (!canvas) return;
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-    const ctx = canvas.getContext("2d");
-    if (ctx) clearCanvas(ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
+    // Canvas stays transparent — white bg + template are HTML layers behind it
+    // Save initial blank state for undo
+    pushHistory();
   }, []);
 
   const findRegion = useCallback(
@@ -125,9 +172,31 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
   const isShapeTool = (t: ToolType) => t === "line" || t === "circle" || t === "rectangle";
 
+  const clipToRegion = useCallback((ctx: CanvasRenderingContext2D, region: FaceRegionDef) => {
+    ctx.beginPath();
+    if (region.isHairRegion) {
+      // Hair = full canvas minus shoulders rect, then only outside ellipse + forehead inside ellipse
+      // Approximate with: full canvas rect, then cut with clip
+      const e = FACE_ELLIPSE;
+      // Outer area: full canvas
+      ctx.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Subtract ellipse body (below forehead y=200) by drawing ellipse counterclockwise
+      // Instead, use a simpler approach: add forehead rect + outer rects
+      ctx.rect(0, 0, CANVAS_WIDTH, 200); // everything above forehead line
+      ctx.rect(0, 0, e.cx - e.rx, CANVAS_HEIGHT); // left of ellipse
+      ctx.rect(e.cx + e.rx, 0, CANVAS_WIDTH - (e.cx + e.rx), CANVAS_HEIGHT); // right of ellipse
+    } else {
+      for (const r of region.rects) {
+        ctx.rect(r.x, r.y, r.width, r.height);
+      }
+    }
+    ctx.clip();
+  }, []);
+
   const drawShape = useCallback(
-    (ctx: CanvasRenderingContext2D, type: ToolType, from: { x: number; y: number }, to: { x: number; y: number }, color: string, size: number) => {
+    (ctx: CanvasRenderingContext2D, type: ToolType, from: { x: number; y: number }, to: { x: number; y: number }, color: string, size: number, region: FaceRegionDef) => {
       ctx.save();
+      clipToRegion(ctx, region);
 
       ctx.strokeStyle = color;
       ctx.lineWidth = size;
@@ -153,7 +222,7 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
       ctx.restore();
     },
-    []
+    [clipToRegion]
   );
 
   const startDrawing = useCallback(
@@ -167,6 +236,7 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
       if (tool.type === "fill") {
         floodFill(point.x, point.y, tool.color, region);
+        pushHistory();
         return;
       }
 
@@ -202,21 +272,35 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
       if (isShapeTool(tool.type) && shapeStart.current && savedImageData.current) {
         ctx.putImageData(savedImageData.current, 0, 0);
-        drawShape(ctx, tool.type, shapeStart.current, point, tool.color, tool.size);
+        drawShape(ctx, tool.type, shapeStart.current, point, tool.color, tool.size, region);
         return;
       }
 
       if (!isPointInRegion(point.x, point.y, region)) return;
       if (!lastPoint.current) return;
 
-      ctx.beginPath();
-      ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
-      ctx.lineTo(point.x, point.y);
-      ctx.strokeStyle = tool.type === "eraser" ? "#ffffff" : tool.color;
-      ctx.lineWidth = tool.type === "eraser" ? tool.size * 3 : tool.size;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.stroke();
+      if (tool.type === "eraser") {
+        ctx.save();
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.strokeStyle = "rgba(0,0,0,1)";
+        ctx.lineWidth = tool.size * 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.current.x, lastPoint.current.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.strokeStyle = tool.color;
+        ctx.lineWidth = tool.size;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.stroke();
+      }
 
       lastPoint.current = point;
     },
@@ -224,12 +308,15 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
   );
 
   const stopDrawing = useCallback(() => {
+    if (isDrawing.current) {
+      pushHistory();
+    }
     shapeStart.current = null;
     savedImageData.current = null;
     activeRegion.current = null;
     isDrawing.current = false;
     lastPoint.current = null;
-  }, []);
+  }, [pushHistory]);
 
   const clear = useCallback(() => {
     const canvas = canvasRef.current;
@@ -243,39 +330,40 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
           for (let x = 0; x < CANVAS_WIDTH; x++) {
             if (isPointInRegion(x, y, region)) {
               const i = (y * CANVAS_WIDTH + x) * 4;
-              data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255;
+              data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
             }
           }
         }
         ctx.putImageData(imgData, 0, 0);
       } else {
-        ctx.fillStyle = "#ffffff";
         for (const r of region.rects) {
-          ctx.fillRect(r.x, r.y, r.width, r.height);
+          ctx.clearRect(r.x, r.y, r.width, r.height);
         }
       }
     }
-  }, [assignedRegions]);
+    pushHistory();
+  }, [assignedRegions, pushHistory]);
+
+  // Keyboard shortcuts: Ctrl+Z / Ctrl+Y
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   const exportImage = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return "";
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return "";
-
-    const imgData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    const data = imgData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] >= 250 && data[i + 1] >= 250 && data[i + 2] >= 250) {
-        data[i + 3] = 0;
-      }
-    }
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = CANVAS_WIDTH;
-    tempCanvas.height = CANVAS_HEIGHT;
-    const tempCtx = tempCanvas.getContext("2d")!;
-    tempCtx.putImageData(imgData, 0, 0);
-    return tempCanvas.toDataURL("image/png");
+    // Canvas is already transparent where not drawn — export directly
+    return canvas.toDataURL("image/png");
   }, []);
 
   return {
@@ -286,6 +374,10 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
     draw,
     stopDrawing,
     clear,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     exportImage,
     canvasWidth: CANVAS_WIDTH,
     canvasHeight: CANVAS_HEIGHT,

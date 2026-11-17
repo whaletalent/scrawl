@@ -38,16 +38,22 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, 800, 600);
 
-      // 2. Render face template with skin tone at full opacity
+      // 2. Render face template with skin tone
       const Template = getFaceTemplate(drawing.faceTemplate);
-      const svgMarkup = renderToStaticMarkup(
-        <Template className="" fillColor={drawing.skinTone} />
-      );
-      try {
-        const templateImg = await loadImage(svgToDataUrl(svgMarkup));
-        ctx.drawImage(templateImg, 0, 0, 800, 600);
-      } catch {
-        // fallback: skip template if SVG rendering fails
+      if (Template) {
+        let svgMarkup = renderToStaticMarkup(
+          <Template className="" fillColor={drawing.skinTone} />
+        );
+        // Add xmlns if missing — required for SVG loaded as image via data URL
+        if (!svgMarkup.includes("xmlns")) {
+          svgMarkup = svgMarkup.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        try {
+          const templateImg = await loadImage(svgToDataUrl(svgMarkup));
+          ctx.drawImage(templateImg, 0, 0, 800, 600);
+        } catch {
+          // skip if SVG rendering fails
+        }
       }
 
       // 3. Draw player images on top (they have transparent backgrounds)

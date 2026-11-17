@@ -20,9 +20,13 @@ interface ToolbarProps {
   tool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
   onClear: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
-export function Toolbar({ tool, onToolChange, onClear }: ToolbarProps) {
+export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
   const isBrushOrEraser = tool.type === "brush" || tool.type === "eraser";
 
   return (
@@ -104,6 +108,33 @@ export function Toolbar({ tool, onToolChange, onClear }: ToolbarProps) {
       </div>
 
       <div className="w-px h-8 bg-gray-600" />
+
+      {/* Undo / Redo */}
+      {onUndo && onRedo && (
+        <>
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Desfazer (Ctrl+Z)"
+            className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
+              canUndo ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-800 text-gray-600 cursor-not-allowed"
+            }`}
+          >
+            ↩
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Refazer (Ctrl+Y)"
+            className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
+              canRedo ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-800 text-gray-600 cursor-not-allowed"
+            }`}
+          >
+            ↪
+          </button>
+          <div className="w-px h-8 bg-gray-600" />
+        </>
+      )}
 
       <button
         onClick={onClear}

@@ -20,6 +20,7 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
   function FaceCanvas({ assignedRegions, faceTemplate, skinTone }, ref) {
     const {
       canvasRef, tool, setTool, startDrawing, draw, stopDrawing, clear,
+      undo, redo, canUndo, canRedo,
       exportImage, canvasWidth, canvasHeight,
     } = useFaceCanvas(assignedRegions);
 
@@ -30,6 +31,10 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
     return (
       <div className="flex flex-col gap-3 items-center w-full">
         <div className="relative w-full" style={{ maxWidth: canvasWidth }}>
+          {/* White background + face template behind transparent canvas */}
+          <div className="absolute inset-0 bg-white rounded-xl pointer-events-none">
+            <Template className="w-full h-full" fillColor={skinTone} />
+          </div>
           <canvas
             ref={canvasRef}
             onMouseDown={startDrawing}
@@ -39,13 +44,9 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
-            className="w-full rounded-xl border-2 border-gray-700 cursor-crosshair touch-none"
+            className="relative w-full rounded-xl border-2 border-gray-700 cursor-crosshair touch-none"
             style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
           />
-          {/* Face template with skin tone */}
-          <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.25 }}>
-            <Template className="w-full h-full" fillColor={skinTone} />
-          </div>
           {/* Region overlay: darken non-assigned areas, label assigned ones */}
           <svg
             viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
@@ -77,7 +78,7 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             })}
           </svg>
         </div>
-        <Toolbar tool={tool} onToolChange={setTool} onClear={clear} />
+        <Toolbar tool={tool} onToolChange={setTool} onClear={clear} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
       </div>
     );
   }
