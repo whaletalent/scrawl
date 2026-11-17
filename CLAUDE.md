@@ -9,7 +9,7 @@ Scrawl — a realtime multiplayer party drawing game. Two-workspace npm monorepo
 - `apps/web` — Next.js 15 (App Router) + React 19 + Tailwind v4. Port **3000**.
 - `apps/ws-server` — standalone WebSocket server (`ws`) run with `tsx`. Port **8080**.
 
-The WebSocket server is authoritative for game state; all rooms live in memory (`rooms: Map<string, Room>` in `apps/ws-server/src/room-manager.ts`). A restart drops every active game — there is no persistence layer yet, even though Firebase (Firestore + Storage) is initialized in `apps/web/src/lib/firebase.ts`.
+The WebSocket server is authoritative for game state; all rooms live in memory (`rooms: Map<string, Room>` in `apps/ws-server/src/room-manager.ts`). A restart drops every active game — there is no persistence layer. (The original MVP plan called for Firebase; it was never wired in and was removed. `.env.local` may still hold unused `NEXT_PUBLIC_FIREBASE_*` vars.)
 
 UI copy is in **Portuguese (pt-BR)**; types, code, commit messages, and this file are in English.
 
@@ -30,7 +30,7 @@ npm run build --workspace=@scrawl/ws-server   # tsc -> dist/
 
 There is **no test suite** (server changes have been verified with throwaway WebSocket client scripts driving a real server on another `PORT`), no root-level lint, and no typecheck script — rely on `tsc --noEmit` (web `tsconfig.json` already sets `noEmit: true`, so `npx tsc -p apps/web` works for typechecking).
 
-Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL` and the Firebase `NEXT_PUBLIC_*` vars. The ws-server reads `PORT` (defaults to 8080) and `RECONNECT_GRACE_MS` (defaults to 20000; lower it when testing disconnects).
+Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL`. The ws-server reads `PORT` (defaults to 8080) and `RECONNECT_GRACE_MS` (defaults to 20000; lower it when testing disconnects).
 
 ## Architecture
 
