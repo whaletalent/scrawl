@@ -3,6 +3,7 @@ import { SILHOUETTE_IDS, FACE_REGION_IDS, FACE_TEMPLATE_IDS } from "./types.js";
 
 const SKIN_TONE_COLORS = ["#FDDCB5", "#E8B88A", "#C68642", "#8D5524", "#5C3317", "#6B8E23", "#4682B4"];
 import { broadcast, sendTo, publicPlayers } from "./room-manager.js";
+import { config } from "./config.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
   "theme-creation": 30_000,
@@ -13,10 +14,9 @@ const PHASE_DURATIONS: Record<string, number> = {
 };
 
 function getPhaseDuration(phase: string, room: Room): number {
-  if (phase === "drawing" || phase === "split-drawing" || phase === "face-drawing") {
-    return room.turnDuration * 1000;
-  }
-  return PHASE_DURATIONS[phase] ?? 0;
+  const isDrawing = phase === "drawing" || phase === "split-drawing" || phase === "face-drawing";
+  const base = isDrawing ? room.turnDuration * 1000 : PHASE_DURATIONS[phase] ?? 0;
+  return Math.round(base * config.timeScale);
 }
 
 const MIN_PARTY_PLAYERS = 4;

@@ -2,12 +2,10 @@ import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
 import { createRoom, joinRoom, removePlayer, getRoom, broadcast, publicPlayer, publicPlayers } from "./room-manager.js";
 import type { Room } from "./types.js";
+import { config } from "./config.js";
 import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit, handlePlayerLeft, resyncPlayer } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
-
-/** How long a disconnected player keeps their slot before being removed. */
-const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) || 20_000;
 
 /** The socket dropped: keep the slot for a grace period so the player can `rejoin`. */
 function handleDisconnect(ws: WebSocket) {
@@ -22,7 +20,7 @@ function handleDisconnect(ws: WebSocket) {
 
   player.connected = false;
   broadcast(room, { type: "player-connection", playerId: player.id, connected: false });
-  player.graceTimer = setTimeout(() => dropPlayer(info.roomCode, info.playerId), RECONNECT_GRACE_MS);
+  player.graceTimer = setTimeout(() => dropPlayer(info.roomCode, info.playerId), config.reconnectGraceMs);
 }
 
 /** Grace period over: the player is gone for good. */
