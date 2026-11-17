@@ -12,9 +12,8 @@ export default function RoomPage() {
     if (!gameState.connected || gameState.roomState) return;
 
     const nickname = sessionStorage.getItem("scrawl-nickname") || "Player";
-    const action = sessionStorage.getItem("scrawl-action") || "join";
 
-    if (params.code === "new" || action === "create") {
+    if (params.code === "new") {
       const gameMode = (sessionStorage.getItem("scrawl-gameMode") as "party" | "split-body" | "face-builder") || "party";
       const totalRounds = parseInt(sessionStorage.getItem("scrawl-totalRounds") || "3", 10);
       const turnDuration = parseInt(sessionStorage.getItem("scrawl-turnDuration") || "90", 10);
@@ -25,6 +24,15 @@ export default function RoomPage() {
       gameState.joinRoom(params.code, nickname);
     }
   }, [gameState.connected, gameState.roomState, params.code]);
+
+  // The host lands on /room/new; once the server assigns the real code,
+  // put it in the URL so the address bar is a working invite link.
+  const roomCode = gameState.roomState?.code;
+  useEffect(() => {
+    if (roomCode && window.location.pathname !== `/room/${roomCode}`) {
+      window.history.replaceState(null, "", `/room/${roomCode}`);
+    }
+  }, [roomCode]);
 
   return <GameController {...gameState} />;
 }

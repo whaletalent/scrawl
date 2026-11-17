@@ -26,7 +26,7 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
         <p className="text-gray-400 text-sm">Room Code</p>
         <p className="text-4xl font-black tracking-widest text-purple-400">{roomCode}</p>
         <button
-          onClick={() => navigator.clipboard.writeText(window.location.href)}
+          onClick={() => navigator.clipboard.writeText(`${window.location.origin}/room/${roomCode}`)}
           className="text-sm text-gray-500 hover:text-gray-400 mt-1"
         >
           Copy invite link

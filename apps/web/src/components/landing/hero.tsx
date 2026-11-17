@@ -21,7 +21,6 @@ export function Hero() {
     const err = validateNickname(nickname);
     if (err) { setError(err); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    sessionStorage.setItem("scrawl-action", "create");
     sessionStorage.setItem("scrawl-gameMode", gameMode);
     sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
     sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
@@ -36,7 +35,6 @@ export function Hero() {
     const code = roomCode.trim().toUpperCase();
     if (code.length < 5) { setError("Enter a valid room code"); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    sessionStorage.setItem("scrawl-action", "join");
     router.push(`/room/${code}`);
   }
 

@@ -72,7 +72,7 @@ Canvases are a fixed **800×600 logical coordinate space**; pointer events are r
 
 ### Landing → room handoff
 
-`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-action`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to `/room/<code>`. The room page reads those keys, and the sentinel `/room/new` (or `action=create`) triggers `create-room` on the socket; anything else is treated as a join. The real room code is assigned by the server and arrives in the `room-state` message.
+`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to `/room/<code>`. The room page reads those keys, and only the sentinel `/room/new` triggers `create-room` on the socket; any other code is treated as a join. The real room code is assigned by the server and arrives in the `room-state` message, at which point the page rewrites the URL to `/room/<code>` (`history.replaceState`) so it works as an invite link.
 
 ### WebSocket client
 

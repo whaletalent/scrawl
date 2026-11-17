@@ -21,7 +21,14 @@ export function GameController(props: GameControllerProps) {
   if (!roomState || !playerId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Connecting...</p>
+        {error ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-red-400">{error}</p>
+            <a href="/" className="text-sm text-gray-400 hover:text-gray-300 underline">Voltar</a>
+          </div>
+        ) : (
+          <p className="text-gray-400">Connecting...</p>
+        )}
       </div>
     );
   }
