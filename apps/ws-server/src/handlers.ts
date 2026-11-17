@@ -1,9 +1,77 @@
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
-import { createRoom, joinRoom, removePlayer, getRoom, broadcast, sendTo } from "./room-manager.js";
-import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit, handlePlayerLeft } from "./game-engine.js";
+import { createRoom, joinRoom, removePlayer, getRoom, broadcast, publicPlayer, publicPlayers } from "./room-manager.js";
+import type { Room } from "./types.js";
+import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit, handlePlayerLeft, resyncPlayer } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
+
+/** How long a disconnected player keeps their slot before being removed. */
+const RECONNECT_GRACE_MS = Number(process.env.RECONNECT_GRACE_MS) || 20_000;
+
+/** The socket dropped: keep the slot for a grace period so the player can `rejoin`. */
+function handleDisconnect(ws: WebSocket) {
+  const info = wsToPlayer.get(ws);
+  if (!info) return;
+  wsToPlayer.delete(ws);
+
+  const room = getRoom(info.roomCode);
+  const player = room?.players.get(info.playerId);
+  // A stale socket closing after the player already rejoined on a new one.
+  if (!room || !player || player.ws !== ws) return;
+
+  player.connected = false;
+  broadcast(room, { type: "player-connection", playerId: player.id, connected: false });
+  player.graceTimer = setTimeout(() => dropPlayer(info.roomCode, info.playerId), RECONNECT_GRACE_MS);
+}
+
+/** Grace period over: the player is gone for good. */
+function dropPlayer(roomCode: string, playerId: string) {
+  const room = removePlayer(roomCode, playerId);
+  if (!room) return;
+  // removePlayer may have promoted a new host — tell the clients who.
+  const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id;
+  broadcast(room, { type: "player-left", playerId, hostId });
+  handlePlayerLeft(room);
+}
+
+function sendRoomState(ws: WebSocket, room: Room, playerId: string) {
+  ws.send(JSON.stringify({
+    type: "room-state",
+    state: serializeRoomState(room),
+    playerId,
+    sessionToken: room.players.get(playerId)?.token,
+  }));
+}
+
+function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
+  const room = getRoom(roomCode);
+  const player = room && Array.from(room.players.values()).find((p) => p.token === token);
+  if (!room || !player || typeof token !== "string") {
+    ws.send(JSON.stringify({ type: "rejoin-failed" }));
+    return;
+  }
+
+  if (player.graceTimer) clearTimeout(player.graceTimer);
+  player.graceTimer = null;
+
+  // Same player on a second socket (e.g. the old one hasn't noticed it's dead).
+  const oldWs = player.ws;
+  if (oldWs !== ws) {
+    wsToPlayer.delete(oldWs);
+    // Tell the old tab to stand down, or its auto-reconnect would fight us for the slot.
+    if (oldWs.readyState === oldWs.OPEN) oldWs.send(JSON.stringify({ type: "session-replaced" }));
+    oldWs.close();
+  }
+
+  player.ws = ws;
+  player.connected = true;
+  wsToPlayer.set(ws, { playerId: player.id, roomCode: room.code });
+
+  sendRoomState(ws, room, player.id);
+  resyncPlayer(room, player.id);
+  broadcast(room, { type: "player-connection", playerId: player.id, connected: true }, player.id);
+}
 
 export function handleConnection(ws: WebSocket) {
   ws.on("message", (raw) => {
@@ -15,19 +83,7 @@ export function handleConnection(ws: WebSocket) {
     }
   });
 
-  ws.on("close", () => {
-    const info = wsToPlayer.get(ws);
-    if (info) {
-      const room = removePlayer(info.roomCode, info.playerId);
-      if (room) {
-        // removePlayer may have promoted a new host — tell the clients who.
-        const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id;
-        broadcast(room, { type: "player-left", playerId: info.playerId, hostId });
-        handlePlayerLeft(room);
-      }
-      wsToPlayer.delete(ws);
-    }
-  });
+  ws.on("close", () => handleDisconnect(ws));
 }
 
 function handleMessage(ws: WebSocket, msg: ClientMessage) {
@@ -37,6 +93,9 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       break;
     case "join-room":
       handleJoinRoom(ws, msg.roomCode, msg.nickname);
+      break;
+    case "rejoin":
+      handleRejoin(ws, msg.roomCode, msg.token);
       break;
     case "start-game":
       handleStartGame(ws);
@@ -66,9 +125,7 @@ function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "cr
   const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration, msg.faceTemplate, msg.skinTone);
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
-
-  const state = serializeRoomState(room);
-  ws.send(JSON.stringify({ type: "room-state", state, playerId: hostId }));
+  sendRoomState(ws, room, hostId);
 }
 
 function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
@@ -80,15 +137,9 @@ function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
 
   const { room, playerId } = result;
   wsToPlayer.set(ws, { playerId, roomCode: room.code });
+  sendRoomState(ws, room, playerId);
 
-  const state = serializeRoomState(room);
-  ws.send(JSON.stringify({ type: "room-state", state, playerId }));
-
-  const player = room.players.get(playerId)!;
-  broadcast(room, {
-    type: "player-joined",
-    player: { id: player.id, nickname: player.nickname, score: player.score, isHost: player.isHost },
-  }, playerId);
+  broadcast(room, { type: "player-joined", player: publicPlayer(room.players.get(playerId)!) }, playerId);
 }
 
 function handleStartGame(ws: WebSocket) {
@@ -268,9 +319,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     phase: room.phase,
     round: room.round,
     totalRounds: room.totalRounds,
-    players: Array.from(room.players.values()).map(({ id, nickname, score, isHost }) => ({
-      id, nickname, score, isHost,
-    })),
+    players: publicPlayers(room),
     themes: room.themes.map((t) => ({
       id: t.id, text: t.text, authorId: t.authorId, votes: t.votes.length,
     })),

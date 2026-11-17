@@ -25,6 +25,11 @@ export interface Player {
   score: number;
   isHost: boolean;
   ws: WebSocket;
+  /** Secret handed to this player only; lets them reclaim their slot after a dropped socket. */
+  token: string;
+  connected: boolean;
+  /** Armed while disconnected; the player is removed for good when it fires. */
+  graceTimer: ReturnType<typeof setTimeout> | null;
 }
 
 export interface Theme {
@@ -111,6 +116,7 @@ export interface Room {
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
+  | { type: "rejoin"; roomCode: string; token: string }
   | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateOption; skinTone?: string }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }

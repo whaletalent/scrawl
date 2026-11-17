@@ -25,10 +25,23 @@ export function sanitizeNickname(nickname: unknown): string {
   return trimmed || "Player";
 }
 
+function newPlayer(id: string, nickname: string, ws: WebSocket): Player {
+  return {
+    id,
+    nickname: sanitizeNickname(nickname),
+    score: 0,
+    isHost: false,
+    ws,
+    token: crypto.randomUUID(),
+    connected: true,
+    graceTimer: null,
+  };
+}
+
 export function createRoom(nickname: string, ws: WebSocket, requestedMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
-  const host: Player = { id: playerId, nickname: sanitizeNickname(nickname), score: 0, isHost: true, ws };
+  const host: Player = { ...newPlayer(playerId, nickname, ws), isHost: true };
 
   // Everything below comes straight from the client — never trust it.
   const gameMode = GAME_MODES.includes(requestedMode) ? requestedMode : "party";
@@ -76,7 +89,7 @@ export function joinRoom(code: string, nickname: string, ws: WebSocket): { room:
   if (room.players.size >= maxPlayers) return null;
 
   const playerId = crypto.randomUUID();
-  const player: Player = { id: playerId, nickname: sanitizeNickname(nickname), score: 0, isHost: false, ws };
+  const player = newPlayer(playerId, nickname, ws);
   room.players.set(playerId, player);
 
   return { room, playerId };
@@ -86,6 +99,8 @@ export function removePlayer(roomCode: string, playerId: string): Room | null {
   const room = rooms.get(roomCode);
   if (!room) return null;
 
+  const leaving = room.players.get(playerId);
+  if (leaving?.graceTimer) clearTimeout(leaving.graceTimer);
   room.players.delete(playerId);
 
   if (room.players.size === 0) {
@@ -104,7 +119,16 @@ export function removePlayer(roomCode: string, playerId: string): Room | null {
 }
 
 export function getRoom(code: string): Room | undefined {
-  return rooms.get(code);
+  return rooms.get(String(code).trim().toUpperCase());
+}
+
+/** What clients are allowed to know about a player (no socket, no token). */
+export function publicPlayer({ id, nickname, score, isHost, connected }: Player) {
+  return { id, nickname, score, isHost, connected };
+}
+
+export function publicPlayers(room: Room) {
+  return Array.from(room.players.values()).map(publicPlayer);
 }
 
 export function broadcast(room: Room, message: object, excludeId?: string) {

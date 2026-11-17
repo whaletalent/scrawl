@@ -2,7 +2,7 @@ import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId, Face
 import { SILHOUETTE_IDS, FACE_REGION_IDS, FACE_TEMPLATE_IDS } from "./types.js";
 
 const SKIN_TONE_COLORS = ["#FDDCB5", "#E8B88A", "#C68642", "#8D5524", "#5C3317", "#6B8E23", "#4682B4"];
-import { broadcast, sendTo } from "./room-manager.js";
+import { broadcast, sendTo, publicPlayers } from "./room-manager.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
   "theme-creation": 30_000,
@@ -57,22 +57,82 @@ function startSplitRound(room: Room) {
   };
   room.splitDrawings.push(drawing);
 
-  sendTo(room, topPlayerId, {
-    type: "split-round-start",
-    round: room.round,
-    side: "top" as const,
-    silhouetteId,
-    totalRounds: room.totalRounds,
-  });
-  sendTo(room, bottomPlayerId, {
-    type: "split-round-start",
-    round: room.round,
-    side: "bottom" as const,
-    silhouetteId,
-    totalRounds: room.totalRounds,
-  });
+  sendSplitRoundStart(room, drawing, topPlayerId);
+  sendSplitRoundStart(room, drawing, bottomPlayerId);
 
   transitionTo(room, "split-drawing");
+}
+
+function sendSplitRoundStart(room: Room, drawing: SplitDrawing, playerId: string) {
+  const isTop = playerId === drawing.topPlayerId;
+  sendTo(room, playerId, {
+    type: "split-round-start",
+    round: drawing.round,
+    side: isTop ? "top" : "bottom",
+    silhouetteId: drawing.silhouetteId,
+    totalRounds: room.totalRounds,
+    submitted: !!(isTop ? drawing.topImageDataUrl : drawing.bottomImageDataUrl),
+  });
+}
+
+function sendFaceRoundStart(room: Room, drawing: FaceDrawing, playerId: string) {
+  const isP1 = playerId === drawing.player1Id;
+  sendTo(room, playerId, {
+    type: "face-round-start",
+    round: drawing.round,
+    regions: drawing.assignments.filter((a) => a.playerId === playerId).map((a) => a.regionId),
+    faceTemplate: drawing.faceTemplate,
+    skinTone: drawing.skinTone,
+    totalRounds: room.totalRounds,
+    submitted: !!(isP1 ? drawing.player1ImageDataUrl : drawing.player2ImageDataUrl),
+  });
+}
+
+function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
+  const isA = playerId === pair.playerA;
+  sendTo(room, playerId, {
+    type: "pair-assigned",
+    pairId: pair.id,
+    partnerId: isA ? pair.playerB : pair.playerA,
+    side: isA ? "left" : "right",
+    theme: room.themes.find((t) => t.id === pair.themeId)?.text ?? "Desenho livre",
+    submitted: room.drawings.some((d) => d.pairId === pair.id && d.playerId === playerId),
+  });
+}
+
+/**
+ * Replays to a player who just reclaimed their slot everything that was sent
+ * individually or broadcast while they were away, so their client can render
+ * the current phase. Call right after sending them `room-state`.
+ */
+export function resyncPlayer(room: Room, playerId: string) {
+  if (room.gameMode === "split-body") {
+    const current = room.splitDrawings.find((d) => d.round === room.round);
+    if (room.phase === "split-drawing" && current) sendSplitRoundStart(room, current, playerId);
+    if (room.phase === "split-final") sendTo(room, playerId, { type: "split-final-results", drawings: room.splitDrawings });
+    return;
+  }
+  if (room.gameMode === "face-builder") {
+    const current = room.faceDrawings.find((d) => d.round === room.round);
+    if (room.phase === "face-drawing" && current) sendFaceRoundStart(room, current, playerId);
+    if (room.phase === "face-final") sendTo(room, playerId, { type: "face-final-results", drawings: room.faceDrawings });
+    return;
+  }
+
+  const pair = room.pairs.find((p) => p.playerA === playerId || p.playerB === playerId);
+  if (pair) sendPairAssigned(room, pair, playerId);
+
+  if (room.phase === "drawing-voting") {
+    sendTo(room, playerId, { type: "drawings-ready", drawings: serializeResults(room.results) });
+  } else if (room.phase === "reveal" || room.phase === "scoreboard") {
+    sendTo(room, playerId, { type: "reveal-data", drawings: serializeResults(room.results), players: publicPlayers(room) });
+  } else if (room.phase === "final-results") {
+    sendTo(room, playerId, {
+      type: "final-results",
+      players: publicPlayers(room).sort((a, b) => b.score - a.score),
+      drawings: serializeResults(room.allResults),
+    });
+  }
 }
 
 export function startFaceGame(room: Room) {
@@ -115,22 +175,8 @@ function startFaceRound(room: Room) {
   };
   room.faceDrawings.push(drawing);
 
-  sendTo(room, player1Id, {
-    type: "face-round-start",
-    round: room.round,
-    regions: player1Regions,
-    faceTemplate: roundTemplate,
-    skinTone: roundSkinTone,
-    totalRounds: room.totalRounds,
-  });
-  sendTo(room, player2Id, {
-    type: "face-round-start",
-    round: room.round,
-    regions: player2Regions,
-    faceTemplate: roundTemplate,
-    skinTone: roundSkinTone,
-    totalRounds: room.totalRounds,
-  });
+  sendFaceRoundStart(room, drawing, player1Id);
+  sendFaceRoundStart(room, drawing, player2Id);
 
   transitionTo(room, "face-drawing");
 }
@@ -254,6 +300,7 @@ export function transitionTo(room: Room, phase: Phase) {
     type: "phase-change",
     phase,
     phaseEndsAt: room.phaseEndsAt,
+    round: room.round,
   });
 
   if (duration > 0) {
@@ -362,23 +409,8 @@ function assignPairs(room: Room, themes: typeof room.themes) {
   }
 
   for (const pair of room.pairs) {
-    const theme = room.themes.find((t) => t.id === pair.themeId);
-    const pairInfo = {
-      type: "pair-assigned" as const,
-      pairId: pair.id,
-      partnerId: "",
-      side: "" as "left" | "right",
-      theme: theme?.text ?? "Desenho livre",
-    };
-
-    const playerA = room.players.get(pair.playerA);
-    if (playerA && playerA.ws.readyState === playerA.ws.OPEN) {
-      playerA.ws.send(JSON.stringify({ ...pairInfo, partnerId: pair.playerB, side: "left" }));
-    }
-    const playerB = room.players.get(pair.playerB);
-    if (playerB && playerB.ws.readyState === playerB.ws.OPEN) {
-      playerB.ws.send(JSON.stringify({ ...pairInfo, partnerId: pair.playerA, side: "right" }));
-    }
+    sendPairAssigned(room, pair, pair.playerA);
+    sendPairAssigned(room, pair, pair.playerB);
   }
 }
 
@@ -428,28 +460,21 @@ function processDrawingVotes(room: Room) {
     }
   }
 
-  const players = Array.from(room.players.values()).map(({ id, nickname, score, isHost }) => ({
-    id, nickname, score, isHost,
-  }));
-
   room.allResults.push(...room.results);
 
   broadcast(room, {
     type: "reveal-data",
     drawings: serializeResults(room.results),
-    players,
+    players: publicPlayers(room),
   });
 
   transitionTo(room, "reveal");
 }
 
 function endPartyGame(room: Room) {
-  const players = Array.from(room.players.values()).map(({ id, nickname, score, isHost }) => ({
-    id, nickname, score, isHost,
-  }));
   broadcast(room, {
     type: "final-results",
-    players: players.sort((a, b) => b.score - a.score),
+    players: publicPlayers(room).sort((a, b) => b.score - a.score),
     drawings: serializeResults(room.allResults),
   });
   transitionTo(room, "final-results");
