@@ -30,7 +30,7 @@ npm run build --workspace=@scrawl/ws-server   # tsc -> dist/
 
 There is **no test suite** (server changes have been verified with throwaway WebSocket client scripts driving a real server on another `PORT`), no root-level lint, and no typecheck script — rely on `tsc --noEmit` (web `tsconfig.json` already sets `noEmit: true`, so `npx tsc -p apps/web` works for typechecking).
 
-Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL` and the Firebase `NEXT_PUBLIC_*` vars. The ws-server reads only `PORT` (defaults to 8080) — no other env vars.
+Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL` and the Firebase `NEXT_PUBLIC_*` vars. The ws-server reads `PORT` (defaults to 8080) and `RECONNECT_GRACE_MS` (defaults to 20000; lower it when testing disconnects).
 
 ## Architecture
 
@@ -74,11 +74,23 @@ Canvases are a fixed **800×600 logical coordinate space**; pointer events are r
 
 ### Landing → room handoff
 
-`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to `/room/<code>`. The room page reads those keys, and only the sentinel `/room/new` triggers `create-room` on the socket; any other code is treated as a join. The real room code is assigned by the server and arrives in the `room-state` message, at which point the page rewrites the URL to `/room/<code>` (`history.replaceState`) so it works as an invite link.
+`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to `/room/<code>`. The room page reads those keys, and only the sentinel `/room/new` triggers `create-room` on the socket; any other code is treated as a join. If there is no `scrawl-nickname` (someone opened an invite link directly), the page asks for one first. The real room code is assigned by the server and arrives in the `room-state` message, at which point the page rewrites the URL to `/room/<code>` (`history.replaceState`) so it works as an invite link.
 
 ### WebSocket client
 
-`apps/web/src/lib/ws-client.ts` holds a **module-level singleton socket** with a 2s auto-reconnect. There is no session / resume token — a reconnect does **not** rejoin the previous room; the player loses their slot. Keep this in mind when touching connection lifecycle.
+`apps/web/src/lib/ws-client.ts` holds a **module-level singleton socket** with a 2s auto-reconnect.
+
+### Reconnection
+
+A fresh socket is anonymous to the server, so slots are reclaimed with a per-player secret:
+
+- `room-state` (sent only to the player it concerns) carries `sessionToken`. The client keeps `{ code, token }` in `sessionStorage` (`scrawl-session`) and in a ref inside `use-game-state.ts`.
+- When a socket closes, the server does **not** remove the player: `handleDisconnect` (handlers.ts) marks them `connected: false`, broadcasts `player-connection`, and arms a grace timer (`RECONNECT_GRACE_MS`). Only when it fires does `dropPlayer` run the real removal (`player-left` + `handlePlayerLeft`).
+- The client sends `rejoin { roomCode, token }` on every socket re-open (network blip) and on page load when the stored session matches the URL's room code (reload). The server swaps the socket in, sends `room-state`, then `resyncPlayer` (game-engine) replays whatever the current phase needs (`pair-assigned`, `split-round-start`, `face-round-start`, drawings/results). Those per-player messages carry `submitted` so the UI knows the round's drawing is already in. A canvas in progress survives a socket blip but not a reload.
+- `rejoin-failed` → the page falls back to a normal join (or shows an error if it was mid-session). `session-replaced` is sent to the old socket when the same token rejoins from another tab; that tab stops reconnecting so two tabs don't steal the slot back and forth.
+- Never put `token` in anything broadcast — use `publicPlayer` / `publicPlayers` from room-manager.ts to serialize players.
+
+Note: `useParams()` keeps returning `new` for the host after the URL is rewritten with `history.replaceState`; don't use it to decide what to do after the first join.
 
 ## Conventions worth knowing
 

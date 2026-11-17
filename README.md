@@ -35,8 +35,9 @@ lobby. To try it alone, open the link in extra browser tabs.
 - `apps/ws-server` — authoritative WebSocket game server (`ws`, run with `tsx`).
 - `docs/` — design specs, implementation plans and a list of game mode ideas.
 
-Rooms live in memory on the WebSocket server: restarting it ends every game,
-and a player who disconnects cannot rejoin a running game.
+Rooms live in memory on the WebSocket server, so restarting it ends every game.
+A player whose connection drops (or who reloads the page) keeps their slot for
+20 seconds and is put back into the running game when they return.
 
 ## Other commands
 
