@@ -39,13 +39,30 @@ Rooms live in memory on the WebSocket server, so restarting it ends every game.
 A player whose connection drops (or who reloads the page) keeps their slot for
 20 seconds and is put back into the running game when they return.
 
+## Tests
+
+```bash
+npm test             # server suite (~10s): game rules, leaving, reconnection
+npm run test:e2e     # browser suite (~1.5min): real UI in Chromium via Playwright
+npm run typecheck    # server + tests, web, e2e
+```
+
+- **Server suite** (`apps/ws-server/test`) — Node's built-in test runner. Each
+  file starts the real server in-process on a free port and plays against it
+  with WebSocket clients, with game phases sped up.
+- **Browser suite** (`e2e/`) — Playwright drives the real app; the other
+  players are scripted bots speaking the WebSocket protocol. It starts its own
+  servers (web on :3100, WebSocket on :8089), so it can run next to
+  `npm run dev`. First time only: `npx playwright install chromium`.
+
+To play a sped-up game by hand, start the WebSocket server with
+`PHASE_TIME_SCALE=0.2` (every phase five times shorter).
+
 ## Other commands
 
 ```bash
 npm run build                                # production build of the web app
 npm run lint  --workspace=@scrawl/web
-npx tsc --noEmit -p apps/web                 # typecheck web
-npx tsc --noEmit -p apps/ws-server           # typecheck server
 ```
 
 See `CLAUDE.md` for architecture notes (message protocol, phase graphs, canvas

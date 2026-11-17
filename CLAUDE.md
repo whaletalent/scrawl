@@ -28,9 +28,29 @@ npm run lint  --workspace=@scrawl/web         # only web has lint
 npm run build --workspace=@scrawl/ws-server   # tsc -> dist/
 ```
 
-There is **no test suite** (server changes have been verified with throwaway WebSocket client scripts driving a real server on another `PORT`), no root-level lint, and no typecheck script — rely on `tsc --noEmit` (web `tsconfig.json` already sets `noEmit: true`, so `npx tsc -p apps/web` works for typechecking).
+```bash
+npm test                 # server suite, ~10s (node:test via tsx)
+npm run test:e2e         # Playwright browser suite, ~1.5min
+npm run typecheck        # ws-server (src + test), web, e2e
 
-Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL`. The ws-server reads `PORT` (defaults to 8080) and `RECONNECT_GRACE_MS` (defaults to 20000; lower it when testing disconnects).
+# A single server test file / a single test by name
+cd apps/ws-server && npx tsx --test --test-reporter=spec test/party.test.ts
+cd apps/ws-server && npx tsx --test --test-name-pattern="drawing votes" test/*.test.ts
+# A single e2e spec / test
+npx playwright test e2e/party.spec.ts
+npx playwright test -g "invite link"
+```
+
+There is no root-level lint.
+
+### Testing
+
+- **Server suite** — `apps/ws-server/test/*.test.ts`. `test/server.ts` starts the real server in-process on port 0 (`createScrawlServer` from `src/app.ts`; `src/server.ts` is just the listen entrypoint). `test/client.ts` is a small WebSocket client: register `c.wait(pred)` **before** triggering the action that causes the message (it only sees future messages), or use `c.on(handler)` for bots that react to everything.
+- **Time** — `src/config.ts` holds `timeScale` and `reconnectGraceMs`, read at use-time. Tests set them through `startServer({ timeScale, graceMs })` (or mutate `config` mid-test) so a whole game takes a second or two. Files that poke at a single phase keep `timeScale: 1` so nothing advances underneath them.
+- **Browser suite** — `e2e/*.spec.ts`, config in `playwright.config.ts`. It launches its own ws-server (:8089, `PHASE_TIME_SCALE=0.15`, `RECONNECT_GRACE_MS=3000`) and `next dev` (:3100, `NEXT_DIST_DIR=.next-e2e` so it doesn't fight `npm run dev` over `.next`). Other players are bots from `e2e/helpers.ts` (`bot`, `autoplayParty`) built on the server suite's `test/client.ts`. `@playwright/test` is pinned to an exact version because each version needs a specific Chromium build (`npx playwright install chromium`).
+- When a behaviour changes, change the server test first if the rule lives on the server; add an e2e test only for what needs a real page (routing, storage, canvas, layout).
+
+Web dev requires `apps/web/.env.local` with `NEXT_PUBLIC_WS_URL`. The ws-server reads `PORT` (defaults to 8080), `RECONNECT_GRACE_MS` (defaults to 20000) and `PHASE_TIME_SCALE` (defaults to 1; e.g. 0.2 makes every phase five times shorter for manual testing).
 
 ## Architecture
 
@@ -55,7 +75,7 @@ All realtime is JSON over a single WebSocket. The message contract is duplicated
 - **split-body** (exactly 2 players): alternating top/bottom halves on a shared silhouette; advances when both halves are submitted OR the per-turn timer expires. Ends in `split-final`.
 - **face-builder** (exactly 2 players): 6 face regions (`hair`, `ears`, `eyes`, `nose`, `mouth`, `shoulders`) are shuffled and split 3-and-3; each player draws only their assigned regions. Ends in `face-final`. Supports `faceTemplate: "random" | FaceTemplateId` and a `skinTone` hex.
 
-Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts`; per-turn drawing phases use `room.turnDuration` (clamped 15–300s). `transitionTo` is the only allowed phase mutator — it broadcasts `phase-change` and arms the timeout.
+Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied by `config.timeScale`); per-turn drawing phases use `room.turnDuration` (clamped 15–300s). `transitionTo` is the only allowed phase mutator — it broadcasts `phase-change` and arms the timeout.
 
 **Players leaving mid-game**: the socket `close` handler calls `handlePlayerLeft` (game-engine). 2-player modes end immediately in their final phase with only the completed rounds; party ends in `final-results` once fewer than 4 players remain, otherwise it carries on. Clients get a `notice` message explaining why. `player-left` carries `hostId` because `removePlayer` may promote a new host.
 
