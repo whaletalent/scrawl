@@ -25,13 +25,13 @@ export function DrawingVoting({ drawings, playerId, pairs, onVote }: DrawingVoti
     onVote(pairId, rank);
   }
 
-  const rankLabels: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd" };
+  const rankLabels: Record<number, string> = { 1: "1º", 2: "2º", 3: "3º" };
 
   return (
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-2xl">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">Vote for the Best</h2>
-        <p className="text-gray-400 mt-1">Assign 1st, 2nd, and 3rd place</p>
+        <h2 className="text-2xl font-bold">Vote nos melhores</h2>
+        <p className="text-gray-400 mt-1">Escolha o 1º, 2º e 3º lugar</p>
       </div>
 
       <div className="w-full flex flex-col gap-6">
@@ -40,13 +40,13 @@ export function DrawingVoting({ drawings, playerId, pairs, onVote }: DrawingVoti
 
           return (
             <div key={drawing.pairId} className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-2">Theme: {drawing.themeText}</p>
+              <p className="text-sm text-gray-400 mb-2">Tema: {drawing.themeText}</p>
               <div className="flex gap-0.5 rounded-lg overflow-hidden">
                 {drawing.imageLeftDataUrl && (
-                  <img src={drawing.imageLeftDataUrl} alt="Left half" className="w-1/2" />
+                  <img src={drawing.imageLeftDataUrl} alt="Metade esquerda" className="w-1/2" />
                 )}
                 {drawing.imageRightDataUrl && (
-                  <img src={drawing.imageRightDataUrl} alt="Right half" className="w-1/2" />
+                  <img src={drawing.imageRightDataUrl} alt="Metade direita" className="w-1/2" />
                 )}
               </div>
               <div className="flex gap-2 mt-3">

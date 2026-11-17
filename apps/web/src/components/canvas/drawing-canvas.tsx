@@ -81,6 +81,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
               >
                 <span className="text-gray-500 text-sm">Área do parceiro</span>
               </div>
+              <span
+                className="absolute left-2 text-[10px] font-bold tracking-wider text-blue-500/70 pointer-events-none"
+                style={side === "top" ? { top: 6 } : { bottom: 6 }}
+              >
+                SUA ÁREA
+              </span>
             </>
           )}
         </div>

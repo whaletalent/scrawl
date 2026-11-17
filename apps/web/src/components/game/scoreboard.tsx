@@ -12,9 +12,9 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
+    <div className="flex flex-col items-center gap-6 px-4 py-8 w-full max-w-lg">
       <h2 className="text-2xl font-bold">
-        {isFinal ? "Final Results!" : "Scoreboard"}
+        {isFinal ? "Resultado final!" : "Placar"}
       </h2>
 
       <div className="w-full flex flex-col gap-2">
@@ -40,15 +40,17 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
 
       {isFinal && drawings.length > 0 && (
         <div className="w-full flex flex-col gap-4 mt-4">
-          <h3 className="text-lg font-bold text-center">Share your masterpieces</h3>
+          <h3 className="text-lg font-bold text-center">Compartilhe as obras-primas</h3>
           {drawings.map((d) => (
             <div key={d.pairId} className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-2">"{d.themeText}"</p>
-              <div className="flex gap-0.5 rounded-lg overflow-hidden mb-3">
-                {d.imageLeftDataUrl && <img src={d.imageLeftDataUrl} alt="" className="w-1/2" />}
-                {d.imageRightDataUrl && <img src={d.imageRightDataUrl} alt="" className="w-1/2" />}
+              <p className="text-xs text-gray-500">Rodada {d.round}</p>
+              <p className="text-sm text-gray-400">"{d.themeText}"</p>
+              <p className="text-sm text-gray-300 mb-2">{d.playerNames[0]} + {d.playerNames[1]}</p>
+              <div className="flex gap-0.5 rounded-lg overflow-hidden mb-3 bg-white">
+                <div className="w-1/2">{d.imageLeftDataUrl && <img src={d.imageLeftDataUrl} alt="" className="w-full" />}</div>
+                <div className="w-1/2">{d.imageRightDataUrl && <img src={d.imageRightDataUrl} alt="" className="w-full" />}</div>
               </div>
-              <ShareCard drawing={d} playerNames={["Player A", "Player B"]} />
+              <ShareCard drawing={d} />
             </div>
           ))}
         </div>

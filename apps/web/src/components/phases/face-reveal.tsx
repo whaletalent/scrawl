@@ -91,7 +91,7 @@ export function FaceReveal({ drawings }: FaceRevealProps) {
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">Round {drawing.round} de {drawings.length}</p>
+        <p className="text-gray-400 text-sm">Rodada {currentIndex + 1} de {drawings.length}</p>
       </div>
 
       <CompositeCanvas drawing={drawing} />

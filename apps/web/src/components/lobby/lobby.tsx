@@ -1,5 +1,6 @@
 "use client";
 import type { FaceTemplateOption, Player, GameMode } from "@/types/game";
+import { FACE_TEMPLATE_LABELS } from "@/components/face-templates";
 
 interface LobbyProps {
   roomCode: string;
@@ -23,32 +24,35 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
   return (
     <div className="flex flex-col items-center gap-6 px-4 py-8">
       <div className="text-center">
-        <p className="text-gray-400 text-sm">Room Code</p>
+        <p className="text-gray-400 text-sm">Código da sala</p>
         <p className="text-4xl font-black tracking-widest text-purple-400">{roomCode}</p>
         <button
           onClick={() => navigator.clipboard.writeText(`${window.location.origin}/room/${roomCode}`)}
           className="text-sm text-gray-500 hover:text-gray-400 mt-1"
         >
-          Copy invite link
+          Copiar link de convite
         </button>
         {isSplitBody && (
           <span className="inline-block mt-2 text-xs bg-blue-600/30 text-blue-400 px-3 py-1 rounded-full">
-            Split Body Mode
+            Modo Split Body
           </span>
         )}
         {isFaceBuilder && (
           <div className="text-center">
             <span className="inline-block px-3 py-1 bg-green-600/20 text-green-400 rounded-full text-sm font-medium">
-              Face Builder Mode
+              Modo Face Builder
             </span>
+            {faceTemplate && (
+              <p className="text-xs text-gray-400 mt-1">Moldura: {FACE_TEMPLATE_LABELS[faceTemplate]}</p>
+            )}
           </div>
         )}
       </div>
 
       <div className="w-full max-w-sm">
         <p className="text-gray-400 text-sm mb-2">
-          Players ({players.length}/{maxPlayers})
-          {players.length < minPlayers && ` — need ${isTwoPlayerMode ? "exactly 2" : "at least 4"}`}
+          Jogadores ({players.length}/{maxPlayers})
+          {players.length < minPlayers && ` — ${isTwoPlayerMode ? "precisa de exatamente 2" : "mínimo de 4"}`}
         </p>
         <div className="flex flex-col gap-2">
           {players.map((p) => (
@@ -59,7 +63,7 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
               }`}
             >
               <span className="font-medium">
-                {p.nickname} {p.id === playerId && "(you)"}
+                {p.nickname} {p.id === playerId && "(você)"}
               </span>
               {p.isHost && (
                 <span className="text-xs bg-yellow-600/30 text-yellow-400 px-2 py-0.5 rounded-full">
@@ -82,11 +86,11 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
           }`}
         >
           {players.length < minPlayers
-            ? `Waiting for players (${players.length}/${minPlayers})...`
-            : isFaceBuilder ? "Start Face Builder" : isSplitBody ? "Start Split Body" : "Start Game"}
+            ? `Esperando jogadores (${players.length}/${minPlayers})...`
+            : isFaceBuilder ? "Começar Face Builder" : isSplitBody ? "Começar Split Body" : "Começar jogo"}
         </button>
       ) : (
-        <p className="text-gray-500">Waiting for the host to start...</p>
+        <p className="text-gray-500">Esperando o host começar...</p>
       )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}

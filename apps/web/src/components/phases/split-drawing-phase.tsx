@@ -44,7 +44,7 @@ export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, ends
   return (
     <div className="flex flex-col items-center gap-4 px-4 w-full">
       <div className="text-center">
-        <p className="text-sm text-gray-500">Round {round}/{totalRounds}</p>
+        <p className="text-sm text-gray-500">Rodada {round}/{totalRounds}</p>
         <h2 className="text-xl font-bold">Complete o personagem!</h2>
         <p className="text-gray-400 text-sm">
           Você desenha: <span className="text-blue-400 font-medium">{sideLabel}</span>

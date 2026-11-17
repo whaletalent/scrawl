@@ -42,7 +42,8 @@ export interface DrawingResult {
   themeText: string;
   imageLeftDataUrl: string;
   imageRightDataUrl: string;
-  combinedImageDataUrl: string;
+  round: number;
+  playerNames: [string, string];
   votes: { first: number; second: number; third: number };
 }
 
@@ -102,7 +103,8 @@ export type ServerMessage =
   | { type: "error"; message: string }
   | { type: "phase-change"; phase: Phase; phaseEndsAt: number }
   | { type: "player-joined"; player: Player }
-  | { type: "player-left"; playerId: string }
+  | { type: "player-left"; playerId: string; hostId?: string }
+  | { type: "notice"; message: string }
   | { type: "theme-submitted"; theme: Theme }
   | { type: "theme-votes-update"; themes: Theme[] }
   | { type: "drawing-submitted"; pairId: string; side: "left" | "right" }

@@ -16,7 +16,7 @@ import { FaceReveal } from "@/components/phases/face-reveal";
 type GameControllerProps = ReturnType<typeof useGameState>;
 
 export function GameController(props: GameControllerProps) {
-  const { roomState, playerId, pairAssignment, drawings, error } = props;
+  const { roomState, playerId, pairAssignment, drawings, error, notice } = props;
 
   if (!roomState || !playerId) {
     return (
@@ -27,7 +27,7 @@ export function GameController(props: GameControllerProps) {
             <a href="/" className="text-sm text-gray-400 hover:text-gray-300 underline">Voltar</a>
           </div>
         ) : (
-          <p className="text-gray-400">Connecting...</p>
+          <p className="text-gray-400">Conectando...</p>
         )}
       </div>
     );
@@ -42,10 +42,16 @@ export function GameController(props: GameControllerProps) {
       {phase !== "lobby" && phase !== "final-results" && phase !== "split-final" && phase !== "face-final" && (
         <div className="px-4 pt-4 flex items-center justify-between">
           <span className="text-sm text-gray-500">
-            Round {roomState.round}/{roomState.totalRounds}
+            Rodada {roomState.round}/{roomState.totalRounds}
           </span>
           <TimerBar endsAt={roomState.phaseEndsAt} />
         </div>
+      )}
+
+      {notice && (
+        <p className="mx-4 mt-4 px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-300 text-sm text-center">
+          {notice}
+        </p>
       )}
 
       <div className="flex-1 flex items-center justify-center">
@@ -86,6 +92,16 @@ export function GameController(props: GameControllerProps) {
             onSubmit={props.submitDrawing}
             endsAt={roomState.phaseEndsAt}
           />
+        )}
+
+        {phase === "drawing" && !pairAssignment && (
+          <div className="text-center px-4">
+            <h2 className="text-xl font-bold">Você é o jurado desta rodada</h2>
+            <p className="text-gray-400 text-sm mt-1">
+              O número de jogadores é ímpar, então alguém fica de fora a cada rodada.
+              Você vota em todos os desenhos quando o tempo acabar.
+            </p>
+          </div>
         )}
 
         {phase === "drawing-voting" && (

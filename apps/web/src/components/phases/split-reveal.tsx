@@ -11,7 +11,7 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (drawings.length === 0) {
-    return <p className="text-gray-400">No drawings to show.</p>;
+    return <p className="text-gray-400">Nenhum desenho para mostrar.</p>;
   }
 
   const drawing = drawings[currentIndex];
@@ -21,7 +21,7 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">Round {drawing.round} de {drawings.length}</p>
+        <p className="text-gray-400 text-sm">Rodada {currentIndex + 1} de {drawings.length}</p>
       </div>
 
       <div className="relative w-full bg-white rounded-xl overflow-hidden" style={{ aspectRatio: "800 / 600" }}>
@@ -34,7 +34,7 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
         {drawing.topImageDataUrl ? (
           <img
             src={drawing.topImageDataUrl}
-            alt="Top half"
+            alt="Metade de cima"
             className="absolute top-0 left-0 w-full"
             style={{ height: "50%", objectFit: "fill" }}
           />
@@ -54,7 +54,7 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
         {drawing.bottomImageDataUrl ? (
           <img
             src={drawing.bottomImageDataUrl}
-            alt="Bottom half"
+            alt="Metade de baixo"
             className="absolute bottom-0 left-0 w-full"
             style={{ height: "50%", objectFit: "fill" }}
           />

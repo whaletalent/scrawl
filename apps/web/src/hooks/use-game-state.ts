@@ -26,6 +26,7 @@ interface GameState {
   faceRound: number;
   faceDrawings: FaceDrawing[];
   error: string | null;
+  notice: string | null;
 }
 
 const initialState: GameState = {
@@ -44,6 +45,7 @@ const initialState: GameState = {
   faceRound: 0,
   faceDrawings: [],
   error: null,
+  notice: null,
 };
 
 export function useGameState() {
@@ -68,6 +70,9 @@ export function useGameState() {
         case "phase-change":
           setState((s) => ({
             ...s,
+            // A new party round starts: forget last round's pair so a player
+            // who sits this one out doesn't keep the stale assignment.
+            pairAssignment: data.phase === "theme-creation" ? null : s.pairAssignment,
             roomState: s.roomState
               ? { ...s.roomState, phase: data.phase, phaseEndsAt: data.phaseEndsAt }
               : null,
@@ -89,7 +94,9 @@ export function useGameState() {
             roomState: s.roomState
               ? {
                   ...s.roomState,
-                  players: s.roomState.players.filter((p: Player) => p.id !== data.playerId),
+                  players: s.roomState.players
+                    .filter((p: Player) => p.id !== data.playerId)
+                    .map((p: Player) => (data.hostId ? { ...p, isHost: p.id === data.hostId } : p)),
                 }
               : null,
           }));
@@ -152,6 +159,10 @@ export function useGameState() {
 
         case "error":
           setState((s) => ({ ...s, error: data.message }));
+          break;
+
+        case "notice":
+          setState((s) => ({ ...s, notice: data.message }));
           break;
 
         case "split-round-start":

@@ -55,7 +55,7 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
 
       {(gameMode === "split-body" || gameMode === "face-builder") && (
         <div className="flex items-center justify-between px-2">
-          <span className="text-sm text-gray-400">Rounds</span>
+          <span className="text-sm text-gray-400">Rodadas</span>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map((n) => (
               <button

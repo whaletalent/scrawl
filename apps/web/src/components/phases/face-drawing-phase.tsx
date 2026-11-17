@@ -38,7 +38,7 @@ export function FaceDrawingPhase({ round, totalRounds, regions, faceTemplate, sk
   return (
     <div className="flex flex-col items-center gap-4 px-4 w-full">
       <div className="text-center">
-        <p className="text-sm text-gray-500">Round {round}/{totalRounds}</p>
+        <p className="text-sm text-gray-500">Rodada {round}/{totalRounds}</p>
         <h2 className="text-xl font-bold">Monte o rosto!</h2>
         <div className="flex gap-2 justify-center mt-1">
           {regions.map((id) => {

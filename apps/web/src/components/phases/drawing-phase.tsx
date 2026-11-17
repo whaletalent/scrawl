@@ -37,9 +37,9 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt }: DrawingPhaseProp
   return (
     <div className="flex flex-col items-center gap-4 px-4 w-full">
       <div className="text-center">
-        <h2 className="text-xl font-bold">Draw: {theme}</h2>
+        <h2 className="text-xl font-bold">Desenhe: {theme}</h2>
         <p className="text-gray-400 text-sm">
-          You draw the {side} half. Your partner draws the other side!
+          Você desenha a metade {side === "left" ? "esquerda" : "direita"}. Seu parceiro desenha a outra!
         </p>
       </div>
 
@@ -50,10 +50,10 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt }: DrawingPhaseProp
           onClick={handleSubmit}
           className="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-lg transition-colors"
         >
-          Submit Drawing
+          Enviar Desenho
         </button>
       ) : (
-        <p className="text-green-400 font-medium">Drawing submitted! Waiting for others...</p>
+        <p className="text-green-400 font-medium">Desenho enviado! Esperando os outros...</p>
       )}
     </div>
   );
