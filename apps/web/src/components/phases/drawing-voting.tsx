@@ -1,19 +1,18 @@
 "use client";
 import { useState } from "react";
-import type { DrawingResult, Pair } from "@/types/game";
+import type { DrawingResult } from "@/types/game";
 
 interface DrawingVotingProps {
   drawings: DrawingResult[];
-  playerId: string;
-  pairs: Pair[];
+  /** The pair this player drew in — not votable. Null for the round's judge. */
+  ownPairId: string | null;
   onVote: (pairId: string, rank: 1 | 2 | 3) => void;
 }
 
-export function DrawingVoting({ drawings, playerId, pairs, onVote }: DrawingVotingProps) {
+export function DrawingVoting({ drawings, ownPairId, onVote }: DrawingVotingProps) {
   const [votes, setVotes] = useState<Record<number, string>>({});
 
-  const ownPair = pairs.find((p) => p.playerA === playerId || p.playerB === playerId);
-  const voteable = drawings.filter((d) => d.pairId !== ownPair?.id);
+  const voteable = drawings.filter((d) => d.pairId !== ownPairId);
 
   function handleVote(pairId: string, rank: 1 | 2 | 3) {
     const newVotes = { ...votes };

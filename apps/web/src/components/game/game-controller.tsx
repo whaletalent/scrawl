@@ -115,8 +115,7 @@ export function GameController(props: GameControllerProps) {
         {phase === "drawing-voting" && (
           <DrawingVoting
             drawings={drawings}
-            playerId={playerId}
-            pairs={roomState.pairs}
+            ownPairId={pairAssignment?.pairId ?? null}
             onVote={props.voteDrawing}
           />
         )}
