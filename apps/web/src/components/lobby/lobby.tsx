@@ -1,5 +1,5 @@
 "use client";
-import type { FaceTemplateId, Player, GameMode } from "@/types/game";
+import type { FaceTemplateOption, Player, GameMode } from "@/types/game";
 
 interface LobbyProps {
   roomCode: string;
@@ -7,7 +7,7 @@ interface LobbyProps {
   playerId: string;
   isHost: boolean;
   gameMode: GameMode;
-  faceTemplate?: FaceTemplateId;
+  faceTemplate?: FaceTemplateOption;
   onStart: () => void;
   error: string | null;
 }

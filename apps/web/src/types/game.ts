@@ -56,6 +56,7 @@ export interface SplitDrawing {
 }
 
 export type FaceTemplateId = "masculine" | "feminine" | "monster" | "alien-face" | "robot-face";
+export type FaceTemplateOption = FaceTemplateId | "random";
 export type FaceRegionId = "hair" | "ears" | "eyes" | "nose" | "mouth" | "shoulders";
 
 export interface FaceDrawing {
@@ -81,13 +82,13 @@ export interface RoomState {
   pairs: Pair[];
   drawings: DrawingResult[];
   phaseEndsAt: number;
-  faceTemplate: FaceTemplateId;
+  faceTemplate: FaceTemplateOption;
   skinTone: string;
 }
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId; skinTone?: string }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateOption; skinTone?: string }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
@@ -112,6 +113,6 @@ export type ServerMessage =
   | { type: "split-round-start"; round: number; side: "top" | "bottom"; silhouetteId: SilhouetteId; totalRounds: number }
   | { type: "split-round-end"; round: number }
   | { type: "split-final-results"; drawings: SplitDrawing[] }
-  | { type: "face-round-start"; round: number; regions: FaceRegionId[]; faceTemplate: FaceTemplateId; totalRounds: number }
+  | { type: "face-round-start"; round: number; regions: FaceRegionId[]; faceTemplate: FaceTemplateId; skinTone: string; totalRounds: number }
   | { type: "face-round-end"; round: number }
   | { type: "face-final-results"; drawings: FaceDrawing[] };

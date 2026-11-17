@@ -1,4 +1,4 @@
-import type { FaceTemplateId } from "@/types/game";
+import type { FaceTemplateId, FaceTemplateOption } from "@/types/game";
 import { MasculineTemplate } from "./masculine";
 import { FeminineTemplate } from "./feminine";
 import { MonsterTemplate } from "./monster";
@@ -13,7 +13,8 @@ const FACE_TEMPLATES: Record<FaceTemplateId, React.FC<{ className?: string; fill
   "robot-face": RobotFaceTemplate,
 };
 
-export const FACE_TEMPLATE_LABELS: Record<FaceTemplateId, string> = {
+export const FACE_TEMPLATE_LABELS: Record<FaceTemplateOption, string> = {
+  random: "Aleatório",
   masculine: "Masculino",
   feminine: "Feminino",
   monster: "Monstro",

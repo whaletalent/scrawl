@@ -1,5 +1,7 @@
-import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId, FaceDrawing } from "./types.js";
-import { SILHOUETTE_IDS, FACE_REGION_IDS } from "./types.js";
+import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId, FaceDrawing, FaceTemplateId } from "./types.js";
+import { SILHOUETTE_IDS, FACE_REGION_IDS, FACE_TEMPLATE_IDS } from "./types.js";
+
+const SKIN_TONE_COLORS = ["#FDDCB5", "#E8B88A", "#C68642", "#8D5524", "#5C3317", "#6B8E23", "#4682B4"];
 import { broadcast, sendTo } from "./room-manager.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
@@ -89,10 +91,18 @@ function startFaceRound(room: Room) {
     ...player2Regions.map((regionId) => ({ regionId, playerId: player2Id })),
   ];
 
+  const isRandom = room.faceTemplate === "random";
+  const roundTemplate: FaceTemplateId = isRandom
+    ? FACE_TEMPLATE_IDS[Math.floor(Math.random() * FACE_TEMPLATE_IDS.length)]
+    : room.faceTemplate as FaceTemplateId;
+  const roundSkinTone = isRandom
+    ? SKIN_TONE_COLORS[Math.floor(Math.random() * SKIN_TONE_COLORS.length)]
+    : room.skinTone;
+
   const drawing: FaceDrawing = {
     round: room.round,
-    faceTemplate: room.faceTemplate,
-    skinTone: room.skinTone,
+    faceTemplate: roundTemplate,
+    skinTone: roundSkinTone,
     assignments,
     player1Id,
     player2Id,
@@ -105,14 +115,16 @@ function startFaceRound(room: Room) {
     type: "face-round-start",
     round: room.round,
     regions: player1Regions,
-    faceTemplate: room.faceTemplate,
+    faceTemplate: roundTemplate,
+    skinTone: roundSkinTone,
     totalRounds: room.totalRounds,
   });
   sendTo(room, player2Id, {
     type: "face-round-start",
     round: room.round,
     regions: player2Regions,
-    faceTemplate: room.faceTemplate,
+    faceTemplate: roundTemplate,
+    skinTone: roundSkinTone,
     totalRounds: room.totalRounds,
   });
 

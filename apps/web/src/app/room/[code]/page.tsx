@@ -18,7 +18,7 @@ export default function RoomPage() {
       const gameMode = (sessionStorage.getItem("scrawl-gameMode") as "party" | "split-body" | "face-builder") || "party";
       const totalRounds = parseInt(sessionStorage.getItem("scrawl-totalRounds") || "3", 10);
       const turnDuration = parseInt(sessionStorage.getItem("scrawl-turnDuration") || "90", 10);
-      const faceTemplate = (sessionStorage.getItem("scrawl-faceTemplate") || "masculine") as import("@/types/game").FaceTemplateId;
+      const faceTemplate = (sessionStorage.getItem("scrawl-faceTemplate") || "random") as import("@/types/game").FaceTemplateOption;
       const skinTone = sessionStorage.getItem("scrawl-skinTone") || "#FDDCB5";
       gameState.createRoom(nickname, gameMode, totalRounds, turnDuration, faceTemplate, skinTone);
     } else {

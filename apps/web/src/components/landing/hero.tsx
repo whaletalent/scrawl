@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
-import type { FaceTemplateId, GameMode } from "@/types/game";
+import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { ModeSelector } from "@/components/lobby/mode-selector";
 
 export function Hero() {
@@ -14,7 +14,7 @@ export function Hero() {
   const [gameMode, setGameMode] = useState<GameMode>("party");
   const [totalRounds, setTotalRounds] = useState(3);
   const [turnDuration, setTurnDuration] = useState(90);
-  const [faceTemplate, setFaceTemplate] = useState<FaceTemplateId>("masculine");
+  const [faceTemplate, setFaceTemplate] = useState<FaceTemplateOption>("random");
   const [skinTone, setSkinTone] = useState("#FDDCB5");
 
   function handleCreate() {

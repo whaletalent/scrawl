@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage } from "@/lib/ws-client";
-import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode, FaceDrawing, FaceRegionId, FaceTemplateId } from "@/types/game";
+import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode, FaceDrawing, FaceRegionId, FaceTemplateId, FaceTemplateOption } from "@/types/game";
 
 interface PairAssignment {
   pairId: string;
@@ -22,6 +22,7 @@ interface GameState {
   splitDrawings: SplitDrawing[];
   faceRegions: FaceRegionId[];
   faceTemplate: FaceTemplateId | null;
+  faceSkinTone: string | null;
   faceRound: number;
   faceDrawings: FaceDrawing[];
   error: string | null;
@@ -39,6 +40,7 @@ const initialState: GameState = {
   splitDrawings: [],
   faceRegions: [],
   faceTemplate: null,
+  faceSkinTone: null,
   faceRound: 0,
   faceDrawings: [],
   error: null,
@@ -182,6 +184,7 @@ export function useGameState() {
             faceRound: data.round,
             faceRegions: data.regions,
             faceTemplate: data.faceTemplate,
+            faceSkinTone: data.skinTone,
             error: null,
           }));
           break;
@@ -208,7 +211,7 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateId, skinTone?: string) => {
+  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string) => {
     send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration, faceTemplate, skinTone });
   }, []);
 

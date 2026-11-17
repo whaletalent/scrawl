@@ -68,6 +68,7 @@ export interface SplitDrawing {
 
 export const FACE_TEMPLATE_IDS = ["masculine", "feminine", "monster", "alien-face", "robot-face"] as const;
 export type FaceTemplateId = (typeof FACE_TEMPLATE_IDS)[number];
+export type FaceTemplateOption = FaceTemplateId | "random";
 
 export const FACE_REGION_IDS = ["hair", "ears", "eyes", "nose", "mouth", "shoulders"] as const;
 export type FaceRegionId = (typeof FACE_REGION_IDS)[number];
@@ -91,7 +92,7 @@ export interface Room {
   gameMode: GameMode;
   turnDuration: number;
   splitDrawings: SplitDrawing[];
-  faceTemplate: FaceTemplateId;
+  faceTemplate: FaceTemplateOption;
   skinTone: string;
   faceDrawings: FaceDrawing[];
   players: Map<string, Player>;
@@ -105,7 +106,7 @@ export interface Room {
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateId; skinTone?: string }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateOption; skinTone?: string }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }

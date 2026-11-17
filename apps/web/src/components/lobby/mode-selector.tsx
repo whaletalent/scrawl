@@ -1,17 +1,17 @@
 "use client";
-import type { FaceTemplateId, GameMode } from "@/types/game";
+import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { FACE_TEMPLATE_LABELS, SKIN_TONES } from "@/components/face-templates";
 
 interface ModeSelectorProps {
   gameMode: GameMode;
   totalRounds: number;
   turnDuration: number;
-  faceTemplate: FaceTemplateId;
+  faceTemplate: FaceTemplateOption;
   skinTone: string;
   onModeChange: (mode: GameMode) => void;
   onRoundsChange: (rounds: number) => void;
   onDurationChange: (seconds: number) => void;
-  onFaceTemplateChange: (template: FaceTemplateId) => void;
+  onFaceTemplateChange: (template: FaceTemplateOption) => void;
   onSkinToneChange: (tone: string) => void;
 }
 
@@ -78,7 +78,7 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
         <div className="flex items-center justify-between px-2">
           <span className="text-sm text-gray-400">Moldura</span>
           <div className="flex gap-1">
-            {(Object.entries(FACE_TEMPLATE_LABELS) as [FaceTemplateId, string][]).map(([id, label]) => (
+            {(Object.entries(FACE_TEMPLATE_LABELS) as [FaceTemplateOption, string][]).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => onFaceTemplateChange(id)}
@@ -95,7 +95,7 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
         </div>
       )}
 
-      {gameMode === "face-builder" && (
+      {gameMode === "face-builder" && faceTemplate !== "random" && (
         <div className="flex items-center justify-between px-2">
           <span className="text-sm text-gray-400">Tom de pele</span>
           <div className="flex gap-1.5">
