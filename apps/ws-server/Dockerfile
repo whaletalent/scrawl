@@ -1,7 +1,7 @@
 # Build from the repository root (the lockfile lives there):
 #   docker build -f apps/ws-server/Dockerfile -t scrawl-ws .
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/ws-server/package.json apps/ws-server/
@@ -10,7 +10,7 @@ RUN npm ci --workspace=@scrawl/ws-server
 COPY apps/ws-server apps/ws-server
 RUN npm run build --workspace=@scrawl/ws-server
 
-FROM node:24-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 ENV PORT=8080
 WORKDIR /app
