@@ -64,17 +64,22 @@ const SHOULDERS_RECT = { x: 120, y: 520, width: 560, height: 70 };
 
 function isInsideEllipse(px: number, py: number): boolean {
   const { cx, cy, rx, ry } = FACE_ELLIPSE;
-  return ((px - cx) ** 2) / (rx ** 2) + ((py - cy) ** 2) / (ry ** 2) <= 1;
+  return (px - cx) ** 2 / rx ** 2 + (py - cy) ** 2 / ry ** 2 <= 1;
 }
 
 function isInsideRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.width && py >= r.y && py <= r.y + r.height;
 }
 
-export function isPointInRegion(px: number, py: number, region: FaceRegionDef): boolean {
+export function isPointInRegion(
+  px: number,
+  py: number,
+  region: FaceRegionDef,
+): boolean {
   if (region.isHairRegion) {
     if (isInsideRect(px, py, SHOULDERS_RECT)) return false;
-    if (!isInsideEllipse(px, py)) return px >= 0 && px <= 800 && py >= 0 && py <= 600;
+    if (!isInsideEllipse(px, py))
+      return px >= 0 && px <= 800 && py >= 0 && py <= 600;
     return py < 200;
   }
   return region.rects.some((r) => isInsideRect(px, py, r));

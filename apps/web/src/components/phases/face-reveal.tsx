@@ -42,11 +42,14 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
       const Template = getFaceTemplate(drawing.faceTemplate);
       if (Template) {
         let svgMarkup = renderToStaticMarkup(
-          <Template className="" fillColor={drawing.skinTone} />
+          <Template className="" fillColor={drawing.skinTone} />,
         );
         // Add xmlns if missing — required for SVG loaded as image via data URL
         if (!svgMarkup.includes("xmlns")) {
-          svgMarkup = svgMarkup.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
+          svgMarkup = svgMarkup.replace(
+            "<svg",
+            '<svg xmlns="http://www.w3.org/2000/svg"',
+          );
         }
         try {
           const templateImg = await loadImage(svgToDataUrl(svgMarkup));
@@ -57,7 +60,10 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
       }
 
       // 3. Draw player images on top (they have transparent backgrounds)
-      for (const src of [drawing.player1ImageDataUrl, drawing.player2ImageDataUrl]) {
+      for (const src of [
+        drawing.player1ImageDataUrl,
+        drawing.player2ImageDataUrl,
+      ]) {
         if (!src) continue;
         try {
           const img = await loadImage(src);
@@ -72,7 +78,10 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
   }, [drawing]);
 
   return (
-    <div className="relative w-full bg-white rounded-xl overflow-hidden" style={{ aspectRatio: "800 / 600" }}>
+    <div
+      className="relative w-full bg-white rounded-xl overflow-hidden"
+      style={{ aspectRatio: "800 / 600" }}
+    >
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
@@ -91,7 +100,9 @@ export function FaceReveal({ drawings }: FaceRevealProps) {
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">Rodada {currentIndex + 1} de {drawings.length}</p>
+        <p className="text-gray-400 text-sm">
+          Rodada {currentIndex + 1} de {drawings.length}
+        </p>
       </div>
 
       <CompositeCanvas drawing={drawing} />
@@ -121,7 +132,9 @@ export function FaceReveal({ drawings }: FaceRevealProps) {
             ))}
           </div>
           <button
-            onClick={() => setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))}
+            onClick={() =>
+              setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))
+            }
             disabled={currentIndex === drawings.length - 1}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               currentIndex === drawings.length - 1

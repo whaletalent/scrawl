@@ -21,12 +21,20 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
       <div className="text-center">
         <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">Rodada {currentIndex + 1} de {drawings.length}</p>
+        <p className="text-gray-400 text-sm">
+          Rodada {currentIndex + 1} de {drawings.length}
+        </p>
       </div>
 
-      <div className="relative w-full bg-white rounded-xl overflow-hidden" style={{ aspectRatio: "800 / 600" }}>
+      <div
+        className="relative w-full bg-white rounded-xl overflow-hidden"
+        style={{ aspectRatio: "800 / 600" }}
+      >
         {/* Silhouette ghost behind */}
-        <div className="absolute inset-0 pointer-events-none" style={{ opacity: 0.04 }}>
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ opacity: 0.04 }}
+        >
           <Silhouette className="w-full h-full" />
         </div>
 
@@ -39,7 +47,10 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
             style={{ height: "50%", objectFit: "fill" }}
           />
         ) : (
-          <div className="absolute top-0 left-0 w-full flex items-center justify-center bg-gray-100" style={{ height: "50%" }}>
+          <div
+            className="absolute top-0 left-0 w-full flex items-center justify-center bg-gray-100"
+            style={{ height: "50%" }}
+          >
             <span className="text-gray-400 text-sm">Não enviado</span>
           </div>
         )}
@@ -59,7 +70,10 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
             style={{ height: "50%", objectFit: "fill" }}
           />
         ) : (
-          <div className="absolute bottom-0 left-0 w-full flex items-center justify-center bg-gray-100" style={{ height: "50%" }}>
+          <div
+            className="absolute bottom-0 left-0 w-full flex items-center justify-center bg-gray-100"
+            style={{ height: "50%" }}
+          >
             <span className="text-gray-400 text-sm">Não enviado</span>
           </div>
         )}
@@ -93,7 +107,9 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
           </div>
 
           <button
-            onClick={() => setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))}
+            onClick={() =>
+              setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))
+            }
             disabled={currentIndex === drawings.length - 1}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               currentIndex === drawings.length - 1

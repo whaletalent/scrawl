@@ -11,7 +11,9 @@ export function TimerBar({ endsAt }: TimerBarProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className={`text-lg font-bold tabular-nums ${isUrgent ? "text-red-400" : "text-white"}`}>
+      <span
+        className={`text-lg font-bold tabular-nums ${isUrgent ? "text-red-400" : "text-white"}`}
+      >
         {secondsLeft}s
       </span>
     </div>

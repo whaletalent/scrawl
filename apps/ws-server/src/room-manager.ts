@@ -15,13 +15,22 @@ function generateCode(): string {
 
 const GAME_MODES: GameMode[] = ["party", "split-body", "face-builder"];
 
-function clampInt(value: unknown, fallback: number, min: number, max: number): number {
-  const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
+function clampInt(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const n =
+    typeof value === "number" && Number.isFinite(value)
+      ? Math.round(value)
+      : fallback;
   return Math.min(Math.max(n, min), max);
 }
 
 export function sanitizeNickname(nickname: unknown): string {
-  const trimmed = typeof nickname === "string" ? nickname.trim().slice(0, 16) : "";
+  const trimmed =
+    typeof nickname === "string" ? nickname.trim().slice(0, 16) : "";
   return trimmed || "Player";
 }
 
@@ -38,7 +47,15 @@ function newPlayer(id: string, nickname: string, ws: WebSocket): Player {
   };
 }
 
-export function createRoom(nickname: string, ws: WebSocket, requestedMode: GameMode = "party", totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string): Room {
+export function createRoom(
+  nickname: string,
+  ws: WebSocket,
+  requestedMode: GameMode = "party",
+  totalRounds?: number,
+  turnDuration?: number,
+  faceTemplate?: FaceTemplateOption,
+  skinTone?: string,
+): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
   const host: Player = { ...newPlayer(playerId, nickname, ws), isHost: true };
@@ -49,11 +66,14 @@ export function createRoom(nickname: string, ws: WebSocket, requestedMode: GameM
   const clampedTurnDuration = clampInt(turnDuration, 90, 15, 300);
 
   const validatedTemplate: FaceTemplateOption =
-    faceTemplate === "random" || FACE_TEMPLATE_IDS.includes(faceTemplate as never)
+    faceTemplate === "random" ||
+    FACE_TEMPLATE_IDS.includes(faceTemplate as never)
       ? (faceTemplate as FaceTemplateOption)
       : "random";
   const validatedSkinTone =
-    typeof skinTone === "string" && /^#[0-9a-fA-F]{6}$/.test(skinTone) ? skinTone : "#FDDCB5";
+    typeof skinTone === "string" && /^#[0-9a-fA-F]{6}$/.test(skinTone)
+      ? skinTone
+      : "#FDDCB5";
 
   const room: Room = {
     code,
@@ -81,7 +101,11 @@ export function createRoom(nickname: string, ws: WebSocket, requestedMode: GameM
   return room;
 }
 
-export function joinRoom(code: string, nickname: string, ws: WebSocket): { room: Room; playerId: string } | null {
+export function joinRoom(
+  code: string,
+  nickname: string,
+  ws: WebSocket,
+): { room: Room; playerId: string } | null {
   const room = rooms.get(String(code).trim().toUpperCase());
   if (!room) return null;
   if (room.phase !== "lobby") return null;
@@ -123,7 +147,13 @@ export function getRoom(code: string): Room | undefined {
 }
 
 /** What clients are allowed to know about a player (no socket, no token). */
-export function publicPlayer({ id, nickname, score, isHost, connected }: Player) {
+export function publicPlayer({
+  id,
+  nickname,
+  score,
+  isHost,
+  connected,
+}: Player) {
   return { id, nickname, score, isHost, connected };
 }
 

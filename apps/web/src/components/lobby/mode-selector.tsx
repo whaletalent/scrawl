@@ -17,7 +17,18 @@ interface ModeSelectorProps {
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 180];
 
-export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate, skinTone, onModeChange, onRoundsChange, onDurationChange, onFaceTemplateChange, onSkinToneChange }: ModeSelectorProps) {
+export function ModeSelector({
+  gameMode,
+  totalRounds,
+  turnDuration,
+  faceTemplate,
+  skinTone,
+  onModeChange,
+  onRoundsChange,
+  onDurationChange,
+  onFaceTemplateChange,
+  onSkinToneChange,
+}: ModeSelectorProps) {
   return (
     <div className="flex flex-col gap-3 w-full">
       <div className="flex gap-2">
@@ -78,7 +89,12 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
         <div className="flex items-center justify-between px-2">
           <span className="text-sm text-gray-400">Moldura</span>
           <div className="flex gap-1">
-            {(Object.entries(FACE_TEMPLATE_LABELS) as [FaceTemplateOption, string][]).map(([id, label]) => (
+            {(
+              Object.entries(FACE_TEMPLATE_LABELS) as [
+                FaceTemplateOption,
+                string,
+              ][]
+            ).map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => onFaceTemplateChange(id)}
@@ -105,7 +121,9 @@ export function ModeSelector({ gameMode, totalRounds, turnDuration, faceTemplate
                 onClick={() => onSkinToneChange(tone.color)}
                 title={tone.label}
                 className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                  skinTone === tone.color ? "border-white scale-110" : "border-gray-600"
+                  skinTone === tone.color
+                    ? "border-white scale-110"
+                    : "border-gray-600"
                 }`}
                 style={{ backgroundColor: tone.color }}
               />

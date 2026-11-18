@@ -8,7 +8,10 @@ interface ShareCardProps {
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
-    if (!src) { resolve(null); return; }
+    if (!src) {
+      resolve(null);
+      return;
+    }
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
@@ -55,9 +58,15 @@ async function renderCard(drawing: DrawingResult): Promise<string> {
 
   ctx.fillStyle = "#e5e7eb";
   ctx.font = "28px sans-serif";
-  ctx.fillText(`${drawing.playerNames[0]} + ${drawing.playerNames[1]}`, 540, 945, 1000);
+  ctx.fillText(
+    `${drawing.playerNames[0]} + ${drawing.playerNames[1]}`,
+    540,
+    945,
+    1000,
+  );
 
-  const score = drawing.votes.first * 3 + drawing.votes.second * 2 + drawing.votes.third;
+  const score =
+    drawing.votes.first * 3 + drawing.votes.second * 2 + drawing.votes.third;
   ctx.fillStyle = "#a855f7";
   ctx.font = "bold 36px sans-serif";
   ctx.fillText(`${score} pts`, 540, 995);

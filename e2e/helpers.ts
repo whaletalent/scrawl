@@ -17,7 +17,12 @@ const CREATE_BUTTON: Record<Mode, string> = {
  */
 export async function createRoom(
   page: Page,
-  { nickname = "Ana", mode, rounds, turnSeconds }: { nickname?: string; mode: Mode; rounds?: number; turnSeconds?: number }
+  {
+    nickname = "Ana",
+    mode,
+    rounds,
+    turnSeconds,
+  }: { nickname?: string; mode: Mode; rounds?: number; turnSeconds?: number },
 ): Promise<string> {
   await page.goto("/");
   await page.getByPlaceholder("Seu apelido").fill(nickname);
@@ -26,33 +31,41 @@ export async function createRoom(
     // The round picker only shows for 2-player modes, but the choice sticks
     // when switching back to Party.
     await page.getByRole("button", { name: "Split Body (2)" }).click();
-    await page.getByRole("button", { name: String(rounds), exact: true }).click();
+    await page
+      .getByRole("button", { name: String(rounds), exact: true })
+      .click();
   }
   await page.getByRole("button", { name: mode }).click();
-  if (turnSeconds) await page.getByRole("combobox").selectOption(String(turnSeconds));
+  if (turnSeconds)
+    await page.getByRole("combobox").selectOption(String(turnSeconds));
   await page.getByRole("button", { name: CREATE_BUTTON[mode] }).click();
 
-  await expect(page).toHaveURL(/\/room\/[A-Z0-9]{5}$/);
-  return page.url().split("/").pop()!;
+  await expect(page).toHaveURL(/\/room\/\?code=[A-Z0-9]{5}$/);
+  return new URL(page.url()).searchParams.get("code")!;
 }
 
 /** Drags the mouse across the canvas; points are fractions of its width/height. */
 export async function draw(page: Page, points: [number, number][]) {
   const box = (await page.locator("canvas").boundingBox())!;
-  const at = ([fx, fy]: [number, number]) => [box.x + fx * box.width, box.y + fy * box.height] as const;
+  const at = ([fx, fy]: [number, number]) =>
+    [box.x + fx * box.width, box.y + fy * box.height] as const;
   await page.mouse.move(...at(points[0]));
   await page.mouse.down();
-  for (const point of points.slice(1)) await page.mouse.move(...at(point), { steps: 4 });
+  for (const point of points.slice(1))
+    await page.mouse.move(...at(point), { steps: 4 });
   await page.mouse.up();
 }
 
 /** Whether anything other than white was painted on the canvas. */
 export function canvasHasInk(page: Page): Promise<boolean> {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
-    const { data } = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height);
+    const { data } = canvas
+      .getContext("2d")!
+      .getImageData(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < data.length; i += 4) {
       const opaque = data[i + 3] > 0;
-      const white = data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255;
+      const white =
+        data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255;
       if (opaque && !white) return true;
     }
     return false;
@@ -77,8 +90,11 @@ export function autoplayParty(b: TestClient) {
       b.send({ type: "submit-drawing", imageDataUrl: IMG });
     }
     if (m.type === "drawings-ready") {
-      const other = m.drawings.find((d: { pairId: string }) => d.pairId !== pairId);
-      if (other) b.send({ type: "vote-drawing", pairId: other.pairId, rank: 1 });
+      const other = m.drawings.find(
+        (d: { pairId: string }) => d.pairId !== pairId,
+      );
+      if (other)
+        b.send({ type: "vote-drawing", pairId: other.pairId, rank: 1 });
     }
   });
 }

@@ -5,7 +5,10 @@ import { MonsterTemplate } from "./monster";
 import { AlienFaceTemplate } from "./alien-face";
 import { RobotFaceTemplate } from "./robot-face";
 
-const FACE_TEMPLATES: Record<FaceTemplateId, React.FC<{ className?: string; fillColor?: string }>> = {
+const FACE_TEMPLATES: Record<
+  FaceTemplateId,
+  React.FC<{ className?: string; fillColor?: string }>
+> = {
   masculine: MasculineTemplate,
   feminine: FeminineTemplate,
   monster: MonsterTemplate,

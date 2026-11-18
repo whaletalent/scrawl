@@ -1,7 +1,19 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage, onOpen } from "@/lib/ws-client";
-import type { RoomState, Phase, Player, Theme, DrawingResult, SplitDrawing, SilhouetteId, GameMode, FaceDrawing, FaceRegionId, FaceTemplateId, FaceTemplateOption } from "@/types/game";
+import type {
+  RoomState,
+  Phase,
+  Player,
+  DrawingResult,
+  SplitDrawing,
+  SilhouetteId,
+  GameMode,
+  FaceDrawing,
+  FaceRegionId,
+  FaceTemplateId,
+  FaceTemplateOption,
+} from "@/types/game";
 
 interface PairAssignment {
   pairId: string;
@@ -86,19 +98,26 @@ export function useGameState() {
     // the server, so reclaim our slot every time it (re)opens mid-session.
     const unsubscribeOpen = onOpen(() => {
       const session = sessionRef.current;
-      if (session) send({ type: "rejoin", roomCode: session.code, token: session.token });
+      if (session)
+        send({ type: "rejoin", roomCode: session.code, token: session.token });
     });
 
     connect(wsUrl);
     setState((s) => ({ ...s, connected: true }));
 
-    const unsubscribe = onMessage((data: any) => {
+    const unsubscribe = onMessage((data) => {
       switch (data.type) {
         case "room-state":
           if (data.sessionToken) {
-            sessionRef.current = { code: data.state.code, token: data.sessionToken };
+            sessionRef.current = {
+              code: data.state.code,
+              token: data.sessionToken,
+            };
             try {
-              sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionRef.current));
+              sessionStorage.setItem(
+                SESSION_KEY,
+                JSON.stringify(sessionRef.current),
+              );
             } catch {
               // storage unavailable: reconnect still works, reload won't
             }
@@ -125,7 +144,11 @@ export function useGameState() {
             rejoinFailed: true,
             // Dropped mid-session and the grace period ran out: nothing to go back to.
             ...(wasPlaying
-              ? { roomState: null, sessionLost: true, error: "Você foi desconectado e sua vaga na sala expirou." }
+              ? {
+                  roomState: null,
+                  sessionLost: true,
+                  error: "Você foi desconectado e sua vaga na sala expirou.",
+                }
               : {}),
           }));
           break;
@@ -156,7 +179,9 @@ export function useGameState() {
               ? {
                   ...s.roomState,
                   players: s.roomState.players.map((p: Player) =>
-                    p.id === data.playerId ? { ...p, connected: data.connected } : p
+                    p.id === data.playerId
+                      ? { ...p, connected: data.connected }
+                      : p,
                   ),
                 }
               : null,
@@ -168,9 +193,15 @@ export function useGameState() {
             ...s,
             // A new party round starts: forget last round's pair so a player
             // who sits this one out doesn't keep the stale assignment.
-            pairAssignment: data.phase === "theme-creation" ? null : s.pairAssignment,
+            pairAssignment:
+              data.phase === "theme-creation" ? null : s.pairAssignment,
             roomState: s.roomState
-              ? { ...s.roomState, phase: data.phase, phaseEndsAt: data.phaseEndsAt, round: data.round ?? s.roomState.round }
+              ? {
+                  ...s.roomState,
+                  phase: data.phase,
+                  phaseEndsAt: data.phaseEndsAt,
+                  round: data.round ?? s.roomState.round,
+                }
               : null,
           }));
           break;
@@ -179,7 +210,10 @@ export function useGameState() {
           setState((s) => ({
             ...s,
             roomState: s.roomState
-              ? { ...s.roomState, players: [...s.roomState.players, data.player] }
+              ? {
+                  ...s.roomState,
+                  players: [...s.roomState.players, data.player],
+                }
               : null,
           }));
           break;
@@ -192,7 +226,9 @@ export function useGameState() {
                   ...s.roomState,
                   players: s.roomState.players
                     .filter((p: Player) => p.id !== data.playerId)
-                    .map((p: Player) => (data.hostId ? { ...p, isHost: p.id === data.hostId } : p)),
+                    .map((p: Player) =>
+                      data.hostId ? { ...p, isHost: p.id === data.hostId } : p,
+                    ),
                 }
               : null,
           }));
@@ -249,7 +285,11 @@ export function useGameState() {
             ...s,
             drawings: data.drawings,
             roomState: s.roomState
-              ? { ...s.roomState, players: data.players, phase: "final-results" as Phase }
+              ? {
+                  ...s.roomState,
+                  players: data.players,
+                  phase: "final-results" as Phase,
+                }
               : null,
           }));
           break;
@@ -322,9 +362,27 @@ export function useGameState() {
     };
   }, []);
 
-  const createRoom = useCallback((nickname: string, gameMode?: GameMode, totalRounds?: number, turnDuration?: number, faceTemplate?: FaceTemplateOption, skinTone?: string) => {
-    send({ type: "create-room", nickname, gameMode, totalRounds, turnDuration, faceTemplate, skinTone });
-  }, []);
+  const createRoom = useCallback(
+    (
+      nickname: string,
+      gameMode?: GameMode,
+      totalRounds?: number,
+      turnDuration?: number,
+      faceTemplate?: FaceTemplateOption,
+      skinTone?: string,
+    ) => {
+      send({
+        type: "create-room",
+        nickname,
+        gameMode,
+        totalRounds,
+        turnDuration,
+        faceTemplate,
+        skinTone,
+      });
+    },
+    [],
+  );
 
   const joinRoom = useCallback((roomCode: string, nickname: string) => {
     send({ type: "join-room", roomCode, nickname });

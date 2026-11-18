@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Scrawl — a realtime multiplayer party drawing game. Two-workspace npm monorepo:
 
-- `apps/web` — Next.js 15 (App Router) + React 19 + Tailwind v4. Port **3000**.
+- `apps/web` — Next.js 15 (App Router) + React 19 + Tailwind v4, built as a **static export** (`output: "export"`) and deployed to GitHub Pages. Port **3000** in dev.
 - `apps/ws-server` — standalone WebSocket server (`ws`) run with `tsx`. Port **8080**.
 
 The WebSocket server is authoritative for game state; all rooms live in memory (`rooms: Map<string, Room>` in `apps/ws-server/src/room-manager.ts`). A restart drops every active game — there is no persistence layer. (The original MVP plan called for Firebase; it was never wired in and was removed. `.env.local` may still hold unused `NEXT_PUBLIC_FIREBASE_*` vars.)
@@ -19,14 +19,17 @@ Run from repo root (npm workspaces):
 
 ```bash
 npm run dev              # Start web (3000) + ws-server (8080) in parallel
-npm run build            # Build the web app (Next.js)
+npm run build            # Static export of the web app -> apps/web/out/
+npm run build:server     # tsc -> apps/ws-server/dist/
+npm run lint             # ESLint (flat config at the root, covers everything)
+npm run format           # Prettier --write; CI runs format:check
 
 # Per workspace
 npm run dev   --workspace=@scrawl/web
 npm run dev   --workspace=@scrawl/ws-server   # tsx watch
-npm run lint  --workspace=@scrawl/web         # only web has lint
-npm run build --workspace=@scrawl/ws-server   # tsc -> dist/
 ```
+
+Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs lint, format:check, typecheck, server tests, both builds and the Playwright suite — run those before pushing.
 
 ```bash
 npm test                 # server suite, ~10s (node:test via tsx)
@@ -40,8 +43,6 @@ cd apps/ws-server && npx tsx --test --test-name-pattern="drawing votes" test/*.t
 npx playwright test e2e/party.spec.ts
 npx playwright test -g "invite link"
 ```
-
-There is no root-level lint.
 
 ### Testing
 
@@ -88,13 +89,17 @@ Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied 
 Canvases are a fixed **800×600 logical coordinate space**; pointer events are rescaled in `getPoint`. Two hooks:
 
 - `apps/web/src/hooks/use-canvas.ts` — general drawing (brush / eraser / fill / line / circle / rectangle), clipped to a `side` region (`left` / `right` / `top` / `bottom` / `full`). Used by party and split-body modes.
-- `apps/web/src/hooks/use-face-canvas.ts` — face-builder variant. Draws are clipped to the player's **assigned** face regions only; the hair region is ellipse-based (see `isPointInRegion` in `apps/web/src/lib/face-regions.ts`). Also owns **undo/redo history** and `Ctrl+Z` / `Ctrl+Y` bindings. Exports a transparent PNG (white bg + template are HTML layers *behind* the canvas).
+- `apps/web/src/hooks/use-face-canvas.ts` — face-builder variant. Draws are clipped to the player's **assigned** face regions only; the hair region is ellipse-based (see `isPointInRegion` in `apps/web/src/lib/face-regions.ts`). Also owns **undo/redo history** and `Ctrl+Z` / `Ctrl+Y` bindings. Exports a transparent PNG (white bg + template are HTML layers _behind_ the canvas).
 
 `FACE_REGIONS` in `lib/face-regions.ts` is the source of truth for region geometry — changing a rect changes both hit-testing and clipping.
 
 ### Landing → room handoff
 
-`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to `/room/<code>`. The room page reads those keys, and only the sentinel `/room/new` triggers `create-room` on the socket; any other code is treated as a join. If there is no `scrawl-nickname` (someone opened an invite link directly), the page asks for one first. The real room code is assigned by the server and arrives in the `room-state` message, at which point the page rewrites the URL to `/room/<code>` (`history.replaceState`) so it works as an invite link.
+`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to the room page.
+
+Because the site is a static export there is no dynamic `/room/[code]` segment: the room page is `/room/?code=ABCDE` (`app/room/page.tsx` wraps `room-client.tsx` in `<Suspense>` for `useSearchParams`). Build room links with `roomPath` / `roomUrl` from `lib/routes.ts` — never by hand — because the deployed site lives under a base path (`NEXT_PUBLIC_BASE_PATH`, `/scrawl` on GitHub Pages) that `router.push` and `<Link>` add automatically but `window.location` / `history.replaceState` / `<a href>` do not.
+
+Only the sentinel `?code=new` triggers `create-room` on the socket; any other code is treated as a join. If there is no `scrawl-nickname` (someone opened an invite link directly), the page asks for one first. The real room code is assigned by the server and arrives in the `room-state` message, at which point the page rewrites the URL (`history.replaceState`) so it works as an invite link.
 
 ### WebSocket client
 
@@ -110,12 +115,16 @@ A fresh socket is anonymous to the server, so slots are reclaimed with a per-pla
 - `rejoin-failed` → the page falls back to a normal join (or shows an error if it was mid-session). `session-replaced` is sent to the old socket when the same token rejoins from another tab; that tab stops reconnecting so two tabs don't steal the slot back and forth.
 - Never put `token` in anything broadcast — use `publicPlayer` / `publicPlayers` from room-manager.ts to serialize players.
 
-Note: `useParams()` keeps returning `new` for the host after the URL is rewritten with `history.replaceState`; don't use it to decide what to do after the first join.
-
 ## Conventions worth knowing
 
 - Path alias `@/*` maps to `apps/web/src/*` (web only).
+- Anything a client sends is untrusted: `createRoom` sanitizes options, drawings must be `data:image/png;base64,` URLs (`isPngDataUrl` in handlers.ts), messages are capped at `MAX_MESSAGE_BYTES` (app.ts), and every socket has an `error` listener — without it a protocol error from one client crashes the whole server.
 - Strict TypeScript via `tsconfig.base.json` (`strict: true`, `target: ES2022`).
 - Room codes are 5 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no 0/O/1/I/L confusion).
 - `createRoom` sanitizes everything the client sends: rounds clamp 1–5 (all modes), turn duration 15–300s, unknown `gameMode` → `party`, unknown `faceTemplate` → `random`, non-hex `skinTone` → default. 2-player modes cap the room at 2 players.
 - `docs/game-mode-ideas.md` is a Portuguese brainstorm list of 40 proposed modes — useful context for mode-related work; not a spec.
+
+## Deploy
+
+- **Web** → GitHub Pages via `.github/workflows/deploy.yml` on every push to `main`. The build gets `NEXT_PUBLIC_BASE_PATH` from `actions/configure-pages` and `NEXT_PUBLIC_WS_URL` from the `WS_URL` repository variable; both are inlined at build time, so changing the server address means re-running the workflow.
+- **WebSocket server** → any host that keeps a Node process alive; `apps/ws-server/Dockerfile` (build context = repo root). It must be served over `wss://` for the Pages site to reach it. Rooms are in memory, so run exactly **one** instance and expect a deploy to end running games.

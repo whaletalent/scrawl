@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useGameState } from "@/hooks/use-game-state";
 import { Lobby } from "@/components/lobby/lobby";
 import { TimerBar } from "@/components/game/timer-bar";
@@ -16,7 +17,8 @@ import { FaceReveal } from "@/components/phases/face-reveal";
 type GameControllerProps = ReturnType<typeof useGameState>;
 
 export function GameController(props: GameControllerProps) {
-  const { roomState, playerId, pairAssignment, drawings, error, notice } = props;
+  const { roomState, playerId, pairAssignment, drawings, error, notice } =
+    props;
 
   if (!roomState || !playerId) {
     return (
@@ -24,7 +26,12 @@ export function GameController(props: GameControllerProps) {
         {error ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-red-400">{error}</p>
-            <a href="/" className="text-sm text-gray-400 hover:text-gray-300 underline">Voltar</a>
+            <Link
+              href="/"
+              className="text-sm text-gray-400 hover:text-gray-300 underline"
+            >
+              Voltar
+            </Link>
           </div>
         ) : (
           <p className="text-gray-400">Conectando...</p>
@@ -34,20 +41,25 @@ export function GameController(props: GameControllerProps) {
   }
 
   const currentPlayer = roomState.players.find((p) => p.id === playerId);
-  const away = roomState.players.filter((p) => p.connected === false).map((p) => p.nickname);
+  const away = roomState.players
+    .filter((p) => p.connected === false)
+    .map((p) => p.nickname);
   const isHost = currentPlayer?.isHost ?? false;
   const phase = roomState.phase;
 
   return (
     <div className="min-h-screen flex flex-col">
-      {phase !== "lobby" && phase !== "final-results" && phase !== "split-final" && phase !== "face-final" && (
-        <div className="px-4 pt-4 flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            Rodada {roomState.round}/{roomState.totalRounds}
-          </span>
-          <TimerBar endsAt={roomState.phaseEndsAt} />
-        </div>
-      )}
+      {phase !== "lobby" &&
+        phase !== "final-results" &&
+        phase !== "split-final" &&
+        phase !== "face-final" && (
+          <div className="px-4 pt-4 flex items-center justify-between">
+            <span className="text-sm text-gray-500">
+              Rodada {roomState.round}/{roomState.totalRounds}
+            </span>
+            <TimerBar endsAt={roomState.phaseEndsAt} />
+          </div>
+        )}
 
       {notice && (
         <p className="mx-4 mt-4 px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-300 text-sm text-center">
@@ -57,7 +69,9 @@ export function GameController(props: GameControllerProps) {
 
       {away.length > 0 && phase !== "lobby" && (
         <p className="mx-4 mt-4 px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm text-center">
-          {away.join(", ")} {away.length === 1 ? "desconectou" : "desconectaram"} — aguardando reconexão...
+          {away.join(", ")}{" "}
+          {away.length === 1 ? "desconectou" : "desconectaram"} — aguardando
+          reconexão...
         </p>
       )}
 
@@ -106,8 +120,8 @@ export function GameController(props: GameControllerProps) {
           <div className="text-center px-4">
             <h2 className="text-xl font-bold">Você é o jurado desta rodada</h2>
             <p className="text-gray-400 text-sm mt-1">
-              O número de jogadores é ímpar, então alguém fica de fora a cada rodada.
-              Você vota em todos os desenhos quando o tempo acabar.
+              O número de jogadores é ímpar, então alguém fica de fora a cada
+              rodada. Você vota em todos os desenhos quando o tempo acabar.
             </p>
           </div>
         )}
@@ -120,9 +134,7 @@ export function GameController(props: GameControllerProps) {
           />
         )}
 
-        {phase === "reveal" && (
-          <Reveal drawings={drawings} players={roomState.players} />
-        )}
+        {phase === "reveal" && <Reveal drawings={drawings} />}
 
         {(phase === "scoreboard" || phase === "final-results") && (
           <Scoreboard
@@ -149,23 +161,23 @@ export function GameController(props: GameControllerProps) {
           <SplitReveal drawings={props.splitDrawings} />
         )}
 
-        {phase === "face-drawing" && props.faceRegions.length > 0 && props.faceTemplate && (
-          <FaceDrawingPhase
-            key={`face-${props.faceRound}`}
-            initialSubmitted={props.roundSubmitted}
-            round={props.faceRound}
-            totalRounds={roomState.totalRounds}
-            regions={props.faceRegions}
-            faceTemplate={props.faceTemplate}
-            skinTone={props.faceSkinTone ?? roomState.skinTone}
-            endsAt={roomState.phaseEndsAt}
-            onSubmit={props.submitFaceDrawing}
-          />
-        )}
+        {phase === "face-drawing" &&
+          props.faceRegions.length > 0 &&
+          props.faceTemplate && (
+            <FaceDrawingPhase
+              key={`face-${props.faceRound}`}
+              initialSubmitted={props.roundSubmitted}
+              round={props.faceRound}
+              totalRounds={roomState.totalRounds}
+              regions={props.faceRegions}
+              faceTemplate={props.faceTemplate}
+              skinTone={props.faceSkinTone ?? roomState.skinTone}
+              endsAt={roomState.phaseEndsAt}
+              onSubmit={props.submitFaceDrawing}
+            />
+          )}
 
-        {phase === "face-final" && (
-          <FaceReveal drawings={props.faceDrawings} />
-        )}
+        {phase === "face-final" && <FaceReveal drawings={props.faceDrawings} />}
       </div>
     </div>
   );

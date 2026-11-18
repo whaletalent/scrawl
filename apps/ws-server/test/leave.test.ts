@@ -7,7 +7,9 @@ import { createRoom, type, phase, sleep, IMG } from "./client.js";
 // advances on its own while a test is poking at a phase.
 const GRACE = 100;
 let srv: Awaited<ReturnType<typeof startServer>>;
-before(async () => { srv = await startServer({ timeScale: 1, graceMs: GRACE }); });
+before(async () => {
+  srv = await startServer({ timeScale: 1, graceMs: GRACE });
+});
 after(() => srv.stop());
 
 test("lobby: when the host leaves, a new host is announced and nothing else happens", async () => {
@@ -18,15 +20,26 @@ test("lobby: when the host leaves, a new host is announced and nothing else happ
   assert.equal(msg.playerId, clients[0].playerId);
   assert.ok([clients[1].playerId, clients[2].playerId].includes(msg.hostId));
   await sleep(100);
-  assert.ok(!clients[1].seen(type("notice")) && !clients[1].seen(type("phase-change")));
+  assert.ok(
+    !clients[1].seen(type("notice")) && !clients[1].seen(type("phase-change")),
+  );
 });
 
 test("split-body: partner leaving ends the game with only the completed rounds", async () => {
-  const { clients } = await createRoom(srv.url, 2, { gameMode: "split-body", totalRounds: 2, turnDuration: 60 });
+  const { clients } = await createRoom(srv.url, 2, {
+    gameMode: "split-body",
+    totalRounds: 2,
+    turnDuration: 60,
+  });
   const [host, guest] = clients;
 
-  const round2 = host.wait((m) => m.type === "split-round-start" && m.round === 2);
-  const started = Promise.all([host.wait(phase("split-drawing")), guest.wait(phase("split-drawing"))]);
+  const round2 = host.wait(
+    (m) => m.type === "split-round-start" && m.round === 2,
+  );
+  const started = Promise.all([
+    host.wait(phase("split-drawing")),
+    guest.wait(phase("split-drawing")),
+  ]);
   host.send({ type: "start-game" });
   await started;
   host.send({ type: "submit-split-drawing", imageDataUrl: IMG });
@@ -40,12 +53,19 @@ test("split-body: partner leaving ends the game with only the completed rounds",
 
   assert.match((await notice).message, /parceiro saiu/);
   const { drawings } = await final;
-  assert.deepEqual(drawings.map((d: { round: number }) => d.round), [1]);
+  assert.deepEqual(
+    drawings.map((d: { round: number }) => d.round),
+    [1],
+  );
   await finalPhase;
 });
 
 test("face-builder: partner leaving in round 1 ends the game with no drawings and promotes the guest", async () => {
-  const { clients } = await createRoom(srv.url, 2, { gameMode: "face-builder", totalRounds: 2, turnDuration: 60 });
+  const { clients } = await createRoom(srv.url, 2, {
+    gameMode: "face-builder",
+    totalRounds: 2,
+    turnDuration: 60,
+  });
   const [host, guest] = clients;
   const started = guest.wait(phase("face-drawing"));
   host.send({ type: "start-game" });
@@ -60,7 +80,10 @@ test("face-builder: partner leaving in round 1 ends the game with no drawings an
 });
 
 test("party: keeps going with 4 players, ends below 4", async () => {
-  const { clients } = await createRoom(srv.url, 5, { gameMode: "party", totalRounds: 2 });
+  const { clients } = await createRoom(srv.url, 5, {
+    gameMode: "party",
+    totalRounds: 2,
+  });
   const started = clients[1].wait(phase("theme-creation"));
   clients[0].send({ type: "start-game" });
   await started;
@@ -69,7 +92,10 @@ test("party: keeps going with 4 players, ends below 4", async () => {
   clients[4].close();
   await firstLeft;
   await sleep(50);
-  assert.ok(!clients[1].seen(type("notice")), "game must continue with 4 players");
+  assert.ok(
+    !clients[1].seen(type("notice")),
+    "game must continue with 4 players",
+  );
 
   const notice = clients[1].wait(type("notice"));
   const final = clients[1].wait(type("final-results"));

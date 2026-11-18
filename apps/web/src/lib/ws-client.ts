@@ -1,4 +1,6 @@
-type MessageHandler = (data: any) => void;
+import type { ServerMessage } from "@/types/game";
+
+type MessageHandler = (data: ServerMessage) => void;
 
 let ws: WebSocket | null = null;
 let handlers: MessageHandler[] = [];
@@ -8,7 +10,11 @@ let intentionalClose = false;
 
 export function connect(url: string) {
   // Skip if already open or currently connecting
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+  if (
+    ws &&
+    (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)
+  )
+    return;
 
   intentionalClose = false;
   ws = new WebSocket(url);
@@ -34,7 +40,7 @@ export function connect(url: string) {
     }
   };
 
-  ws.onerror = (err) => {
+  ws.onerror = () => {
     console.log("[ws] error, closing");
     ws?.close();
   };

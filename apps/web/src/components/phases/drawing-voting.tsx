@@ -9,7 +9,11 @@ interface DrawingVotingProps {
   onVote: (pairId: string, rank: 1 | 2 | 3) => void;
 }
 
-export function DrawingVoting({ drawings, ownPairId, onVote }: DrawingVotingProps) {
+export function DrawingVoting({
+  drawings,
+  ownPairId,
+  onVote,
+}: DrawingVotingProps) {
   const [votes, setVotes] = useState<Record<number, string>>({});
 
   const voteable = drawings.filter((d) => d.pairId !== ownPairId);
@@ -35,17 +39,29 @@ export function DrawingVoting({ drawings, ownPairId, onVote }: DrawingVotingProp
 
       <div className="w-full flex flex-col gap-6">
         {voteable.map((drawing) => {
-          const currentRank = Object.entries(votes).find(([, id]) => id === drawing.pairId)?.[0];
+          const currentRank = Object.entries(votes).find(
+            ([, id]) => id === drawing.pairId,
+          )?.[0];
 
           return (
             <div key={drawing.pairId} className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-2">Tema: {drawing.themeText}</p>
+              <p className="text-sm text-gray-400 mb-2">
+                Tema: {drawing.themeText}
+              </p>
               <div className="flex gap-0.5 rounded-lg overflow-hidden">
                 {drawing.imageLeftDataUrl && (
-                  <img src={drawing.imageLeftDataUrl} alt="Metade esquerda" className="w-1/2" />
+                  <img
+                    src={drawing.imageLeftDataUrl}
+                    alt="Metade esquerda"
+                    className="w-1/2"
+                  />
                 )}
                 {drawing.imageRightDataUrl && (
-                  <img src={drawing.imageRightDataUrl} alt="Metade direita" className="w-1/2" />
+                  <img
+                    src={drawing.imageRightDataUrl}
+                    alt="Metade direita"
+                    className="w-1/2"
+                  />
                 )}
               </div>
               <div className="flex gap-2 mt-3">
@@ -55,7 +71,11 @@ export function DrawingVoting({ drawings, ownPairId, onVote }: DrawingVotingProp
                     onClick={() => handleVote(drawing.pairId, rank)}
                     className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${
                       Number(currentRank) === rank
-                        ? rank === 1 ? "bg-yellow-600" : rank === 2 ? "bg-gray-400 text-black" : "bg-orange-700"
+                        ? rank === 1
+                          ? "bg-yellow-600"
+                          : rank === 2
+                            ? "bg-gray-400 text-black"
+                            : "bg-orange-700"
                         : "bg-gray-700 hover:bg-gray-600"
                     }`}
                   >

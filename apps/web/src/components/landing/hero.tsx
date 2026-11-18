@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
+import { NEW_ROOM, roomPath } from "@/lib/routes";
 import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { ModeSelector } from "@/components/lobby/mode-selector";
 
@@ -14,28 +15,38 @@ export function Hero() {
   const [gameMode, setGameMode] = useState<GameMode>("party");
   const [totalRounds, setTotalRounds] = useState(3);
   const [turnDuration, setTurnDuration] = useState(90);
-  const [faceTemplate, setFaceTemplate] = useState<FaceTemplateOption>("random");
+  const [faceTemplate, setFaceTemplate] =
+    useState<FaceTemplateOption>("random");
   const [skinTone, setSkinTone] = useState("#FDDCB5");
 
   function handleCreate() {
     const err = validateNickname(nickname);
-    if (err) { setError(err); return; }
+    if (err) {
+      setError(err);
+      return;
+    }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
     sessionStorage.setItem("scrawl-gameMode", gameMode);
     sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
     sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
     sessionStorage.setItem("scrawl-faceTemplate", faceTemplate);
     sessionStorage.setItem("scrawl-skinTone", skinTone);
-    router.push("/room/new");
+    router.push(roomPath(NEW_ROOM));
   }
 
   function handleJoin() {
     const err = validateNickname(nickname);
-    if (err) { setError(err); return; }
+    if (err) {
+      setError(err);
+      return;
+    }
     const code = roomCode.trim().toUpperCase();
-    if (code.length < 5) { setError("Digite um código de sala válido"); return; }
+    if (code.length < 5) {
+      setError("Digite um código de sala válido");
+      return;
+    }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    router.push(`/room/${code}`);
+    router.push(roomPath(code));
   }
 
   return (
@@ -44,7 +55,8 @@ export function Hero() {
         Scrawl
       </h1>
       <p className="text-xl text-gray-400 text-center max-w-md">
-        Desenhe, ria, dispute. O party game em que a sua arte horrível vira lenda.
+        Desenhe, ria, dispute. O party game em que a sua arte horrível vira
+        lenda.
       </p>
 
       <div className="w-full max-w-sm flex flex-col gap-4">
@@ -52,7 +64,10 @@ export function Hero() {
           type="text"
           placeholder="Seu apelido"
           value={nickname}
-          onChange={(e) => { setNickname(e.target.value); setError(null); }}
+          onChange={(e) => {
+            setNickname(e.target.value);
+            setError(null);
+          }}
           maxLength={16}
           className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
         />
@@ -92,7 +107,11 @@ export function Hero() {
               onClick={handleCreate}
               className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
             >
-              {gameMode === "party" ? "Criar Party" : gameMode === "split-body" ? "Criar Split Body" : "Criar Face Builder"}
+              {gameMode === "party"
+                ? "Criar Party"
+                : gameMode === "split-body"
+                  ? "Criar Split Body"
+                  : "Criar Face Builder"}
             </button>
           </div>
         )}
@@ -103,7 +122,10 @@ export function Hero() {
               type="text"
               placeholder="Código da sala (ex.: ABC12)"
               value={roomCode}
-              onChange={(e) => { setRoomCode(e.target.value.toUpperCase()); setError(null); }}
+              onChange={(e) => {
+                setRoomCode(e.target.value.toUpperCase());
+                setError(null);
+              }}
               maxLength={5}
               className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg tracking-widest uppercase"
             />
@@ -118,7 +140,10 @@ export function Hero() {
 
         {mode !== "initial" && (
           <button
-            onClick={() => { setMode("initial"); setError(null); }}
+            onClick={() => {
+              setMode("initial");
+              setError(null);
+            }}
             className="text-gray-500 hover:text-gray-400 text-sm"
           >
             Voltar

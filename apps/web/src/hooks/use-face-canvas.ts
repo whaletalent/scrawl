@@ -1,6 +1,11 @@
 "use client";
 import { useRef, useState, useCallback, useEffect } from "react";
-import { FACE_ELLIPSE, isPointInRegion, getRegionDef, type FaceRegionDef } from "@/lib/face-regions";
+import {
+  FACE_ELLIPSE,
+  isPointInRegion,
+  getRegionDef,
+  type FaceRegionDef,
+} from "@/lib/face-regions";
 import type { FaceRegionId } from "@/types/game";
 import type { CanvasTool, ToolType } from "./use-canvas";
 
@@ -19,7 +24,11 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
   const shapeStart = useRef<{ x: number; y: number } | null>(null);
   const savedImageData = useRef<ImageData | null>(null);
   const activeRegion = useRef<FaceRegionDef | null>(null);
-  const [tool, setTool] = useState<CanvasTool>({ type: "brush", color: "#000000", size: 4 });
+  const [tool, setTool] = useState<CanvasTool>({
+    type: "brush",
+    color: "#000000",
+    size: 4,
+  });
 
   // Undo/redo history
   const historyRef = useRef<ImageData[]>([]);
@@ -38,7 +47,10 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
     if (!ctx || !canvas) return;
     const snapshot = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     // Discard any redo states ahead of current index
-    historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    historyRef.current = historyRef.current.slice(
+      0,
+      historyIndexRef.current + 1,
+    );
     historyRef.current.push(snapshot);
     // Cap history at 50 entries
     if (historyRef.current.length > 50) {
@@ -87,37 +99,39 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       }
       return null;
     },
-    [assignedRegionIds]
+    [assignedRegionIds],
   );
 
-  const getPoint = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = CANVAS_WIDTH / rect.width;
-      const scaleY = CANVAS_HEIGHT / rect.height;
+  const getPoint = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
 
-      let clientX: number, clientY: number;
-      if ("touches" in e) {
-        if (e.touches.length === 0) return null;
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
+    let clientX: number, clientY: number;
+    if ("touches" in e) {
+      if (e.touches.length === 0) return null;
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
 
-      const x = (clientX - rect.left) * scaleX;
-      const y = (clientY - rect.top) * scaleY;
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
-      return { x, y };
-    },
-    []
-  );
+    return { x, y };
+  }, []);
 
   const floodFill = useCallback(
-    (startX: number, startY: number, fillColor: string, region: FaceRegionDef) => {
+    (
+      startX: number,
+      startY: number,
+      fillColor: string,
+      region: FaceRegionDef,
+    ) => {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
       if (!ctx || !canvas) return;
@@ -129,7 +143,10 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       const sx = Math.floor(startX);
       const sy = Math.floor(startY);
       const idx = (sy * w + sx) * 4;
-      const tR = data[idx], tG = data[idx + 1], tB = data[idx + 2], tA = data[idx + 3];
+      const tR = data[idx],
+        tG = data[idx + 1],
+        tB = data[idx + 2],
+        tA = data[idx + 3];
 
       const fill = hexToRgb(fillColor);
       if (tR === fill.r && tG === fill.g && tB === fill.b && tA === 255) return;
@@ -155,7 +172,8 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
           Math.abs(data[i + 1] - tG) > tolerance ||
           Math.abs(data[i + 2] - tB) > tolerance ||
           Math.abs(data[i + 3] - tA) > tolerance
-        ) continue;
+        )
+          continue;
 
         data[i] = fill.r;
         data[i + 1] = fill.g;
@@ -167,34 +185,46 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
       ctx.putImageData(imgData, 0, 0);
     },
-    []
+    [],
   );
 
-  const isShapeTool = (t: ToolType) => t === "line" || t === "circle" || t === "rectangle";
+  const isShapeTool = (t: ToolType) =>
+    t === "line" || t === "circle" || t === "rectangle";
 
-  const clipToRegion = useCallback((ctx: CanvasRenderingContext2D, region: FaceRegionDef) => {
-    ctx.beginPath();
-    if (region.isHairRegion) {
-      // Hair = full canvas minus shoulders rect, then only outside ellipse + forehead inside ellipse
-      // Approximate with: full canvas rect, then cut with clip
-      const e = FACE_ELLIPSE;
-      // Outer area: full canvas
-      ctx.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      // Subtract ellipse body (below forehead y=200) by drawing ellipse counterclockwise
-      // Instead, use a simpler approach: add forehead rect + outer rects
-      ctx.rect(0, 0, CANVAS_WIDTH, 200); // everything above forehead line
-      ctx.rect(0, 0, e.cx - e.rx, CANVAS_HEIGHT); // left of ellipse
-      ctx.rect(e.cx + e.rx, 0, CANVAS_WIDTH - (e.cx + e.rx), CANVAS_HEIGHT); // right of ellipse
-    } else {
-      for (const r of region.rects) {
-        ctx.rect(r.x, r.y, r.width, r.height);
+  const clipToRegion = useCallback(
+    (ctx: CanvasRenderingContext2D, region: FaceRegionDef) => {
+      ctx.beginPath();
+      if (region.isHairRegion) {
+        // Hair = full canvas minus shoulders rect, then only outside ellipse + forehead inside ellipse
+        // Approximate with: full canvas rect, then cut with clip
+        const e = FACE_ELLIPSE;
+        // Outer area: full canvas
+        ctx.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        // Subtract ellipse body (below forehead y=200) by drawing ellipse counterclockwise
+        // Instead, use a simpler approach: add forehead rect + outer rects
+        ctx.rect(0, 0, CANVAS_WIDTH, 200); // everything above forehead line
+        ctx.rect(0, 0, e.cx - e.rx, CANVAS_HEIGHT); // left of ellipse
+        ctx.rect(e.cx + e.rx, 0, CANVAS_WIDTH - (e.cx + e.rx), CANVAS_HEIGHT); // right of ellipse
+      } else {
+        for (const r of region.rects) {
+          ctx.rect(r.x, r.y, r.width, r.height);
+        }
       }
-    }
-    ctx.clip();
-  }, []);
+      ctx.clip();
+    },
+    [],
+  );
 
   const drawShape = useCallback(
-    (ctx: CanvasRenderingContext2D, type: ToolType, from: { x: number; y: number }, to: { x: number; y: number }, color: string, size: number, region: FaceRegionDef) => {
+    (
+      ctx: CanvasRenderingContext2D,
+      type: ToolType,
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+      color: string,
+      size: number,
+      region: FaceRegionDef,
+    ) => {
       ctx.save();
       clipToRegion(ctx, region);
 
@@ -217,12 +247,17 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
       } else if (type === "rectangle") {
-        ctx.strokeRect(Math.min(from.x, to.x), Math.min(from.y, to.y), Math.abs(to.x - from.x), Math.abs(to.y - from.y));
+        ctx.strokeRect(
+          Math.min(from.x, to.x),
+          Math.min(from.y, to.y),
+          Math.abs(to.x - from.x),
+          Math.abs(to.y - from.y),
+        );
       }
 
       ctx.restore();
     },
-    [clipToRegion]
+    [clipToRegion],
   );
 
   const startDrawing = useCallback(
@@ -244,7 +279,12 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (ctx && canvas) {
-          savedImageData.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          savedImageData.current = ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          );
         }
         shapeStart.current = point;
         isDrawing.current = true;
@@ -254,7 +294,7 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       isDrawing.current = true;
       lastPoint.current = point;
     },
-    [getPoint, tool, findRegion, floodFill]
+    [getPoint, tool, findRegion, floodFill],
   );
 
   const draw = useCallback(
@@ -270,9 +310,21 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       const region = activeRegion.current;
       if (!region) return;
 
-      if (isShapeTool(tool.type) && shapeStart.current && savedImageData.current) {
+      if (
+        isShapeTool(tool.type) &&
+        shapeStart.current &&
+        savedImageData.current
+      ) {
         ctx.putImageData(savedImageData.current, 0, 0);
-        drawShape(ctx, tool.type, shapeStart.current, point, tool.color, tool.size, region);
+        drawShape(
+          ctx,
+          tool.type,
+          shapeStart.current,
+          point,
+          tool.color,
+          tool.size,
+          region,
+        );
         return;
       }
 
@@ -304,7 +356,7 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
 
       lastPoint.current = point;
     },
-    [getPoint, tool, drawShape]
+    [getPoint, tool, drawShape],
   );
 
   const stopDrawing = useCallback(() => {
@@ -330,7 +382,10 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
           for (let x = 0; x < CANVAS_WIDTH; x++) {
             if (isPointInRegion(x, y, region)) {
               const i = (y * CANVAS_WIDTH + x) * 4;
-              data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 0;
+              data[i] = 0;
+              data[i + 1] = 0;
+              data[i + 2] = 0;
+              data[i + 3] = 0;
             }
           }
         }
@@ -350,7 +405,10 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === "y" || (e.key === "z" && e.shiftKey))
+      ) {
         e.preventDefault();
         redo();
       }

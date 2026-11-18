@@ -41,12 +41,14 @@ export function ThemeVoting({ themes, playerId, onVote }: ThemeVotingProps) {
                   voted
                     ? "bg-purple-600/30 border-2 border-purple-500"
                     : canVote
-                    ? "bg-gray-800 border-2 border-transparent hover:border-gray-600"
-                    : "bg-gray-800/50 border-2 border-transparent text-gray-600"
+                      ? "bg-gray-800 border-2 border-transparent hover:border-gray-600"
+                      : "bg-gray-800/50 border-2 border-transparent text-gray-600"
                 }`}
               >
                 <span className="font-medium">{t.text}</span>
-                <span className="ml-2 text-sm text-gray-500">{t.votes} {t.votes === 1 ? "voto" : "votos"}</span>
+                <span className="ml-2 text-sm text-gray-500">
+                  {t.votes} {t.votes === 1 ? "voto" : "votos"}
+                </span>
               </button>
             );
           })}

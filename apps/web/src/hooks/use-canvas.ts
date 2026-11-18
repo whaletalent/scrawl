@@ -2,7 +2,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { clearCanvas } from "@/lib/canvas-utils";
 
-export type ToolType = "brush" | "eraser" | "fill" | "line" | "circle" | "rectangle";
+export type ToolType =
+  "brush" | "eraser" | "fill" | "line" | "circle" | "rectangle";
 
 export interface CanvasTool {
   type: ToolType;
@@ -24,7 +25,11 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const shapeStart = useRef<{ x: number; y: number } | null>(null);
   const savedImageData = useRef<ImageData | null>(null);
-  const [tool, setTool] = useState<CanvasTool>({ type: "brush", color: "#000000", size: 4 });
+  const [tool, setTool] = useState<CanvasTool>({
+    type: "brush",
+    color: "#000000",
+    size: 4,
+  });
 
   const halfWidth = CANVAS_WIDTH / 2;
   const halfHeight = CANVAS_HEIGHT / 2;
@@ -33,12 +38,12 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
     side === "full"
       ? { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT }
       : side === "left"
-      ? { x: 0, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
-      : side === "right"
-      ? { x: halfWidth, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
-      : side === "top"
-      ? { x: 0, y: 0, width: CANVAS_WIDTH, height: halfHeight }
-      : { x: 0, y: halfHeight, width: CANVAS_WIDTH, height: halfHeight };
+        ? { x: 0, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
+        : side === "right"
+          ? { x: halfWidth, y: 0, width: halfWidth, height: CANVAS_HEIGHT }
+          : side === "top"
+            ? { x: 0, y: 0, width: CANVAS_WIDTH, height: halfHeight }
+            : { x: 0, y: halfHeight, width: CANVAS_WIDTH, height: halfHeight };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,12 +75,14 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
       const x = (clientX - rect.left) * scaleX;
       const y = (clientY - rect.top) * scaleY;
 
-      if (x < drawableArea.x || x > drawableArea.x + drawableArea.width) return null;
-      if (y < drawableArea.y || y > drawableArea.y + drawableArea.height) return null;
+      if (x < drawableArea.x || x > drawableArea.x + drawableArea.width)
+        return null;
+      if (y < drawableArea.y || y > drawableArea.y + drawableArea.height)
+        return null;
 
       return { x, y };
     },
-    [drawableArea]
+    [drawableArea],
   );
 
   const floodFill = useCallback(
@@ -92,7 +99,10 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
       const sx = Math.floor(startX);
       const sy = Math.floor(startY);
       const idx = (sy * w + sx) * 4;
-      const tR = data[idx], tG = data[idx + 1], tB = data[idx + 2], tA = data[idx + 3];
+      const tR = data[idx],
+        tG = data[idx + 1],
+        tB = data[idx + 2],
+        tA = data[idx + 3];
 
       const fill = hexToRgb(fillColor);
       if (tR === fill.r && tG === fill.g && tB === fill.b && tA === 255) return;
@@ -121,7 +131,8 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
           Math.abs(data[i + 1] - tG) > tolerance ||
           Math.abs(data[i + 2] - tB) > tolerance ||
           Math.abs(data[i + 3] - tA) > tolerance
-        ) continue;
+        )
+          continue;
 
         data[i] = fill.r;
         data[i + 1] = fill.g;
@@ -133,14 +144,26 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
 
       ctx.putImageData(imgData, 0, 0);
     },
-    [drawableArea]
+    [drawableArea],
   );
 
   const drawShape = useCallback(
-    (ctx: CanvasRenderingContext2D, type: ToolType, from: { x: number; y: number }, to: { x: number; y: number }, color: string, size: number) => {
+    (
+      ctx: CanvasRenderingContext2D,
+      type: ToolType,
+      from: { x: number; y: number },
+      to: { x: number; y: number },
+      color: string,
+      size: number,
+    ) => {
       ctx.save();
       ctx.beginPath();
-      ctx.rect(drawableArea.x, drawableArea.y, drawableArea.width, drawableArea.height);
+      ctx.rect(
+        drawableArea.x,
+        drawableArea.y,
+        drawableArea.width,
+        drawableArea.height,
+      );
       ctx.clip();
 
       ctx.strokeStyle = color;
@@ -166,16 +189,17 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
           Math.min(from.x, to.x),
           Math.min(from.y, to.y),
           Math.abs(to.x - from.x),
-          Math.abs(to.y - from.y)
+          Math.abs(to.y - from.y),
         );
       }
 
       ctx.restore();
     },
-    [drawableArea]
+    [drawableArea],
   );
 
-  const isShapeTool = (t: ToolType) => t === "line" || t === "circle" || t === "rectangle";
+  const isShapeTool = (t: ToolType) =>
+    t === "line" || t === "circle" || t === "rectangle";
 
   const startDrawing = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -191,7 +215,12 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (ctx && canvas) {
-          savedImageData.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          savedImageData.current = ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          );
         }
         shapeStart.current = point;
         isDrawing.current = true;
@@ -201,7 +230,7 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
       isDrawing.current = true;
       lastPoint.current = point;
     },
-    [getPoint, tool, floodFill]
+    [getPoint, tool, floodFill],
   );
 
   const draw = useCallback(
@@ -214,9 +243,20 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
       const ctx = canvas?.getContext("2d");
       if (!ctx) return;
 
-      if (isShapeTool(tool.type) && shapeStart.current && savedImageData.current) {
+      if (
+        isShapeTool(tool.type) &&
+        shapeStart.current &&
+        savedImageData.current
+      ) {
         ctx.putImageData(savedImageData.current, 0, 0);
-        drawShape(ctx, tool.type, shapeStart.current, point, tool.color, tool.size);
+        drawShape(
+          ctx,
+          tool.type,
+          shapeStart.current,
+          point,
+          tool.color,
+          tool.size,
+        );
         return;
       }
 
@@ -233,7 +273,7 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
 
       lastPoint.current = point;
     },
-    [getPoint, tool, drawShape]
+    [getPoint, tool, drawShape],
   );
 
   const stopDrawing = useCallback(() => {
@@ -248,7 +288,12 @@ export function useCanvas(side: "left" | "right" | "top" | "bottom" | "full") {
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(drawableArea.x, drawableArea.y, drawableArea.width, drawableArea.height);
+    ctx.fillRect(
+      drawableArea.x,
+      drawableArea.y,
+      drawableArea.width,
+      drawableArea.height,
+    );
   }, [drawableArea]);
 
   return {

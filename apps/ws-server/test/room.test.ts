@@ -4,12 +4,18 @@ import { startServer } from "./server.js";
 import { connect, createRoom, join, type } from "./client.js";
 
 let srv: Awaited<ReturnType<typeof startServer>>;
-before(async () => { srv = await startServer(); });
+before(async () => {
+  srv = await startServer();
+});
 after(() => srv.stop());
 
 test("create-room sanitizes everything the client sends", async () => {
   const { clients } = await createRoom(srv.url, 1, {
-    gameMode: "bogus", totalRounds: 99, turnDuration: 1, faceTemplate: "nope", skinTone: "red",
+    gameMode: "bogus",
+    totalRounds: 99,
+    turnDuration: 1,
+    faceTemplate: "nope",
+    skinTone: "red",
   });
   const s = clients[0].state;
   assert.equal(s.gameMode, "party");
@@ -61,7 +67,9 @@ test("2-player modes reject a third player", async () => {
 });
 
 test("a room that already started cannot be joined", async () => {
-  const { code, clients } = await createRoom(srv.url, 2, { gameMode: "split-body" });
+  const { code, clients } = await createRoom(srv.url, 2, {
+    gameMode: "split-body",
+  });
   const started = clients[1].wait(type("phase-change"));
   clients[0].send({ type: "start-game" });
   await started;
@@ -84,7 +92,14 @@ test("players are serialized without their session token", async () => {
   const { clients } = await createRoom(srv.url, 2);
   const [host, guest] = clients;
   assert.ok(host.token && guest.token && host.token !== guest.token);
-  const everything = JSON.stringify([...host.msgs, ...guest.msgs].map((m) => ({ ...m, sessionToken: undefined })));
-  assert.ok(!everything.includes(host.token) && !everything.includes(guest.token));
+  const everything = JSON.stringify(
+    [...host.msgs, ...guest.msgs].map((m) => ({
+      ...m,
+      sessionToken: undefined,
+    })),
+  );
+  assert.ok(
+    !everything.includes(host.token) && !everything.includes(guest.token),
+  );
   assert.equal(guest.state.players[0].connected, true);
 });

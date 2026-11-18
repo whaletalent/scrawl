@@ -1,6 +1,9 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { DrawingCanvas, type DrawingCanvasHandle } from "@/components/canvas/drawing-canvas";
+import {
+  DrawingCanvas,
+  type DrawingCanvasHandle,
+} from "@/components/canvas/drawing-canvas";
 
 interface DrawingPhaseProps {
   theme: string;
@@ -11,7 +14,13 @@ interface DrawingPhaseProps {
   endsAt: number;
 }
 
-export function DrawingPhase({ theme, side, onSubmit, endsAt, initialSubmitted }: DrawingPhaseProps) {
+export function DrawingPhase({
+  theme,
+  side,
+  onSubmit,
+  endsAt,
+  initialSubmitted,
+}: DrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
@@ -27,7 +36,10 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt, initialSubmitted }
   useEffect(() => {
     if (!endsAt || submitted) return;
     const ms = endsAt - Date.now() - 500;
-    if (ms <= 0) { doSubmit(); return; }
+    if (ms <= 0) {
+      doSubmit();
+      return;
+    }
     const timer = setTimeout(doSubmit, ms);
     return () => clearTimeout(timer);
   }, [endsAt, submitted, doSubmit]);
@@ -41,7 +53,8 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt, initialSubmitted }
       <div className="text-center">
         <h2 className="text-xl font-bold">Desenhe: {theme}</h2>
         <p className="text-gray-400 text-sm">
-          Você desenha a metade {side === "left" ? "esquerda" : "direita"}. Seu parceiro desenha a outra!
+          Você desenha a metade {side === "left" ? "esquerda" : "direita"}. Seu
+          parceiro desenha a outra!
         </p>
       </div>
 
@@ -55,7 +68,9 @@ export function DrawingPhase({ theme, side, onSubmit, endsAt, initialSubmitted }
           Enviar Desenho
         </button>
       ) : (
-        <p className="text-green-400 font-medium">Desenho enviado! Esperando os outros...</p>
+        <p className="text-green-400 font-medium">
+          Desenho enviado! Esperando os outros...
+        </p>
       )}
     </div>
   );
