@@ -1,7 +1,23 @@
-import type { Room, Phase, Pair, DrawingResult, SplitDrawing, SilhouetteId, FaceDrawing, FaceTemplateId } from "./types.js";
+import type {
+  Room,
+  Phase,
+  Pair,
+  DrawingResult,
+  SplitDrawing,
+  FaceDrawing,
+  FaceTemplateId,
+} from "./types.js";
 import { SILHOUETTE_IDS, FACE_REGION_IDS, FACE_TEMPLATE_IDS } from "./types.js";
 
-const SKIN_TONE_COLORS = ["#FDDCB5", "#E8B88A", "#C68642", "#8D5524", "#5C3317", "#6B8E23", "#4682B4"];
+const SKIN_TONE_COLORS = [
+  "#FDDCB5",
+  "#E8B88A",
+  "#C68642",
+  "#8D5524",
+  "#5C3317",
+  "#6B8E23",
+  "#4682B4",
+];
 import { broadcast, sendTo, publicPlayers } from "./room-manager.js";
 import { config } from "./config.js";
 
@@ -14,8 +30,13 @@ const PHASE_DURATIONS: Record<string, number> = {
 };
 
 function getPhaseDuration(phase: string, room: Room): number {
-  const isDrawing = phase === "drawing" || phase === "split-drawing" || phase === "face-drawing";
-  const base = isDrawing ? room.turnDuration * 1000 : PHASE_DURATIONS[phase] ?? 0;
+  const isDrawing =
+    phase === "drawing" ||
+    phase === "split-drawing" ||
+    phase === "face-drawing";
+  const base = isDrawing
+    ? room.turnDuration * 1000
+    : (PHASE_DURATIONS[phase] ?? 0);
   return Math.round(base * config.timeScale);
 }
 
@@ -38,14 +59,16 @@ export function startSplitGame(room: Room) {
 
 function startSplitRound(room: Room) {
   const playerIds = Array.from(room.players.keys());
-  const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id ?? playerIds[0];
+  const hostId =
+    Array.from(room.players.values()).find((p) => p.isHost)?.id ?? playerIds[0];
   const guestId = playerIds.find((id) => id !== hostId)!;
 
   const isOddRound = room.round % 2 === 1;
   const topPlayerId = isOddRound ? hostId : guestId;
   const bottomPlayerId = isOddRound ? guestId : hostId;
 
-  const silhouetteId = SILHOUETTE_IDS[Math.floor(Math.random() * SILHOUETTE_IDS.length)];
+  const silhouetteId =
+    SILHOUETTE_IDS[Math.floor(Math.random() * SILHOUETTE_IDS.length)];
 
   const drawing: SplitDrawing = {
     round: room.round,
@@ -63,7 +86,11 @@ function startSplitRound(room: Room) {
   transitionTo(room, "split-drawing");
 }
 
-function sendSplitRoundStart(room: Room, drawing: SplitDrawing, playerId: string) {
+function sendSplitRoundStart(
+  room: Room,
+  drawing: SplitDrawing,
+  playerId: string,
+) {
   const isTop = playerId === drawing.topPlayerId;
   sendTo(room, playerId, {
     type: "split-round-start",
@@ -75,16 +102,24 @@ function sendSplitRoundStart(room: Room, drawing: SplitDrawing, playerId: string
   });
 }
 
-function sendFaceRoundStart(room: Room, drawing: FaceDrawing, playerId: string) {
+function sendFaceRoundStart(
+  room: Room,
+  drawing: FaceDrawing,
+  playerId: string,
+) {
   const isP1 = playerId === drawing.player1Id;
   sendTo(room, playerId, {
     type: "face-round-start",
     round: drawing.round,
-    regions: drawing.assignments.filter((a) => a.playerId === playerId).map((a) => a.regionId),
+    regions: drawing.assignments
+      .filter((a) => a.playerId === playerId)
+      .map((a) => a.regionId),
     faceTemplate: drawing.faceTemplate,
     skinTone: drawing.skinTone,
     totalRounds: room.totalRounds,
-    submitted: !!(isP1 ? drawing.player1ImageDataUrl : drawing.player2ImageDataUrl),
+    submitted: !!(isP1
+      ? drawing.player1ImageDataUrl
+      : drawing.player2ImageDataUrl),
   });
 }
 
@@ -95,8 +130,11 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
     pairId: pair.id,
     partnerId: isA ? pair.playerB : pair.playerA,
     side: isA ? "left" : "right",
-    theme: room.themes.find((t) => t.id === pair.themeId)?.text ?? "Desenho livre",
-    submitted: room.drawings.some((d) => d.pairId === pair.id && d.playerId === playerId),
+    theme:
+      room.themes.find((t) => t.id === pair.themeId)?.text ?? "Desenho livre",
+    submitted: room.drawings.some(
+      (d) => d.pairId === pair.id && d.playerId === playerId,
+    ),
   });
 }
 
@@ -108,24 +146,43 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
 export function resyncPlayer(room: Room, playerId: string) {
   if (room.gameMode === "split-body") {
     const current = room.splitDrawings.find((d) => d.round === room.round);
-    if (room.phase === "split-drawing" && current) sendSplitRoundStart(room, current, playerId);
-    if (room.phase === "split-final") sendTo(room, playerId, { type: "split-final-results", drawings: room.splitDrawings });
+    if (room.phase === "split-drawing" && current)
+      sendSplitRoundStart(room, current, playerId);
+    if (room.phase === "split-final")
+      sendTo(room, playerId, {
+        type: "split-final-results",
+        drawings: room.splitDrawings,
+      });
     return;
   }
   if (room.gameMode === "face-builder") {
     const current = room.faceDrawings.find((d) => d.round === room.round);
-    if (room.phase === "face-drawing" && current) sendFaceRoundStart(room, current, playerId);
-    if (room.phase === "face-final") sendTo(room, playerId, { type: "face-final-results", drawings: room.faceDrawings });
+    if (room.phase === "face-drawing" && current)
+      sendFaceRoundStart(room, current, playerId);
+    if (room.phase === "face-final")
+      sendTo(room, playerId, {
+        type: "face-final-results",
+        drawings: room.faceDrawings,
+      });
     return;
   }
 
-  const pair = room.pairs.find((p) => p.playerA === playerId || p.playerB === playerId);
+  const pair = room.pairs.find(
+    (p) => p.playerA === playerId || p.playerB === playerId,
+  );
   if (pair) sendPairAssigned(room, pair, playerId);
 
   if (room.phase === "drawing-voting") {
-    sendTo(room, playerId, { type: "drawings-ready", drawings: serializeResults(room.results) });
+    sendTo(room, playerId, {
+      type: "drawings-ready",
+      drawings: serializeResults(room.results),
+    });
   } else if (room.phase === "reveal" || room.phase === "scoreboard") {
-    sendTo(room, playerId, { type: "reveal-data", drawings: serializeResults(room.results), players: publicPlayers(room) });
+    sendTo(room, playerId, {
+      type: "reveal-data",
+      drawings: serializeResults(room.results),
+      players: publicPlayers(room),
+    });
   } else if (room.phase === "final-results") {
     sendTo(room, playerId, {
       type: "final-results",
@@ -158,7 +215,7 @@ function startFaceRound(room: Room) {
   const isRandom = room.faceTemplate === "random";
   const roundTemplate: FaceTemplateId = isRandom
     ? FACE_TEMPLATE_IDS[Math.floor(Math.random() * FACE_TEMPLATE_IDS.length)]
-    : room.faceTemplate as FaceTemplateId;
+    : (room.faceTemplate as FaceTemplateId);
   const roundSkinTone = isRandom
     ? SKIN_TONE_COLORS[Math.floor(Math.random() * SKIN_TONE_COLORS.length)]
     : room.skinTone;
@@ -181,7 +238,11 @@ function startFaceRound(room: Room) {
   transitionTo(room, "face-drawing");
 }
 
-export function handleFaceDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
+export function handleFaceDrawingSubmit(
+  room: Room,
+  playerId: string,
+  imageDataUrl: string,
+) {
   if (room.phase !== "face-drawing") {
     console.log(`[face] submit rejected: phase is ${room.phase}`);
     return;
@@ -193,16 +254,23 @@ export function handleFaceDrawingSubmit(room: Room, playerId: string, imageDataU
   if (playerId === currentDrawing.player1Id) {
     if (currentDrawing.player1ImageDataUrl) return;
     currentDrawing.player1ImageDataUrl = imageDataUrl;
-    console.log(`[face] round ${room.round}: P1 submitted (${imageDataUrl.length} chars)`);
+    console.log(
+      `[face] round ${room.round}: P1 submitted (${imageDataUrl.length} chars)`,
+    );
   } else if (playerId === currentDrawing.player2Id) {
     if (currentDrawing.player2ImageDataUrl) return;
     currentDrawing.player2ImageDataUrl = imageDataUrl;
-    console.log(`[face] round ${room.round}: P2 submitted (${imageDataUrl.length} chars)`);
+    console.log(
+      `[face] round ${room.round}: P2 submitted (${imageDataUrl.length} chars)`,
+    );
   } else {
     return;
   }
 
-  if (currentDrawing.player1ImageDataUrl && currentDrawing.player2ImageDataUrl) {
+  if (
+    currentDrawing.player1ImageDataUrl &&
+    currentDrawing.player2ImageDataUrl
+  ) {
     console.log(`[face] round ${room.round}: BOTH submitted, advancing`);
     advanceFaceRound(room);
   }
@@ -232,9 +300,15 @@ function startFaceFinal(room: Room) {
   transitionTo(room, "face-final");
 }
 
-export function handleSplitDrawingSubmit(room: Room, playerId: string, imageDataUrl: string) {
+export function handleSplitDrawingSubmit(
+  room: Room,
+  playerId: string,
+  imageDataUrl: string,
+) {
   if (room.phase !== "split-drawing") {
-    console.log(`[split] submit rejected: phase is ${room.phase}, not split-drawing`);
+    console.log(
+      `[split] submit rejected: phase is ${room.phase}, not split-drawing`,
+    );
     return;
   }
 
@@ -247,13 +321,19 @@ export function handleSplitDrawingSubmit(room: Room, playerId: string, imageData
   if (playerId === currentDrawing.topPlayerId) {
     if (currentDrawing.topImageDataUrl) return;
     currentDrawing.topImageDataUrl = imageDataUrl;
-    console.log(`[split] round ${room.round}: TOP submitted (${imageDataUrl.length} chars)`);
+    console.log(
+      `[split] round ${room.round}: TOP submitted (${imageDataUrl.length} chars)`,
+    );
   } else if (playerId === currentDrawing.bottomPlayerId) {
     if (currentDrawing.bottomImageDataUrl) return;
     currentDrawing.bottomImageDataUrl = imageDataUrl;
-    console.log(`[split] round ${room.round}: BOTTOM submitted (${imageDataUrl.length} chars)`);
+    console.log(
+      `[split] round ${room.round}: BOTTOM submitted (${imageDataUrl.length} chars)`,
+    );
   } else {
-    console.log(`[split] submit rejected: player ${playerId} not in current drawing`);
+    console.log(
+      `[split] submit rejected: player ${playerId} not in current drawing`,
+    );
     return;
   }
 
@@ -329,17 +409,25 @@ function onPhaseEnd(room: Room) {
       nextRoundOrEnd(room);
       break;
     case "split-drawing": {
-      const currentDrawing = room.splitDrawings.find((d) => d.round === room.round);
+      const currentDrawing = room.splitDrawings.find(
+        (d) => d.round === room.round,
+      );
       if (currentDrawing) {
-        console.log(`[split] TIMER EXPIRED round ${room.round}: top=${!!currentDrawing.topImageDataUrl}, bottom=${!!currentDrawing.bottomImageDataUrl}`);
+        console.log(
+          `[split] TIMER EXPIRED round ${room.round}: top=${!!currentDrawing.topImageDataUrl}, bottom=${!!currentDrawing.bottomImageDataUrl}`,
+        );
         advanceSplitRound(room);
       }
       break;
     }
     case "face-drawing": {
-      const currentDrawing = room.faceDrawings.find((d) => d.round === room.round);
+      const currentDrawing = room.faceDrawings.find(
+        (d) => d.round === room.round,
+      );
       if (currentDrawing) {
-        console.log(`[face] TIMER EXPIRED round ${room.round}: p1=${!!currentDrawing.player1ImageDataUrl}, p2=${!!currentDrawing.player2ImageDataUrl}`);
+        console.log(
+          `[face] TIMER EXPIRED round ${room.round}: p1=${!!currentDrawing.player1ImageDataUrl}, p2=${!!currentDrawing.player2ImageDataUrl}`,
+        );
         advanceFaceRound(room);
       }
       break;
@@ -368,7 +456,9 @@ function processThemes(room: Room) {
 
 function selectTopThemesAndPair(room: Room) {
   const numPairs = Math.floor(room.players.size / 2);
-  const sorted = [...room.themes].sort((a, b) => b.votes.length - a.votes.length);
+  const sorted = [...room.themes].sort(
+    (a, b) => b.votes.length - a.votes.length,
+  );
   const selected = sorted.slice(0, numPairs);
 
   if (sorted.length > 0 && sorted[0].votes.length > 0) {
@@ -388,7 +478,9 @@ function assignPairs(room: Room, themes: typeof room.themes) {
   // drawing). Pick whoever has sat out the least so it rotates.
   if (playerIds.length % 2 === 1) {
     const count = (id: string) => room.sitOutCounts.get(id) ?? 0;
-    const sitOutId = playerIds.reduce((best, id) => (count(id) < count(best) ? id : best));
+    const sitOutId = playerIds.reduce((best, id) =>
+      count(id) < count(best) ? id : best,
+    );
     playerIds.splice(playerIds.indexOf(sitOutId), 1);
     room.sitOutCounts.set(sitOutId, count(sitOutId) + 1);
   }
@@ -417,8 +509,12 @@ function assignPairs(room: Room, themes: typeof room.themes) {
 function processDrawings(room: Room) {
   room.results = room.pairs.map((pair) => {
     const theme = room.themes.find((t) => t.id === pair.themeId);
-    const leftDrawing = room.drawings.find((d) => d.pairId === pair.id && d.side === "left");
-    const rightDrawing = room.drawings.find((d) => d.pairId === pair.id && d.side === "right");
+    const leftDrawing = room.drawings.find(
+      (d) => d.pairId === pair.id && d.side === "left",
+    );
+    const rightDrawing = room.drawings.find(
+      (d) => d.pairId === pair.id && d.side === "right",
+    );
 
     return {
       pairId: pair.id,
@@ -434,13 +530,18 @@ function processDrawings(room: Room) {
     };
   });
 
-  broadcast(room, { type: "drawings-ready", drawings: serializeResults(room.results) });
+  broadcast(room, {
+    type: "drawings-ready",
+    drawings: serializeResults(room.results),
+  });
   transitionTo(room, "drawing-voting");
 }
 
 function processDrawingVotes(room: Room) {
   for (const result of room.results) {
-    let first = 0, second = 0, third = 0;
+    let first = 0,
+      second = 0,
+      third = 0;
     for (const vote of Object.values(result.votes)) {
       if (vote.first === result.pairId) first++;
       if (vote.second === result.pairId) second++;
@@ -480,7 +581,12 @@ function endPartyGame(room: Room) {
   transitionTo(room, "final-results");
 }
 
-const IDLE_PHASES: Phase[] = ["lobby", "final-results", "split-final", "face-final"];
+const IDLE_PHASES: Phase[] = [
+  "lobby",
+  "final-results",
+  "split-final",
+  "face-final",
+];
 
 /**
  * Called after a player has been removed from the room. A running game that
@@ -490,15 +596,24 @@ export function handlePlayerLeft(room: Room) {
   if (IDLE_PHASES.includes(room.phase)) return;
 
   if (room.gameMode === "split-body") {
-    broadcast(room, { type: "notice", message: "Seu parceiro saiu. O jogo foi encerrado." });
+    broadcast(room, {
+      type: "notice",
+      message: "Seu parceiro saiu. O jogo foi encerrado.",
+    });
     room.splitDrawings = room.splitDrawings.filter(
-      (d) => d.round !== room.round || (d.topImageDataUrl && d.bottomImageDataUrl)
+      (d) =>
+        d.round !== room.round || (d.topImageDataUrl && d.bottomImageDataUrl),
     );
     startSplitFinal(room);
   } else if (room.gameMode === "face-builder") {
-    broadcast(room, { type: "notice", message: "Seu parceiro saiu. O jogo foi encerrado." });
+    broadcast(room, {
+      type: "notice",
+      message: "Seu parceiro saiu. O jogo foi encerrado.",
+    });
     room.faceDrawings = room.faceDrawings.filter(
-      (d) => d.round !== room.round || (d.player1ImageDataUrl && d.player2ImageDataUrl)
+      (d) =>
+        d.round !== room.round ||
+        (d.player1ImageDataUrl && d.player2ImageDataUrl),
     );
     startFaceFinal(room);
   } else if (room.players.size < MIN_PARTY_PLAYERS) {
@@ -528,7 +643,8 @@ function serializeResults(results: DrawingResult[]) {
     ...r,
     votes: {
       first: Object.values(r.votes).filter((v) => v.first === r.pairId).length,
-      second: Object.values(r.votes).filter((v) => v.second === r.pairId).length,
+      second: Object.values(r.votes).filter((v) => v.second === r.pairId)
+        .length,
       third: Object.values(r.votes).filter((v) => v.third === r.pairId).length,
     },
   }));

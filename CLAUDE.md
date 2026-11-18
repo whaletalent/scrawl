@@ -88,7 +88,7 @@ Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied 
 Canvases are a fixed **800×600 logical coordinate space**; pointer events are rescaled in `getPoint`. Two hooks:
 
 - `apps/web/src/hooks/use-canvas.ts` — general drawing (brush / eraser / fill / line / circle / rectangle), clipped to a `side` region (`left` / `right` / `top` / `bottom` / `full`). Used by party and split-body modes.
-- `apps/web/src/hooks/use-face-canvas.ts` — face-builder variant. Draws are clipped to the player's **assigned** face regions only; the hair region is ellipse-based (see `isPointInRegion` in `apps/web/src/lib/face-regions.ts`). Also owns **undo/redo history** and `Ctrl+Z` / `Ctrl+Y` bindings. Exports a transparent PNG (white bg + template are HTML layers *behind* the canvas).
+- `apps/web/src/hooks/use-face-canvas.ts` — face-builder variant. Draws are clipped to the player's **assigned** face regions only; the hair region is ellipse-based (see `isPointInRegion` in `apps/web/src/lib/face-regions.ts`). Also owns **undo/redo history** and `Ctrl+Z` / `Ctrl+Y` bindings. Exports a transparent PNG (white bg + template are HTML layers _behind_ the canvas).
 
 `FACE_REGIONS` in `lib/face-regions.ts` is the source of truth for region geometry — changing a rect changes both hit-testing and clipping.
 

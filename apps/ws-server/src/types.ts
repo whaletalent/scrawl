@@ -16,7 +16,14 @@ export type Phase =
 
 export type GameMode = "party" | "split-body" | "face-builder";
 
-export const SILHOUETTE_IDS = ["man", "woman", "child", "robot", "alien", "superhero"] as const;
+export const SILHOUETTE_IDS = [
+  "man",
+  "woman",
+  "child",
+  "robot",
+  "alien",
+  "superhero",
+] as const;
 export type SilhouetteId = (typeof SILHOUETTE_IDS)[number];
 
 export interface Player {
@@ -72,11 +79,24 @@ export interface SplitDrawing {
   silhouetteId: SilhouetteId;
 }
 
-export const FACE_TEMPLATE_IDS = ["masculine", "feminine", "monster", "alien-face", "robot-face"] as const;
+export const FACE_TEMPLATE_IDS = [
+  "masculine",
+  "feminine",
+  "monster",
+  "alien-face",
+  "robot-face",
+] as const;
 export type FaceTemplateId = (typeof FACE_TEMPLATE_IDS)[number];
 export type FaceTemplateOption = FaceTemplateId | "random";
 
-export const FACE_REGION_IDS = ["hair", "ears", "eyes", "nose", "mouth", "shoulders"] as const;
+export const FACE_REGION_IDS = [
+  "hair",
+  "ears",
+  "eyes",
+  "nose",
+  "mouth",
+  "shoulders",
+] as const;
 export type FaceRegionId = (typeof FACE_REGION_IDS)[number];
 
 export interface FaceDrawing {
@@ -117,7 +137,15 @@ export interface Room {
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
   | { type: "rejoin"; roomCode: string; token: string }
-  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateOption; skinTone?: string }
+  | {
+      type: "create-room";
+      nickname: string;
+      gameMode?: GameMode;
+      totalRounds?: number;
+      turnDuration?: number;
+      faceTemplate?: FaceTemplateOption;
+      skinTone?: string;
+    }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }

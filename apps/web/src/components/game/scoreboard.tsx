@@ -33,22 +33,36 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
               </span>
               <span className="font-medium">{player.nickname}</span>
             </div>
-            <span className="text-lg font-bold text-purple-400">{player.score} pts</span>
+            <span className="text-lg font-bold text-purple-400">
+              {player.score} pts
+            </span>
           </div>
         ))}
       </div>
 
       {isFinal && drawings.length > 0 && (
         <div className="w-full flex flex-col gap-4 mt-4">
-          <h3 className="text-lg font-bold text-center">Compartilhe as obras-primas</h3>
+          <h3 className="text-lg font-bold text-center">
+            Compartilhe as obras-primas
+          </h3>
           {drawings.map((d) => (
             <div key={d.pairId} className="bg-gray-800 rounded-xl p-4">
               <p className="text-xs text-gray-500">Rodada {d.round}</p>
               <p className="text-sm text-gray-400">"{d.themeText}"</p>
-              <p className="text-sm text-gray-300 mb-2">{d.playerNames[0]} + {d.playerNames[1]}</p>
+              <p className="text-sm text-gray-300 mb-2">
+                {d.playerNames[0]} + {d.playerNames[1]}
+              </p>
               <div className="flex gap-0.5 rounded-lg overflow-hidden mb-3 bg-white">
-                <div className="w-1/2">{d.imageLeftDataUrl && <img src={d.imageLeftDataUrl} alt="" className="w-full" />}</div>
-                <div className="w-1/2">{d.imageRightDataUrl && <img src={d.imageRightDataUrl} alt="" className="w-full" />}</div>
+                <div className="w-1/2">
+                  {d.imageLeftDataUrl && (
+                    <img src={d.imageLeftDataUrl} alt="" className="w-full" />
+                  )}
+                </div>
+                <div className="w-1/2">
+                  {d.imageRightDataUrl && (
+                    <img src={d.imageRightDataUrl} alt="" className="w-full" />
+                  )}
+                </div>
               </div>
               <ShareCard drawing={d} />
             </div>

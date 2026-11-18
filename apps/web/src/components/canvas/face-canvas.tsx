@@ -19,9 +19,20 @@ export interface FaceCanvasHandle {
 export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
   function FaceCanvas({ assignedRegions, faceTemplate, skinTone }, ref) {
     const {
-      canvasRef, tool, setTool, startDrawing, draw, stopDrawing, clear,
-      undo, redo, canUndo, canRedo,
-      exportImage, canvasWidth, canvasHeight,
+      canvasRef,
+      tool,
+      setTool,
+      startDrawing,
+      draw,
+      stopDrawing,
+      clear,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      exportImage,
+      canvasWidth,
+      canvasHeight,
     } = useFaceCanvas(assignedRegions);
 
     useImperativeHandle(ref, () => ({ exportImage }));
@@ -57,7 +68,10 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
               return region.rects.map((rect, i) => (
                 <g key={`${region.id}-${i}`}>
                   <rect
-                    x={rect.x} y={rect.y} width={rect.width} height={rect.height}
+                    x={rect.x}
+                    y={rect.y}
+                    width={rect.width}
+                    height={rect.height}
                     rx={6}
                     fill={isAssigned ? "none" : "rgba(0,0,0,0.25)"}
                     stroke={isAssigned ? region.color : "none"}
@@ -66,9 +80,13 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
                   />
                   {isAssigned && i === 0 && (
                     <text
-                      x={rect.x + rect.width / 2} y={rect.y + 14}
-                      textAnchor="middle" fill={region.color}
-                      fontSize="11" fontWeight="bold" opacity="0.6"
+                      x={rect.x + rect.width / 2}
+                      y={rect.y + 14}
+                      textAnchor="middle"
+                      fill={region.color}
+                      fontSize="11"
+                      fontWeight="bold"
+                      opacity="0.6"
                     >
                       {region.label}
                     </text>
@@ -78,8 +96,16 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             })}
           </svg>
         </div>
-        <Toolbar tool={tool} onToolChange={setTool} onClear={clear} onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} />
+        <Toolbar
+          tool={tool}
+          onToolChange={setTool}
+          onClear={clear}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
       </div>
     );
-  }
+  },
 );

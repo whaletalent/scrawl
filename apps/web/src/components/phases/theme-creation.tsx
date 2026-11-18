@@ -9,7 +9,12 @@ interface ThemeCreationProps {
   onSubmit: (text: string) => void;
 }
 
-export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: ThemeCreationProps) {
+export function ThemeCreation({
+  themes,
+  playerId,
+  playerCount,
+  onSubmit,
+}: ThemeCreationProps) {
   const [text, setText] = useState("");
   const maxThemes = playerCount < 6 ? 2 : 1;
   const myThemes = themes.filter((t) => t.authorId === playerId);
@@ -53,7 +58,10 @@ export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: Theme
 
       <div className="w-full flex flex-col gap-2">
         {themes.map((t) => (
-          <div key={t.id} className="px-4 py-2 bg-gray-800/50 rounded-lg text-gray-300">
+          <div
+            key={t.id}
+            className="px-4 py-2 bg-gray-800/50 rounded-lg text-gray-300"
+          >
             {t.authorId === playerId ? t.text : "Tema enviado..."}
           </div>
         ))}

@@ -1,6 +1,9 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
-import { DrawingCanvas, type DrawingCanvasHandle } from "@/components/canvas/drawing-canvas";
+import {
+  DrawingCanvas,
+  type DrawingCanvasHandle,
+} from "@/components/canvas/drawing-canvas";
 import { getSilhouette } from "@/components/silhouettes";
 import type { SilhouetteId } from "@/types/game";
 
@@ -15,7 +18,15 @@ interface SplitDrawingPhaseProps {
   initialSubmitted?: boolean;
 }
 
-export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, endsAt, onSubmit, initialSubmitted }: SplitDrawingPhaseProps) {
+export function SplitDrawingPhase({
+  round,
+  totalRounds,
+  side,
+  silhouetteId,
+  endsAt,
+  onSubmit,
+  initialSubmitted,
+}: SplitDrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
@@ -31,7 +42,10 @@ export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, ends
   useEffect(() => {
     if (!endsAt || submitted) return;
     const ms = endsAt - Date.now() - 500; // submit 500ms before server timer
-    if (ms <= 0) { doSubmit(); return; }
+    if (ms <= 0) {
+      doSubmit();
+      return;
+    }
     const timer = setTimeout(doSubmit, ms);
     return () => clearTimeout(timer);
   }, [endsAt, submitted, doSubmit]);
@@ -46,19 +60,20 @@ export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, ends
   return (
     <div className="flex flex-col items-center gap-4 px-4 w-full">
       <div className="text-center">
-        <p className="text-sm text-gray-500">Rodada {round}/{totalRounds}</p>
+        <p className="text-sm text-gray-500">
+          Rodada {round}/{totalRounds}
+        </p>
         <h2 className="text-xl font-bold">Complete o personagem!</h2>
         <p className="text-gray-400 text-sm">
-          Você desenha: <span className="text-blue-400 font-medium">{sideLabel}</span>
+          Você desenha:{" "}
+          <span className="text-blue-400 font-medium">{sideLabel}</span>
         </p>
       </div>
 
       <DrawingCanvas
         ref={canvasRef}
         side={side}
-        silhouetteOverlay={
-          <Silhouette className="w-full h-full" />
-        }
+        silhouetteOverlay={<Silhouette className="w-full h-full" />}
       />
 
       {!submitted ? (
@@ -69,7 +84,9 @@ export function SplitDrawingPhase({ round, totalRounds, side, silhouetteId, ends
           Enviar Desenho
         </button>
       ) : (
-        <p className="text-green-400 font-medium">Desenho enviado! Esperando parceiro...</p>
+        <p className="text-green-400 font-medium">
+          Desenho enviado! Esperando parceiro...
+        </p>
       )}
     </div>
   );

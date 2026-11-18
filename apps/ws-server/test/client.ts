@@ -25,9 +25,16 @@ export interface TestClient {
   seen(pred: Pred): boolean;
 }
 
-export const type = (t: string): Pred => (m) => m.type === t;
-export const phase = (p: string): Pred => (m) => m.type === "phase-change" && m.phase === p;
-export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+export const type =
+  (t: string): Pred =>
+  (m) =>
+    m.type === t;
+export const phase =
+  (p: string): Pred =>
+  (m) =>
+    m.type === "phase-change" && m.phase === p;
+export const sleep = (ms: number) =>
+  new Promise<void>((r) => setTimeout(r, ms));
 
 /** A tiny valid PNG, used wherever a test needs to submit "a drawing". */
 export const IMG =
@@ -54,8 +61,13 @@ export function connect(url: string, name = "client"): Promise<TestClient> {
       wait: (pred, timeoutMs = 5000) =>
         new Promise((res, rej) => {
           const timer = setTimeout(
-            () => rej(new Error(`${name}: timed out after ${timeoutMs}ms waiting for ${pred}. Got: ${c.msgs.map((m) => m.type).join(", ")}`)),
-            timeoutMs
+            () =>
+              rej(
+                new Error(
+                  `${name}: timed out after ${timeoutMs}ms waiting for ${pred}. Got: ${c.msgs.map((m) => m.type).join(", ")}`,
+                ),
+              ),
+            timeoutMs,
           );
           waiters.push((m) => {
             if (!pred(m)) return false;
@@ -88,7 +100,11 @@ export function connect(url: string, name = "client"): Promise<TestClient> {
 }
 
 /** Connects and joins an existing room. Resolves once the server answered (room-state or error). */
-export async function join(url: string, roomCode: string, nickname: string): Promise<TestClient> {
+export async function join(
+  url: string,
+  roomCode: string,
+  nickname: string,
+): Promise<TestClient> {
   const c = await connect(url, nickname);
   const answered = c.wait((m) => m.type === "room-state" || m.type === "error");
   c.send({ type: "join-room", roomCode, nickname });
@@ -97,14 +113,19 @@ export async function join(url: string, roomCode: string, nickname: string): Pro
 }
 
 /** Creates a room with `players` clients in it; `clients[0]` is the host. */
-export async function createRoom(url: string, players: number, options: object = {}) {
+export async function createRoom(
+  url: string,
+  players: number,
+  options: object = {},
+) {
   const host = await connect(url, "p0");
   const created = host.wait(type("room-state"));
   host.send({ type: "create-room", nickname: "p0", ...options });
   const code: string = (await created).state.code;
 
   const clients = [host];
-  for (let i = 1; i < players; i++) clients.push(await join(url, code, `p${i}`));
+  for (let i = 1; i < players; i++)
+    clients.push(await join(url, code, `p${i}`));
   return { code, clients };
 }
 

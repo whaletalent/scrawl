@@ -1,17 +1,35 @@
 {
   "name": "scrawl",
+  "version": "1.0.0",
   "private": true,
+  "author": "whaletalent",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@scrawl/ws-server & npm run dev --workspace=@scrawl/web",
     "build": "npm run build --workspace=@scrawl/web",
+    "build:server": "npm run build --workspace=@scrawl/ws-server",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspace=@scrawl/ws-server && tsc --noEmit -p apps/web && tsc --noEmit -p e2e",
     "test": "npm test --workspace=@scrawl/ws-server",
-    "test:e2e": "playwright test",
-    "typecheck": "npm run typecheck --workspace=@scrawl/ws-server && tsc --noEmit -p apps/web && tsc --noEmit -p e2e"
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0"
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript-eslint": "^8.73.0"
   }
 }

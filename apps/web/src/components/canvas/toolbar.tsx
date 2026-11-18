@@ -2,9 +2,18 @@
 import type { CanvasTool, ToolType } from "@/hooks/use-canvas";
 
 const COLORS = [
-  "#000000", "#ffffff", "#ef4444", "#f97316", "#eab308",
-  "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280",
-  "#92400e", "#0891b2",
+  "#000000",
+  "#ffffff",
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#6b7280",
+  "#92400e",
+  "#0891b2",
 ];
 
 const SIZES = [2, 4, 8, 16];
@@ -26,9 +35,15 @@ interface ToolbarProps {
   canRedo?: boolean;
 }
 
-export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, canRedo }: ToolbarProps) {
-  const isBrushOrEraser = tool.type === "brush" || tool.type === "eraser";
-
+export function Toolbar({
+  tool,
+  onToolChange,
+  onClear,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+}: ToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-3 p-3 bg-gray-800 rounded-xl">
       {/* Colors */}
@@ -73,7 +88,9 @@ export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, 
       <button
         onClick={() => onToolChange({ ...tool, type: "brush" })}
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-          tool.type === "brush" ? "bg-purple-600" : "bg-gray-700 hover:bg-gray-600"
+          tool.type === "brush"
+            ? "bg-purple-600"
+            : "bg-gray-700 hover:bg-gray-600"
         }`}
       >
         Pincel
@@ -83,7 +100,9 @@ export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, 
       <button
         onClick={() => onToolChange({ ...tool, type: "eraser" })}
         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-          tool.type === "eraser" ? "bg-purple-600" : "bg-gray-700 hover:bg-gray-600"
+          tool.type === "eraser"
+            ? "bg-purple-600"
+            : "bg-gray-700 hover:bg-gray-600"
         }`}
       >
         Borracha
@@ -99,7 +118,9 @@ export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, 
             onClick={() => onToolChange({ ...tool, type })}
             title={label}
             className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
-              tool.type === type ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
+              tool.type === type
+                ? "bg-blue-600"
+                : "bg-gray-700 hover:bg-gray-600"
             }`}
           >
             {icon}
@@ -117,7 +138,9 @@ export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, 
             disabled={!canUndo}
             title="Desfazer (Ctrl+Z)"
             className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
-              canUndo ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-800 text-gray-600 cursor-not-allowed"
+              canUndo
+                ? "bg-gray-700 hover:bg-gray-600"
+                : "bg-gray-800 text-gray-600 cursor-not-allowed"
             }`}
           >
             ↩
@@ -127,7 +150,9 @@ export function Toolbar({ tool, onToolChange, onClear, onUndo, onRedo, canUndo, 
             disabled={!canRedo}
             title="Refazer (Ctrl+Y)"
             className={`flex items-center justify-center w-9 h-9 rounded-lg text-base transition-colors ${
-              canRedo ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-800 text-gray-600 cursor-not-allowed"
+              canRedo
+                ? "bg-gray-700 hover:bg-gray-600"
+                : "bg-gray-800 text-gray-600 cursor-not-allowed"
             }`}
           >
             ↪

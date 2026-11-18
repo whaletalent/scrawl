@@ -1,9 +1,25 @@
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "./types.js";
-import { createRoom, joinRoom, removePlayer, getRoom, broadcast, publicPlayer, publicPlayers } from "./room-manager.js";
+import {
+  createRoom,
+  joinRoom,
+  removePlayer,
+  getRoom,
+  broadcast,
+  publicPlayer,
+  publicPlayers,
+} from "./room-manager.js";
 import type { Room } from "./types.js";
 import { config } from "./config.js";
-import { startGame, startSplitGame, handleSplitDrawingSubmit, startFaceGame, handleFaceDrawingSubmit, handlePlayerLeft, resyncPlayer } from "./game-engine.js";
+import {
+  startGame,
+  startSplitGame,
+  handleSplitDrawingSubmit,
+  startFaceGame,
+  handleFaceDrawingSubmit,
+  handlePlayerLeft,
+  resyncPlayer,
+} from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
 
@@ -19,8 +35,15 @@ function handleDisconnect(ws: WebSocket) {
   if (!room || !player || player.ws !== ws) return;
 
   player.connected = false;
-  broadcast(room, { type: "player-connection", playerId: player.id, connected: false });
-  player.graceTimer = setTimeout(() => dropPlayer(info.roomCode, info.playerId), config.reconnectGraceMs);
+  broadcast(room, {
+    type: "player-connection",
+    playerId: player.id,
+    connected: false,
+  });
+  player.graceTimer = setTimeout(
+    () => dropPlayer(info.roomCode, info.playerId),
+    config.reconnectGraceMs,
+  );
 }
 
 /** Grace period over: the player is gone for good. */
@@ -34,17 +57,20 @@ function dropPlayer(roomCode: string, playerId: string) {
 }
 
 function sendRoomState(ws: WebSocket, room: Room, playerId: string) {
-  ws.send(JSON.stringify({
-    type: "room-state",
-    state: serializeRoomState(room),
-    playerId,
-    sessionToken: room.players.get(playerId)?.token,
-  }));
+  ws.send(
+    JSON.stringify({
+      type: "room-state",
+      state: serializeRoomState(room),
+      playerId,
+      sessionToken: room.players.get(playerId)?.token,
+    }),
+  );
 }
 
 function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
   const room = getRoom(roomCode);
-  const player = room && Array.from(room.players.values()).find((p) => p.token === token);
+  const player =
+    room && Array.from(room.players.values()).find((p) => p.token === token);
   if (!room || !player || typeof token !== "string") {
     ws.send(JSON.stringify({ type: "rejoin-failed" }));
     return;
@@ -58,7 +84,8 @@ function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
   if (oldWs !== ws) {
     wsToPlayer.delete(oldWs);
     // Tell the old tab to stand down, or its auto-reconnect would fight us for the slot.
-    if (oldWs.readyState === oldWs.OPEN) oldWs.send(JSON.stringify({ type: "session-replaced" }));
+    if (oldWs.readyState === oldWs.OPEN)
+      oldWs.send(JSON.stringify({ type: "session-replaced" }));
     oldWs.close();
   }
 
@@ -68,7 +95,11 @@ function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
 
   sendRoomState(ws, room, player.id);
   resyncPlayer(room, player.id);
-  broadcast(room, { type: "player-connection", playerId: player.id, connected: true }, player.id);
+  broadcast(
+    room,
+    { type: "player-connection", playerId: player.id, connected: true },
+    player.id,
+  );
 }
 
 export function handleConnection(ws: WebSocket) {
@@ -119,8 +150,19 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
   }
 }
 
-function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "create-room" }>) {
-  const room = createRoom(msg.nickname, ws, msg.gameMode, msg.totalRounds, msg.turnDuration, msg.faceTemplate, msg.skinTone);
+function handleCreateRoom(
+  ws: WebSocket,
+  msg: Extract<ClientMessage, { type: "create-room" }>,
+) {
+  const room = createRoom(
+    msg.nickname,
+    ws,
+    msg.gameMode,
+    msg.totalRounds,
+    msg.turnDuration,
+    msg.faceTemplate,
+    msg.skinTone,
+  );
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
   sendRoomState(ws, room, hostId);
@@ -129,7 +171,12 @@ function handleCreateRoom(ws: WebSocket, msg: Extract<ClientMessage, { type: "cr
 function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
   const result = joinRoom(roomCode, nickname, ws);
   if (!result) {
-    ws.send(JSON.stringify({ type: "error", message: "Sala não encontrada, cheia ou já iniciada" }));
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: "Sala não encontrada, cheia ou já iniciada",
+      }),
+    );
     return;
   }
 
@@ -137,7 +184,14 @@ function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
   wsToPlayer.set(ws, { playerId, roomCode: room.code });
   sendRoomState(ws, room, playerId);
 
-  broadcast(room, { type: "player-joined", player: publicPlayer(room.players.get(playerId)!) }, playerId);
+  broadcast(
+    room,
+    {
+      type: "player-joined",
+      player: publicPlayer(room.players.get(playerId)!),
+    },
+    playerId,
+  );
 }
 
 function handleStartGame(ws: WebSocket) {
@@ -149,25 +203,45 @@ function handleStartGame(ws: WebSocket) {
 
   const player = room.players.get(info.playerId);
   if (!player?.isHost) {
-    ws.send(JSON.stringify({ type: "error", message: "Só o host pode iniciar o jogo" }));
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        message: "Só o host pode iniciar o jogo",
+      }),
+    );
     return;
   }
 
   if (room.gameMode === "split-body") {
     if (room.players.size !== 2) {
-      ws.send(JSON.stringify({ type: "error", message: "O modo Split Body precisa de exatamente 2 jogadores" }));
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "O modo Split Body precisa de exatamente 2 jogadores",
+        }),
+      );
       return;
     }
     startSplitGame(room);
   } else if (room.gameMode === "face-builder") {
     if (room.players.size !== 2) {
-      ws.send(JSON.stringify({ type: "error", message: "O modo Face Builder precisa de exatamente 2 jogadores" }));
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "O modo Face Builder precisa de exatamente 2 jogadores",
+        }),
+      );
       return;
     }
     startFaceGame(room);
   } else {
     if (room.players.size < 4) {
-      ws.send(JSON.stringify({ type: "error", message: "São necessários pelo menos 4 jogadores para começar" }));
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "São necessários pelo menos 4 jogadores para começar",
+        }),
+      );
       return;
     }
     startGame(room);
@@ -199,7 +273,12 @@ function handleSubmitTheme(ws: WebSocket, text: string) {
 
   broadcast(room, {
     type: "theme-submitted",
-    theme: { id: theme.id, text: theme.text, authorId: theme.authorId, votes: 0 },
+    theme: {
+      id: theme.id,
+      text: theme.text,
+      authorId: theme.authorId,
+      votes: 0,
+    },
   });
 }
 
@@ -216,7 +295,8 @@ function handleVoteTheme(ws: WebSocket, themeId: string) {
   if (theme.votes.includes(info.playerId)) return;
 
   const playerVoteCount = room.themes.reduce(
-    (count, t) => count + (t.votes.includes(info.playerId) ? 1 : 0), 0
+    (count, t) => count + (t.votes.includes(info.playerId) ? 1 : 0),
+    0,
   );
   if (playerVoteCount >= 2) return;
 
@@ -225,7 +305,10 @@ function handleVoteTheme(ws: WebSocket, themeId: string) {
   broadcast(room, {
     type: "theme-votes-update",
     themes: room.themes.map((t) => ({
-      id: t.id, text: t.text, authorId: t.authorId, votes: t.votes.length,
+      id: t.id,
+      text: t.text,
+      authorId: t.authorId,
+      votes: t.votes.length,
     })),
   });
 }
@@ -238,14 +321,14 @@ function handleSubmitDrawing(ws: WebSocket, imageDataUrl: string) {
   if (!room || room.phase !== "drawing") return;
 
   const pair = room.pairs.find(
-    (p) => p.playerA === info.playerId || p.playerB === info.playerId
+    (p) => p.playerA === info.playerId || p.playerB === info.playerId,
   );
   if (!pair) return;
 
   const side = pair.playerA === info.playerId ? "left" : "right";
 
   const existing = room.drawings.find(
-    (d) => d.pairId === pair.id && d.playerId === info.playerId
+    (d) => d.pairId === pair.id && d.playerId === info.playerId,
   );
   if (existing) return;
 
@@ -285,7 +368,7 @@ function handleVoteDrawing(ws: WebSocket, pairId: string, rank: 1 | 2 | 3) {
   if (!room || room.phase !== "drawing-voting") return;
 
   const ownPair = room.pairs.find(
-    (p) => p.playerA === info.playerId || p.playerB === info.playerId
+    (p) => p.playerA === info.playerId || p.playerB === info.playerId,
   );
   if (ownPair?.id === pairId) return;
 
@@ -319,7 +402,10 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     totalRounds: room.totalRounds,
     players: publicPlayers(room),
     themes: room.themes.map((t) => ({
-      id: t.id, text: t.text, authorId: t.authorId, votes: t.votes.length,
+      id: t.id,
+      text: t.text,
+      authorId: t.authorId,
+      votes: t.votes.length,
     })),
     pairs: room.pairs,
     drawings: [],

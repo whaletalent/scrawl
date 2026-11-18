@@ -6,11 +6,16 @@ test("landing page validates the nickname", async ({ page }) => {
   await page.getByPlaceholder("Seu apelido").fill("A");
   await page.getByRole("button", { name: "Criar sala" }).click();
   await page.getByRole("button", { name: "Criar Party" }).click();
-  await expect(page.getByText("O apelido precisa ter pelo menos 2 caracteres")).toBeVisible();
+  await expect(
+    page.getByText("O apelido precisa ter pelo menos 2 caracteres"),
+  ).toBeVisible();
   await expect(page).toHaveURL("/");
 });
 
-test("the host's URL and invite link point to the real room", async ({ page, context }) => {
+test("the host's URL and invite link point to the real room", async ({
+  page,
+  context,
+}) => {
   const errors = failOnPageErrors(page);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const code = await createRoom(page, { mode: "Face Builder (2)" });
@@ -27,14 +32,21 @@ test("the host's URL and invite link point to the real room", async ({ page, con
   expect(errors).toEqual([]);
 });
 
-test("an invite link asks for a nickname, then joins the room", async ({ page, browser }) => {
+test("an invite link asks for a nickname, then joins the room", async ({
+  page,
+  browser,
+}) => {
   const code = await createRoom(page, { mode: "Split Body (2)" });
 
   const guest = await (await browser.newContext()).newPage();
   await guest.goto(`/room/?code=${code.toLowerCase()}`);
-  await expect(guest.getByRole("heading", { name: `Entrar na sala ${code}` })).toBeVisible();
+  await expect(
+    guest.getByRole("heading", { name: `Entrar na sala ${code}` }),
+  ).toBeVisible();
   await guest.getByRole("button", { name: "Entrar" }).click();
-  await expect(guest.getByText("O apelido precisa ter pelo menos 2 caracteres")).toBeVisible();
+  await expect(
+    guest.getByText("O apelido precisa ter pelo menos 2 caracteres"),
+  ).toBeVisible();
 
   await guest.getByPlaceholder("Seu apelido").fill("Bia");
   await guest.getByPlaceholder("Seu apelido").press("Enter");
@@ -43,27 +55,42 @@ test("an invite link asks for a nickname, then joins the room", async ({ page, b
   await expect(guest.getByText("Esperando o host começar...")).toBeVisible();
 
   await expect(page.getByText("Jogadores (2/2)")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Começar Split Body" })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Começar Split Body" }),
+  ).toBeEnabled();
 });
 
-test("an invite link to a room that doesn't exist shows an error and a way back", async ({ page }) => {
+test("an invite link to a room that doesn't exist shows an error and a way back", async ({
+  page,
+}) => {
   await page.goto("/room/?code=ZZZZZ");
   await page.getByPlaceholder("Seu apelido").fill("Bia");
   await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page.getByText("Sala não encontrada, cheia ou já iniciada")).toBeVisible();
+  await expect(
+    page.getByText("Sala não encontrada, cheia ou já iniciada"),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Voltar" }).click();
   await expect(page).toHaveURL("/");
 });
 
-test("the lobby waits for enough players and shows who is the host", async ({ page }) => {
+test("the lobby waits for enough players and shows who is the host", async ({
+  page,
+}) => {
   const code = await createRoom(page, { mode: "Party (4-10)" });
-  await expect(page.getByRole("button", { name: "Esperando jogadores (1/4)..." })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Esperando jogadores (1/4)..." }),
+  ).toBeDisabled();
   for (const name of ["Bia", "Caio", "Duda"]) await bot(code, name);
   await expect(page.getByText("Jogadores (4/10)")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Começar jogo" })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Começar jogo" }),
+  ).toBeEnabled();
 });
 
-test("when the host leaves the lobby, the next player becomes host", async ({ page, browser }) => {
+test("when the host leaves the lobby, the next player becomes host", async ({
+  page,
+  browser,
+}) => {
   const code = await createRoom(page, { mode: "Party (4-10)" });
   const guest = await (await browser.newContext()).newPage();
   await guest.goto(`/room/?code=${code}`);
@@ -74,31 +101,43 @@ test("when the host leaves the lobby, the next player becomes host", async ({ pa
   await page.close();
   await expect(guest.getByText("Ana (reconectando...)")).toBeVisible();
   // once the grace period is over the slot is gone and Bia is promoted
-  await expect(guest.getByRole("button", { name: "Esperando jogadores (1/4)..." })).toBeVisible();
+  await expect(
+    guest.getByRole("button", { name: "Esperando jogadores (1/4)..." }),
+  ).toBeVisible();
   await expect(guest.getByText("Ana")).toHaveCount(0);
 });
 
-test("opening the same session in a second tab takes over and stops the first", async ({ page, context }) => {
+test("opening the same session in a second tab takes over and stops the first", async ({
+  page,
+  context,
+}) => {
   const code = await createRoom(page, { mode: "Party (4-10)" });
   const session = await page.evaluate(() => ({ ...sessionStorage }));
 
   // What "duplicate tab" does: a new tab starting with a copy of sessionStorage.
   const second = await context.newPage();
   await second.addInitScript((items) => {
-    for (const [key, value] of Object.entries(items)) sessionStorage.setItem(key, value);
+    for (const [key, value] of Object.entries(items))
+      sessionStorage.setItem(key, value);
   }, session);
   await second.goto(`/room/?code=${code}`);
 
   await expect(second.getByText("Ana (você)")).toBeVisible();
   await expect(second.getByText("Jogadores (1/10)")).toBeVisible();
-  await expect(page.getByText("Esta sala foi aberta em outra aba.")).toBeVisible();
+  await expect(
+    page.getByText("Esta sala foi aberta em outra aba."),
+  ).toBeVisible();
   // and it stays that way — the first tab must not grab the slot back
   await page.waitForTimeout(3000);
   await expect(second.getByText("Ana (você)")).toBeVisible();
-  await expect(page.getByText("Esta sala foi aberta em outra aba.")).toBeVisible();
+  await expect(
+    page.getByText("Esta sala foi aberta em outra aba."),
+  ).toBeVisible();
 });
 
-test("opening the room page without a code goes back to the landing page", async ({ page }) => {
+test("opening the room page without a code goes back to the landing page", async ({
+  page,
+}) => {
   await page.goto("/room/");
   await expect(page).toHaveURL("/");
   await expect(page.getByPlaceholder("Seu apelido")).toBeVisible();

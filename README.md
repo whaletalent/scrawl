@@ -5,11 +5,11 @@ half see, and the fun is in the reveal.
 
 ## Game modes
 
-| Mode | Players | How it works |
-|------|---------|--------------|
-| **Party** | 4–10 | Everyone writes absurd themes, pairs draw one theme on a split canvas (left/right) without seeing each other's half, then everybody ranks the results. With an odd number of players, one player per round sits out and judges. |
-| **Split Body** | 2 | One player draws the top half of a character, the other the bottom, over a faint silhouette. Sides alternate each round. |
-| **Face Builder** | 2 | Six face regions are shuffled and split 3-and-3; each player can only draw in their own regions. |
+| Mode             | Players | How it works                                                                                                                                                                                                                    |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Party**        | 4–10    | Everyone writes absurd themes, pairs draw one theme on a split canvas (left/right) without seeing each other's half, then everybody ranks the results. With an odd number of players, one player per round sits out and judges. |
+| **Split Body**   | 2       | One player draws the top half of a character, the other the bottom, over a faint silhouette. Sides alternate each round.                                                                                                        |
+| **Face Builder** | 2       | Six face regions are shuffled and split 3-and-3; each player can only draw in their own regions.                                                                                                                                |
 
 ## Running locally
 
