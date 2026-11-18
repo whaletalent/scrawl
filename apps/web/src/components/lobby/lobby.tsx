@@ -1,6 +1,7 @@
 "use client";
 import type { FaceTemplateOption, Player, GameMode } from "@/types/game";
 import { FACE_TEMPLATE_LABELS } from "@/components/face-templates";
+import { roomUrl } from "@/lib/routes";
 
 interface LobbyProps {
   roomCode: string;
@@ -27,7 +28,7 @@ export function Lobby({ roomCode, players, playerId, isHost, gameMode, faceTempl
         <p className="text-gray-400 text-sm">Código da sala</p>
         <p className="text-4xl font-black tracking-widest text-purple-400">{roomCode}</p>
         <button
-          onClick={() => navigator.clipboard.writeText(`${window.location.origin}/room/${roomCode}`)}
+          onClick={() => navigator.clipboard.writeText(roomUrl(roomCode))}
           className="text-sm text-gray-500 hover:text-gray-400 mt-1"
         >
           Copiar link de convite

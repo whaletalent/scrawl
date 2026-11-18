@@ -6,7 +6,7 @@ test("two browsers play Face Builder; a reload rejoins; a partner leaving ends t
   const code = await createRoom(host, { mode: "Face Builder (2)", turnSeconds: 180 });
 
   const guest = await (await browser.newContext()).newPage();
-  await guest.goto(`/room/${code}`);
+  await guest.goto(`/room/?code=${code}`);
   await guest.getByPlaceholder("Seu apelido").fill("Bia");
   await guest.getByRole("button", { name: "Entrar" }).click();
 
@@ -33,7 +33,7 @@ test("two browsers play Face Builder; a reload rejoins; a partner leaving ends t
   // Reloading mid-game puts the host straight back into the round.
   await host.reload();
   await expect(host.getByRole("heading", { name: "Monte o rosto!" })).toBeVisible();
-  await expect(host).toHaveURL(`/room/${code}`);
+  await expect(host).toHaveURL(`/room/?code=${code}`);
   await expect(guest.getByText(/saiu|encerrado/)).toHaveCount(0);
   await expect(guest.getByText(/aguardando reconexão/)).toHaveCount(0);
 

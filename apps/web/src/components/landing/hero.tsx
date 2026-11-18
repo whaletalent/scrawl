@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
+import { NEW_ROOM, roomPath } from "@/lib/routes";
 import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { ModeSelector } from "@/components/lobby/mode-selector";
 
@@ -26,7 +27,7 @@ export function Hero() {
     sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
     sessionStorage.setItem("scrawl-faceTemplate", faceTemplate);
     sessionStorage.setItem("scrawl-skinTone", skinTone);
-    router.push("/room/new");
+    router.push(roomPath(NEW_ROOM));
   }
 
   function handleJoin() {
@@ -35,7 +36,7 @@ export function Hero() {
     const code = roomCode.trim().toUpperCase();
     if (code.length < 5) { setError("Digite um código de sala válido"); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    router.push(`/room/${code}`);
+    router.push(roomPath(code));
   }
 
   return (

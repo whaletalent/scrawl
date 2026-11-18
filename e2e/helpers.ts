@@ -32,8 +32,8 @@ export async function createRoom(
   if (turnSeconds) await page.getByRole("combobox").selectOption(String(turnSeconds));
   await page.getByRole("button", { name: CREATE_BUTTON[mode] }).click();
 
-  await expect(page).toHaveURL(/\/room\/[A-Z0-9]{5}$/);
-  return page.url().split("/").pop()!;
+  await expect(page).toHaveURL(/\/room\/\?code=[A-Z0-9]{5}$/);
+  return new URL(page.url()).searchParams.get("code")!;
 }
 
 /** Drags the mouse across the canvas; points are fractions of its width/height. */

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useGameState } from "@/hooks/use-game-state";
 import { Lobby } from "@/components/lobby/lobby";
 import { TimerBar } from "@/components/game/timer-bar";
@@ -24,7 +25,7 @@ export function GameController(props: GameControllerProps) {
         {error ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-red-400">{error}</p>
-            <a href="/" className="text-sm text-gray-400 hover:text-gray-300 underline">Voltar</a>
+            <Link href="/" className="text-sm text-gray-400 hover:text-gray-300 underline">Voltar</Link>
           </div>
         ) : (
           <p className="text-gray-400">Conectando...</p>
