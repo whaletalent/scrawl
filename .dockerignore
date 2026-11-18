@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+**/node_modules
+**/.next
+**/.next-e2e
+**/out
+**/dist
+docs
+e2e
+test-results
+playwright-report
+.superpowers
