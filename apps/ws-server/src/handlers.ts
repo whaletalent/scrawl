@@ -112,7 +112,19 @@ export function handleConnection(ws: WebSocket) {
     }
   });
 
+  // Without a listener, a protocol error (oversized or malformed frame) would
+  // be an unhandled 'error' event and take the whole server down. ws closes
+  // the socket right after, so the close handler does the cleanup.
+  ws.on("error", (err) => console.warn(`[ws] client error: ${err.message}`));
+
   ws.on("close", () => handleDisconnect(ws));
+}
+
+/** Drawings are relayed to other players' <img> tags, so accept nothing but an inline PNG. */
+function isPngDataUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" && value.startsWith("data:image/png;base64,")
+  );
 }
 
 function handleMessage(ws: WebSocket, msg: ClientMessage) {
@@ -136,16 +148,19 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       handleVoteTheme(ws, msg.themeId);
       break;
     case "submit-drawing":
-      handleSubmitDrawing(ws, msg.imageDataUrl);
+      if (isPngDataUrl(msg.imageDataUrl))
+        handleSubmitDrawing(ws, msg.imageDataUrl);
       break;
     case "vote-drawing":
       handleVoteDrawing(ws, msg.pairId, msg.rank);
       break;
     case "submit-split-drawing":
-      handleSubmitSplitDrawing(ws, msg.imageDataUrl);
+      if (isPngDataUrl(msg.imageDataUrl))
+        handleSubmitSplitDrawing(ws, msg.imageDataUrl);
       break;
     case "submit-face-drawing":
-      handleSubmitFaceDrawing(ws, msg.imageDataUrl);
+      if (isPngDataUrl(msg.imageDataUrl))
+        handleSubmitFaceDrawing(ws, msg.imageDataUrl);
       break;
   }
 }
