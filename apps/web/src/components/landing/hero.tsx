@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
+import type { FaceTemplateOption, GameMode } from "@/types/game";
+import { ModeSelector } from "@/components/lobby/mode-selector";
 
 export function Hero() {
   const router = useRouter();
@@ -9,12 +11,21 @@ export function Hero() {
   const [roomCode, setRoomCode] = useState("");
   const [mode, setMode] = useState<"initial" | "create" | "join">("initial");
   const [error, setError] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>("party");
+  const [totalRounds, setTotalRounds] = useState(3);
+  const [turnDuration, setTurnDuration] = useState(90);
+  const [faceTemplate, setFaceTemplate] = useState<FaceTemplateOption>("random");
+  const [skinTone, setSkinTone] = useState("#FDDCB5");
 
   function handleCreate() {
     const err = validateNickname(nickname);
     if (err) { setError(err); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    sessionStorage.setItem("scrawl-action", "create");
+    sessionStorage.setItem("scrawl-gameMode", gameMode);
+    sessionStorage.setItem("scrawl-totalRounds", String(totalRounds));
+    sessionStorage.setItem("scrawl-turnDuration", String(turnDuration));
+    sessionStorage.setItem("scrawl-faceTemplate", faceTemplate);
+    sessionStorage.setItem("scrawl-skinTone", skinTone);
     router.push("/room/new");
   }
 
@@ -22,9 +33,8 @@ export function Hero() {
     const err = validateNickname(nickname);
     if (err) { setError(err); return; }
     const code = roomCode.trim().toUpperCase();
-    if (code.length < 5) { setError("Enter a valid room code"); return; }
+    if (code.length < 5) { setError("Digite um código de sala válido"); return; }
     sessionStorage.setItem("scrawl-nickname", nickname.trim());
-    sessionStorage.setItem("scrawl-action", "join");
     router.push(`/room/${code}`);
   }
 
@@ -34,13 +44,13 @@ export function Hero() {
         Scrawl
       </h1>
       <p className="text-xl text-gray-400 text-center max-w-md">
-        Draw, laugh, compete. The party game where your terrible art becomes legendary.
+        Desenhe, ria, dispute. O party game em que a sua arte horrível vira lenda.
       </p>
 
       <div className="w-full max-w-sm flex flex-col gap-4">
         <input
           type="text"
-          placeholder="Your nickname"
+          placeholder="Seu apelido"
           value={nickname}
           onChange={(e) => { setNickname(e.target.value); setError(null); }}
           maxLength={16}
@@ -53,31 +63,45 @@ export function Hero() {
               onClick={() => setMode("create")}
               className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
             >
-              Create Room
+              Criar sala
             </button>
             <button
               onClick={() => setMode("join")}
               className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-lg transition-colors"
             >
-              Join Room
+              Entrar em sala
             </button>
           </div>
         )}
 
         {mode === "create" && (
-          <button
-            onClick={handleCreate}
-            className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
-          >
-            Create Party
-          </button>
+          <div className="flex flex-col gap-3">
+            <ModeSelector
+              gameMode={gameMode}
+              totalRounds={totalRounds}
+              turnDuration={turnDuration}
+              faceTemplate={faceTemplate}
+              onModeChange={setGameMode}
+              onRoundsChange={setTotalRounds}
+              onDurationChange={setTurnDuration}
+              onFaceTemplateChange={setFaceTemplate}
+              skinTone={skinTone}
+              onSkinToneChange={setSkinTone}
+            />
+            <button
+              onClick={handleCreate}
+              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
+            >
+              {gameMode === "party" ? "Criar Party" : gameMode === "split-body" ? "Criar Split Body" : "Criar Face Builder"}
+            </button>
+          </div>
         )}
 
         {mode === "join" && (
           <div className="flex flex-col gap-3">
             <input
               type="text"
-              placeholder="Room code (e.g. ABC12)"
+              placeholder="Código da sala (ex.: ABC12)"
               value={roomCode}
               onChange={(e) => { setRoomCode(e.target.value.toUpperCase()); setError(null); }}
               maxLength={5}
@@ -87,7 +111,7 @@ export function Hero() {
               onClick={handleJoin}
               className="w-full py-3 bg-pink-600 hover:bg-pink-500 rounded-xl font-bold text-lg transition-colors"
             >
-              Join Party
+              Entrar
             </button>
           </div>
         )}
@@ -97,7 +121,7 @@ export function Hero() {
             onClick={() => { setMode("initial"); setError(null); }}
             className="text-gray-500 hover:text-gray-400 text-sm"
           >
-            Back
+            Voltar
           </button>
         )}
 

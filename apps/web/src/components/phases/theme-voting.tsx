@@ -21,9 +21,9 @@ export function ThemeVoting({ themes, playerId, onVote }: ThemeVotingProps) {
   return (
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-md">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">Vote for Themes</h2>
+        <h2 className="text-2xl font-bold">Vote nos temas</h2>
         <p className="text-gray-400 mt-1">
-          Pick your 2 favorites ({votedIds.size}/2 votes used)
+          Escolha seus 2 favoritos ({votedIds.size}/2 votos usados)
         </p>
       </div>
 
@@ -46,7 +46,7 @@ export function ThemeVoting({ themes, playerId, onVote }: ThemeVotingProps) {
                 }`}
               >
                 <span className="font-medium">{t.text}</span>
-                <span className="ml-2 text-sm text-gray-500">{t.votes} votes</span>
+                <span className="ml-2 text-sm text-gray-500">{t.votes} {t.votes === 1 ? "voto" : "votos"}</span>
               </button>
             );
           })}

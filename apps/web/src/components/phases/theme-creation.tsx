@@ -24,9 +24,9 @@ export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: Theme
   return (
     <div className="flex flex-col items-center gap-6 px-4 w-full max-w-md">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">Create a Theme</h2>
+        <h2 className="text-2xl font-bold">Crie um tema</h2>
         <p className="text-gray-400 mt-1">
-          The more absurd, the better. ({myThemes.length}/{maxThemes} submitted)
+          Quanto mais absurdo, melhor. ({myThemes.length}/{maxThemes} enviados)
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: Theme
         <div className="w-full flex gap-2">
           <input
             type="text"
-            placeholder='e.g. "Shrek playing chess with Gandalf"'
+            placeholder='ex.: "Shrek jogando xadrez com o Gandalf"'
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -46,7 +46,7 @@ export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: Theme
             disabled={!canSubmit}
             className="px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl font-bold transition-colors"
           >
-            Send
+            Enviar
           </button>
         </div>
       )}
@@ -54,7 +54,7 @@ export function ThemeCreation({ themes, playerId, playerCount, onSubmit }: Theme
       <div className="w-full flex flex-col gap-2">
         {themes.map((t) => (
           <div key={t.id} className="px-4 py-2 bg-gray-800/50 rounded-lg text-gray-300">
-            {t.authorId === playerId ? t.text : "Theme submitted..."}
+            {t.authorId === playerId ? t.text : "Tema enviado..."}
           </div>
         ))}
       </div>

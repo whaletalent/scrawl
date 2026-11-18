@@ -6,13 +6,23 @@ export type Phase =
   | "drawing-voting"
   | "reveal"
   | "scoreboard"
-  | "final-results";
+  | "final-results"
+  | "split-drawing"
+  | "split-final"
+  | "face-drawing"
+  | "face-final";
+
+export type GameMode = "party" | "split-body" | "face-builder";
+
+export type SilhouetteId = "man" | "woman" | "child" | "robot" | "alien" | "superhero";
 
 export interface Player {
   id: string;
   nickname: string;
   score: number;
   isHost: boolean;
+  /** False while the player's socket is down and the server is holding their slot. */
+  connected?: boolean;
 }
 
 export interface Theme {
@@ -34,12 +44,39 @@ export interface DrawingResult {
   themeText: string;
   imageLeftDataUrl: string;
   imageRightDataUrl: string;
-  combinedImageDataUrl: string;
+  round: number;
+  playerNames: [string, string];
   votes: { first: number; second: number; third: number };
+}
+
+export interface SplitDrawing {
+  round: number;
+  topPlayerId: string;
+  bottomPlayerId: string;
+  topImageDataUrl: string | null;
+  bottomImageDataUrl: string | null;
+  silhouetteId: SilhouetteId;
+}
+
+export type FaceTemplateId = "masculine" | "feminine" | "monster" | "alien-face" | "robot-face";
+export type FaceTemplateOption = FaceTemplateId | "random";
+export type FaceRegionId = "hair" | "ears" | "eyes" | "nose" | "mouth" | "shoulders";
+
+export interface FaceDrawing {
+  round: number;
+  faceTemplate: FaceTemplateId;
+  skinTone: string;
+  assignments: { regionId: FaceRegionId; playerId: string }[];
+  player1Id: string;
+  player2Id: string;
+  player1ImageDataUrl: string | null;
+  player2ImageDataUrl: string | null;
 }
 
 export interface RoomState {
   code: string;
+  gameMode: GameMode;
+  turnDuration: number;
   phase: Phase;
   round: number;
   totalRounds: number;
@@ -48,27 +85,43 @@ export interface RoomState {
   pairs: Pair[];
   drawings: DrawingResult[];
   phaseEndsAt: number;
+  faceTemplate: FaceTemplateOption;
+  skinTone: string;
 }
 
 export type ClientMessage =
   | { type: "join-room"; roomCode: string; nickname: string }
-  | { type: "create-room"; nickname: string }
+  | { type: "rejoin"; roomCode: string; token: string }
+  | { type: "create-room"; nickname: string; gameMode?: GameMode; totalRounds?: number; turnDuration?: number; faceTemplate?: FaceTemplateOption; skinTone?: string }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }
-  | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 };
+  | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 }
+  | { type: "submit-split-drawing"; imageDataUrl: string }
+  | { type: "submit-face-drawing"; imageDataUrl: string };
 
 export type ServerMessage =
-  | { type: "room-state"; state: RoomState }
+  | { type: "room-state"; state: RoomState; playerId: string; sessionToken?: string }
+  | { type: "rejoin-failed" }
+  | { type: "session-replaced" }
+  | { type: "player-connection"; playerId: string; connected: boolean }
+  | { type: "pair-assigned"; pairId: string; partnerId: string; side: "left" | "right"; theme: string; submitted: boolean }
   | { type: "error"; message: string }
-  | { type: "phase-change"; phase: Phase; phaseEndsAt: number }
+  | { type: "phase-change"; phase: Phase; phaseEndsAt: number; round: number }
   | { type: "player-joined"; player: Player }
-  | { type: "player-left"; playerId: string }
+  | { type: "player-left"; playerId: string; hostId?: string }
+  | { type: "notice"; message: string }
   | { type: "theme-submitted"; theme: Theme }
   | { type: "theme-votes-update"; themes: Theme[] }
   | { type: "drawing-submitted"; pairId: string; side: "left" | "right" }
   | { type: "drawings-ready"; drawings: DrawingResult[] }
   | { type: "vote-update"; drawings: DrawingResult[] }
   | { type: "reveal-data"; drawings: DrawingResult[]; players: Player[] }
-  | { type: "final-results"; players: Player[]; drawings: DrawingResult[] };
+  | { type: "final-results"; players: Player[]; drawings: DrawingResult[] }
+  | { type: "split-round-start"; round: number; side: "top" | "bottom"; silhouetteId: SilhouetteId; totalRounds: number; submitted: boolean }
+  | { type: "split-round-end"; round: number }
+  | { type: "split-final-results"; drawings: SplitDrawing[] }
+  | { type: "face-round-start"; round: number; regions: FaceRegionId[]; faceTemplate: FaceTemplateId; skinTone: string; totalRounds: number; submitted: boolean }
+  | { type: "face-round-end"; round: number }
+  | { type: "face-final-results"; drawings: FaceDrawing[] };
