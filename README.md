@@ -114,6 +114,8 @@ docs/                     screenshot, design specs, implementation plans, mode i
 
   It listens on `PORT` (default 8080), answers plain HTTP with a 200 for health checks, and must be reachable over `wss://` for the Pages site to connect to it.
 
+  `render.yaml` is a [Render](https://render.com) Blueprint for it: in Render choose New > Blueprint and pick this repository, then put the service's address in the `WS_URL` repository variable (`wss://<name>.onrender.com`) and re-run the deploy workflow. Rooms live in memory, so run a single instance.
+
 - Dependabot keeps npm packages, GitHub Actions and the Docker base image up to date.
 
 ## License

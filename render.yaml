@@ -1,0 +1,21 @@
+# Render Blueprint for the WebSocket server (the web app is on GitHub Pages).
+# In Render: New > Blueprint, pick this repository. Then copy the service's
+# address into the GitHub repository variable WS_URL as wss://<name>.onrender.com
+services:
+  - type: web
+    name: scrawl-ws
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./apps/ws-server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    # deploy a commit on main only after its CI checks pass
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - apps/ws-server/**
+        - package.json
+        - package-lock.json
+        - tsconfig.base.json
+        - render.yaml
