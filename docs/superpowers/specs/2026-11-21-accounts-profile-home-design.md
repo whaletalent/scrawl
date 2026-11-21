@@ -19,12 +19,14 @@ Today a Scrawl player is a nickname typed on the landing page; nothing outlives 
 2. The avatar and username replace the bare nickname wherever players are listed in a room.
 3. A home for logged-in players: create room, join by code, list of open public rooms, latest drawings of the community gallery.
 4. Logged-in players can save a finished drawing to a public gallery.
-5. A profile page: avatar, username, redraw avatar, the gallery drawings the player took part in, sign out.
+5. A profile page: avatar, username, redraw avatar, change password, the gallery drawings the player took part in, sign out.
 
 ## Non-goals (first version)
 
 - Friends, followers, chat, match history, statistics, rankings.
 - Viewing other players' profile pages.
+- Password recovery, e-mail addresses, social sign-in, changing a username.
+- Captcha or other bot protection on sign-up beyond Supabase's built-in rate limits.
 - Likes/comments on gallery drawings.
 - A report button or moderation UI. The owner removes drawings from the Supabase dashboard.
 - An in-app "delete my account" button (done by hand in the dashboard on request).
@@ -46,7 +48,7 @@ Today a Scrawl player is a nickname typed on the landing page; nothing outlives 
 - The protocol is duplicated in `apps/ws-server/src/types.ts` and `apps/web/src/types/game.ts` and must stay in sync (see `CLAUDE.md`).
 - Everything a client sends is untrusted.
 - UI copy in pt-BR; code, docs and commits in English.
-- Supabase free plan: 500 MB database, 1 GB file storage, project **paused after one week of inactivity**. The built-in e-mail service only delivers to members of the Supabase organization, so e-mail confirmation and password recovery do not work for real users without a custom SMTP provider (which needs a domain the project doesn't have).
+- Supabase free plan: 500 MB database, 1 GB file storage, project **paused after one week of inactivity**. The built-in e-mail service only delivers to members of the Supabase organization, so nothing in this design may depend on sending e-mail.
 
 ## Approaches
 
@@ -77,7 +79,13 @@ Browser (static site)
 
 ### Sign-in method
 
-**Proposed: "Entrar com Google" only** (Supabase Auth Google provider, PKCE flow, redirect back to the site). No passwords anywhere, and no e-mail delivery needed. _(This replaces the e-mail + password idea floated in the conversation, because of the e-mail constraint above. Pending the owner's confirmation.)_
+**Username and password, nothing else** (owner's decision: no Google, no e-mail, "something really simple").
+
+- Supabase Auth needs an e-mail or phone as the identifier, so the site derives a synthetic, never-shown address from the username (lower-cased username at a reserved, undeliverable domain such as `@users.scrawl.invalid`) and signs up / signs in with that plus the password. "Confirm email" is turned off in the Supabase project. The player only ever sees "username" and "senha".
+- **Username rules:** 3–16 characters; letters, digits, `_` and `.`; unique ignoring case; shown with the capitalisation the player typed. **It cannot be changed afterwards**, because it is the login.
+- **Password rules:** at least 8 characters, typed twice at sign-up. The same minimum is set in the Supabase project so the rule doesn't live only in the browser.
+- **There is no password recovery**: no e-mail exists to send a link to. A player who forgets the password loses access unless the owner resets it from the Supabase dashboard. The sign-up screen says so in one line. A logged-in player can change their password from the profile.
+- Sign-up and sign-in errors are shown in plain pt-BR ("Esse username já existe", "Username ou senha incorretos").
 
 ### Data (Supabase)
 
@@ -113,13 +121,13 @@ The schema and policies live in the repo as SQL (`supabase/migrations/`), so the
 
 ### Account creation (onboarding)
 
-After the first Google sign-in there is no `profiles` row. Until there is one, the player is sent to onboarding and can't reach the home:
+Creating an account is one flow, "Criar conta":
 
-1. **Username** — with a live "already taken" check; the unique index is the real guard.
+1. **Username and password** — with a live "already taken" check; the unique index is the real guard.
 2. **Draw your avatar** — the Face Builder canvas (`FaceCanvas` / `use-face-canvas.ts`) in a new **free mode**: the whole canvas is drawable, strokes are not clipped to regions, and no region outlines or labels are shown. (Assigning all six regions is not enough: the regions don't cover cheeks, jaw or chin, and each stroke is clipped to the region it started in.) The player picks one of the five face templates and a skin tone (same controls as room creation); brush, eraser, fill, shapes, undo/redo as in the game; no timer.
 3. On save, the browser composes background + template + drawing (the same composition `FaceReveal` does), crops a square around the face, scales it to a small PNG (256×256), uploads it and creates the profile row.
 
-The avatar step is required, but an untouched template is a valid avatar. Username and avatar can both be changed later from the profile (avatar via the same canvas, starting blank).
+The avatar step is required, but an untouched template is a valid avatar. If the player abandons the flow after step 1, the account exists without a `profiles` row; on their next sign-in they are sent back to the avatar step and can't reach the home until it's done. The avatar can be redrawn later from the profile (same canvas, starting blank).
 
 ### Identity inside a room
 
@@ -200,18 +208,20 @@ Three stages, each shippable on its own:
 
 ## Manual steps for the owner
 
-The implementer can't do these: create the Supabase project; create a Google OAuth client and enable the Google provider; allow the site's URLs as redirect URLs (`https://whaletalent.github.io/scrawl/` and localhost); run the SQL; set the two repository variables and the two Render environment variables.
+The implementer can't do these: create the Supabase project; turn off "Confirm email" and set the minimum password length; run the SQL; set the two repository variables and the two Render environment variables.
 
 ## Decided by the owner
 
 - Account = username + self-drawn avatar, drawn with the Face Builder used freely, at sign-up.
 - Home = list of open rooms from other players that can be joined, kept very simple, plus the latest saved drawings **from everybody** at the side.
 - Approach A (Supabase).
+- Sign-in with username and password only, with basic rules for both; no Google, no e-mail.
 - Accepted as proposed: only lobby-phase rooms with a free seat are listed; the creator chooses public or private; playing without an account keeps working; avatars appear next to names in rooms; the home layout.
 
 ## Calls made by the designer (not discussed in detail — check these)
 
-- Google-only sign-in (pending confirmation, see above).
+- The synthetic-address technique behind username login, that usernames can't be changed, and that forgotten passwords are only recoverable by the owner.
+- Password minimum of 8 characters; password can be changed from the profile.
 - Saving happens on final screens only; any logged-in player in the room may save; one gallery entry per drawing; the save goes through the game server with a browser-composed image.
 - An author, or whoever saved it, can remove a drawing from the gallery, file included; the owner moderates from the dashboard.
 - Profile lists drawings the player co-authored or saved.
@@ -219,7 +229,7 @@ The implementer can't do these: create the Supabase project; create a Google OAu
 - Guests may share a name with an account; the avatar tells them apart.
 - A public room stays listed when the host changes.
 - The avatar canvas is a real free mode, not "all six regions".
-- Username rules (3–16, letters/digits/`_`/`.`, unique ignoring case) and that it can be changed.
+- Username rules (3–16, letters/digits/`_`/`.`, unique ignoring case).
 - Avatar is a 256×256 PNG; required step, untouched template allowed.
 - Only logged-in hosts can create public rooms; private is the default.
 - Room list over the WebSocket with push updates.
