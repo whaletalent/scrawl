@@ -23,6 +23,7 @@ export async function createRoom(
     rounds,
     turnSeconds,
     loggedIn = false,
+    visibility,
   }: {
     nickname?: string;
     mode: Mode;
@@ -30,6 +31,8 @@ export async function createRoom(
     turnSeconds?: number;
     /** The page is signed in: there is no nickname to type. */
     loggedIn?: boolean;
+    /** Only on the logged-in home; the default there is private. */
+    visibility?: "Pública" | "Privada";
   },
 ): Promise<string> {
   await page.goto("/");
@@ -46,6 +49,7 @@ export async function createRoom(
   await page.getByRole("button", { name: mode }).click();
   if (turnSeconds)
     await page.getByRole("combobox").selectOption(String(turnSeconds));
+  if (visibility) await page.getByRole("radio", { name: visibility }).check();
   await page.getByRole("button", { name: CREATE_BUTTON[mode] }).click();
 
   await expect(page).toHaveURL(/\/room\/\?code=[A-Z0-9]{5}$/);
@@ -141,8 +145,14 @@ export async function finishOnboarding(page: Page, username: string) {
     [0.6, 0.5],
   ]);
   await page.getByRole("button", { name: "Criar conta" }).click();
+  await expectHome(page, username);
+}
+
+/** The logged-in home, with this player's name in the account menu. */
+export async function expectHome(page: Page, username: string) {
   await expect(page).toHaveURL("/");
-  await expect(page.getByText("Jogando como")).toContainText(username);
+  await expect(page.getByRole("link", { name: username })).toBeVisible();
+  await expect(page.getByText("Salas abertas")).toBeVisible();
 }
 
 /** A complete new account, signed in on this page. */

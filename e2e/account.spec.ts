@@ -4,6 +4,7 @@ import {
   createRoom,
   draw,
   emailOf,
+  expectHome,
   failOnPageErrors,
   finishOnboarding,
   PASSWORD,
@@ -66,8 +67,7 @@ test("sign in with Google goes through onboarding the first time and straight ho
   await page.getByRole("button", { name: "Sair" }).click();
   await expect(page).toHaveURL("/login/");
   await page.getByRole("button", { name: "Entrar com Google" }).click();
-  await expect(page).toHaveURL("/");
-  await expect(page.getByText("Jogando como")).toContainText(name);
+  await expectHome(page, name);
 });
 
 test("the avatar canvas lets you draw across region borders", async ({

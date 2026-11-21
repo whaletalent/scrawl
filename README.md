@@ -27,7 +27,7 @@ Scrawl is a browser party game for friends on a call or in the same room. One pl
 2. Rooms live in the server's memory: a room has a five-character code, a list of players and a phase. Restarting the server ends every game.
 3. The server drives the game as a state machine (`lobby → theme-creation → drawing → voting → reveal → …`), broadcasting a `phase-change` with a deadline; clients only render the current phase and send their input.
 4. Drawings are made on an 800×600 canvas clipped to the player's own area and sent as PNG data URLs when the player submits (or automatically just before the deadline).
-5. Accounts are optional. A player can sign up (e-mail and password, or Google), pick a username and draw their own avatar, which then shows next to their name in every room. Accounts live in a [Supabase](https://supabase.com) project; guests keep playing with just a nickname, and without a Supabase project the game simply has no login.
+5. Accounts are optional. A player can sign up (e-mail and password, or Google), pick a username and draw their own avatar, which then shows next to their name in every room. Accounts live in a [Supabase](https://supabase.com) project; guests keep playing with just a nickname, and without a Supabase project the game simply has no login. A logged-in player lands on a home that lists the open **public rooms** (the creator chooses private or public), so they can join a stranger's game.
 6. A player whose connection drops, or who reloads the page, keeps their slot for 20 seconds and is put back into the running game when they return.
 
 ## Tech stack
@@ -66,7 +66,7 @@ The web app finds the server through `NEXT_PUBLIC_WS_URL` (default `ws://localho
 | `npm run build`        | Static build of the web app into `apps/web/out/`         |
 | `npm run build:server` | Compile the WebSocket server into `apps/ws-server/dist/` |
 | `npm test`             | Server and web unit suites (~10s)                        |
-| `npm run test:e2e`     | Browser test suite (~2min)                               |
+| `npm run test:e2e`     | Browser test suite (~3min)                               |
 | `npm run typecheck`    | Type-check both apps and the tests                       |
 | `npm run lint`         | Lint with ESLint                                         |
 | `npm run lint:fix`     | Lint and apply automatic fixes                           |

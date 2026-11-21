@@ -33,7 +33,7 @@ Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs lint, format:check, typ
 
 ```bash
 npm test                 # server suite + web unit tests, ~10s (node:test via tsx)
-npm run test:e2e         # Playwright browser suite, ~2min
+npm run test:e2e         # Playwright browser suite, ~3min
 npm run typecheck        # ws-server (src + test), web, e2e
 
 # A single server test file / a single test by name
@@ -125,6 +125,15 @@ Design: `docs/superpowers/specs/2026-11-21-accounts-profile-home-design.md`. Own
 - Server: `create-room` / `join-room` take an optional `accessToken`. `withIdentity` (handlers.ts) resolves it through the `Accounts` interface (`src/accounts.ts`) before the player enters the room; a profile replaces the nickname with the username and sets `avatarUrl`. Anything wrong, slow (3s) or unreachable means "guest", never an error. `src/supabase-accounts.ts` is the real implementation (JWKS verification with `jose`, then one REST read).
 - **The profile row is written by the browser, so the server trusts nothing in it**: username must match `USERNAME_PATTERN`, and the avatar must be a file inside this project's `avatars/<userId>/` (`isOwnAvatarUrl`). `userId`, access tokens and e-mails are never broadcast.
 - Tests never touch a real project. Server tests pass a fake `Accounts` to `startServer({ accounts })`, or use `test/fake-supabase.ts` — an in-process fake of the Supabase HTTP API that the browser suite also runs (port 8090), so accounts are **on** during e2e.
+
+### Home and public rooms
+
+- `app/page.tsx` is two pages at one address: `Home` (`components/home/`) when `useAccount().status === "ready"`, the guest landing (`Hero`) otherwise.
+- A room has `isPublic` (default false). `createRoom` honours `visibility: "public"` **only for a host who joined with an account**. The web hands the choice to the room page through `sessionStorage` (`lib/room-options.ts`, key `scrawl-visibility`).
+- `src/public-rooms.ts` owns the list: a room is listed while public, in `lobby`, not full, and its host's socket is connected. `watch-rooms` / `unwatch-rooms` subscribe a socket (it also stops watching when it closes or enters a room); the server answers with `public-rooms { rooms }` and pushes again whenever a watcher's list would differ. **Anything that changes joinability must call `publishRooms()`** (handlers.ts does after create, join, start, disconnect, rejoin and drop).
+- A `PublicRoom` entry is exactly `code`, `hostName`, `hostAvatarUrl?`, `gameMode`, `playerCount`, `capacity` — it goes to anyone who asks.
+- Web: `hooks/use-public-rooms.ts` re-subscribes on every socket open and reports `connecting` until the server answers (the list shows "Acordando o servidor…", since the free host sleeps).
+- In the browser suite every test shares one game server, so other tests' public rooms are on the list: find a row by its host's unique name, never by position or count.
 
 ## Conventions worth knowing
 
