@@ -1,14 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { validateNickname } from "@/lib/room-utils";
 import { NEW_ROOM, roomPath } from "@/lib/routes";
 import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { ModeSelector } from "@/components/lobby/mode-selector";
+import { useAccount } from "@/hooks/use-account";
+import { AccountMenu } from "@/components/account/account-menu";
 
 export function Hero() {
   const router = useRouter();
-  const [nickname, setNickname] = useState("");
+  const account = useAccount();
+  // Logged in, the player's name is their username and nobody types a nickname.
+  const username = account.profile?.username;
+  const [typedNickname, setNickname] = useState("");
+  const nickname = username ?? typedNickname;
   const [roomCode, setRoomCode] = useState("");
   const [mode, setMode] = useState<"initial" | "create" | "join">("initial");
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +25,14 @@ export function Hero() {
   const [faceTemplate, setFaceTemplate] =
     useState<FaceTemplateOption>("random");
   const [skinTone, setSkinTone] = useState("#FDDCB5");
+
+  // An account without a username and avatar has to finish onboarding first.
+  useEffect(() => {
+    if (account.status === "needs-profile") router.replace("/welcome/");
+  }, [account.status, router]);
+
+  if (account.status === "loading" || account.status === "needs-profile")
+    return <p className="text-gray-400">Carregando...</p>;
 
   function handleCreate() {
     const err = validateNickname(nickname);
@@ -51,6 +66,11 @@ export function Hero() {
 
   return (
     <div className="flex flex-col items-center gap-8 px-4">
+      {account.profile && (
+        <div className="absolute top-4 right-4">
+          <AccountMenu profile={account.profile} />
+        </div>
+      )}
       <h1 className="text-6xl font-black tracking-tight bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
         Scrawl
       </h1>
@@ -60,17 +80,23 @@ export function Hero() {
       </p>
 
       <div className="w-full max-w-sm flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="Seu apelido"
-          value={nickname}
-          onChange={(e) => {
-            setNickname(e.target.value);
-            setError(null);
-          }}
-          maxLength={16}
-          className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
-        />
+        {username ? (
+          <p className="text-center text-gray-400">
+            Jogando como <strong className="text-white">{username}</strong>
+          </p>
+        ) : (
+          <input
+            type="text"
+            placeholder="Seu apelido"
+            value={nickname}
+            onChange={(e) => {
+              setNickname(e.target.value);
+              setError(null);
+            }}
+            maxLength={16}
+            className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
+          />
+        )}
 
         {mode === "initial" && (
           <div className="flex gap-3">
@@ -151,6 +177,15 @@ export function Hero() {
         )}
 
         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        {account.status === "signed-out" && (
+          <Link
+            href="/login/"
+            className="text-center text-sm text-purple-400 hover:text-purple-300"
+          >
+            Entrar / Criar conta
+          </Link>
+        )}
       </div>
     </div>
   );
