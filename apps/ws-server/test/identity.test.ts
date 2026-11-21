@@ -1,15 +1,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { startServer } from "./server.js";
-import {
-  connect,
-  createRoom,
-  join,
-  type,
-  sleep,
-  IMG,
-  type TestClient,
-} from "./client.js";
+import { connect, join, type, sleep, IMG, type TestClient } from "./client.js";
 import type { Accounts } from "../src/accounts.js";
 
 const AVATAR = "https://x/storage/v1/object/public/avatars/u-ana/1.png";
