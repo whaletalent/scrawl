@@ -13,6 +13,7 @@ import type { Room } from "./types.js";
 import { config } from "./config.js";
 import { getAccounts, type Profile } from "./accounts.js";
 import { publishRooms, unwatchRooms, watchRooms } from "./public-rooms.js";
+import { handleSaveDrawing } from "./gallery.js";
 import {
   startGame,
   startSplitGame,
@@ -152,6 +153,22 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
     case "rejoin":
       handleRejoin(ws, msg.roomCode, msg.token);
       break;
+    case "save-drawing": {
+      const info = wsToPlayer.get(ws);
+      const room = info && getRoom(info.roomCode);
+      const player = room?.players.get(info!.playerId);
+      if (room && player)
+        handleSaveDrawing(room, player, msg.drawing, msg.imageDataUrl);
+      else
+        ws.send(
+          JSON.stringify({
+            type: "drawing-save-failed",
+            key: "",
+            reason: "not-allowed",
+          }),
+        );
+      break;
+    }
     case "watch-rooms":
       // The list is for people choosing a room, not for those already in one.
       if (!wsToPlayer.has(ws)) watchRooms(ws);
@@ -480,6 +497,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     skinTone: room.skinTone,
     turnDuration: room.turnDuration,
     isPublic: room.isPublic,
+    savedDrawings: Array.from(room.savedDrawings),
     phase: room.phase,
     round: room.round,
     totalRounds: room.totalRounds,

@@ -111,6 +111,11 @@ export function createRoom(
     phaseEndsAt: 0,
     // The list shows the host's username and avatar, so a guest can't host a public room.
     isPublic: Boolean(profile) && visibility === "public",
+    roster: new Map([
+      [playerId, { nickname: host.nickname, userId: host.userId }],
+    ]),
+    resultAuthors: new Map(),
+    savedDrawings: new Set(),
   };
 
   rooms.set(code, room);
@@ -131,6 +136,10 @@ export function joinRoom(
   const playerId = crypto.randomUUID();
   const player = newPlayer(playerId, nickname, ws, profile);
   room.players.set(playerId, player);
+  room.roster.set(playerId, {
+    nickname: player.nickname,
+    userId: player.userId,
+  });
 
   return { room, playerId };
 }

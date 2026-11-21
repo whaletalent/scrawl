@@ -508,6 +508,11 @@ function assignPairs(room: Room, themes: typeof room.themes) {
 
 function processDrawings(room: Room) {
   room.results = room.pairs.map((pair) => {
+    // Who drew it, kept server-side for the gallery (see gallery.ts).
+    room.resultAuthors.set(`${room.round}:${pair.id}`, [
+      pair.playerA,
+      pair.playerB,
+    ]);
     const theme = room.themes.find((t) => t.id === pair.themeId);
     const leftDrawing = room.drawings.find(
       (d) => d.pairId === pair.id && d.side === "left",

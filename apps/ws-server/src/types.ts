@@ -139,6 +139,18 @@ export interface Room {
   phaseEndsAt: number;
   /** Listed on the home page for strangers to join. Only an account can host one. */
   isPublic: boolean;
+  /** Everyone who was ever in the room. Unlike `players` it never shrinks, so a drawing keeps its authors after they leave. */
+  roster: Map<string, { nickname: string; userId: string | null }>;
+  /** Party mode: the two player ids behind each result, by drawing key. */
+  resultAuthors: Map<string, [string, string]>;
+  /** Keys of the drawings already put in the gallery (or being put there). */
+  savedDrawings: Set<string>;
+}
+
+/** Points at one finished drawing of a room. `pairId` in party mode only. */
+export interface DrawingRef {
+  round: number;
+  pairId?: string;
 }
 
 /** One row of the home page's list of open rooms. Sent to anyone who asks. */
@@ -173,6 +185,7 @@ export type ClientMessage =
       /** Defaults to private. "public" is honoured only for a logged-in host. */
       visibility?: "public" | "private";
     }
+  | { type: "save-drawing"; drawing: DrawingRef; imageDataUrl: string }
   | { type: "watch-rooms" }
   | { type: "unwatch-rooms" }
   | { type: "submit-split-drawing"; imageDataUrl: string }
