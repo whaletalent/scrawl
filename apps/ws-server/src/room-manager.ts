@@ -65,6 +65,7 @@ export function createRoom(
   faceTemplate?: FaceTemplateOption,
   skinTone?: string,
   profile?: Profile | null,
+  visibility?: unknown,
 ): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
@@ -108,6 +109,8 @@ export function createRoom(
     sitOutCounts: new Map(),
     phaseTimer: null,
     phaseEndsAt: 0,
+    // The list shows the host's username and avatar, so a guest can't host a public room.
+    isPublic: Boolean(profile) && visibility === "public",
   };
 
   rooms.set(code, room);
@@ -123,14 +126,23 @@ export function joinRoom(
   const room = rooms.get(String(code).trim().toUpperCase());
   if (!room) return null;
   if (room.phase !== "lobby") return null;
-  const maxPlayers = room.gameMode === "party" ? 10 : 2;
-  if (room.players.size >= maxPlayers) return null;
+  if (room.players.size >= roomCapacity(room)) return null;
 
   const playerId = crypto.randomUUID();
   const player = newPlayer(playerId, nickname, ws, profile);
   room.players.set(playerId, player);
 
   return { room, playerId };
+}
+
+/** How many players fit: party takes up to 10, the other modes exactly 2. */
+export function roomCapacity(room: Room): number {
+  return room.gameMode === "party" ? 10 : 2;
+}
+
+/** Every live room, oldest first. */
+export function allRooms(): Iterable<Room> {
+  return rooms.values();
 }
 
 export function removePlayer(roomCode: string, playerId: string): Room | null {

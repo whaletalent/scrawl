@@ -12,6 +12,7 @@ import {
 import type { Room } from "./types.js";
 import { config } from "./config.js";
 import { getAccounts, type Profile } from "./accounts.js";
+import { publishRooms, unwatchRooms, watchRooms } from "./public-rooms.js";
 import {
   startGame,
   startSplitGame,
@@ -45,11 +46,14 @@ function handleDisconnect(ws: WebSocket) {
     () => dropPlayer(info.roomCode, info.playerId),
     config.reconnectGraceMs,
   );
+  // A room whose host is away is hidden from the list until they're back.
+  publishRooms();
 }
 
 /** Grace period over: the player is gone for good. */
 function dropPlayer(roomCode: string, playerId: string) {
   const room = removePlayer(roomCode, playerId);
+  publishRooms();
   if (!room) return;
   // removePlayer may have promoted a new host — tell the clients who.
   const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id;
@@ -101,6 +105,8 @@ function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
     { type: "player-connection", playerId: player.id, connected: true },
     player.id,
   );
+  unwatchRooms(ws);
+  publishRooms();
 }
 
 export function handleConnection(ws: WebSocket) {
@@ -118,7 +124,10 @@ export function handleConnection(ws: WebSocket) {
   // the socket right after, so the close handler does the cleanup.
   ws.on("error", (err) => console.warn(`[ws] client error: ${err.message}`));
 
-  ws.on("close", () => handleDisconnect(ws));
+  ws.on("close", () => {
+    unwatchRooms(ws);
+    handleDisconnect(ws);
+  });
 }
 
 /** Drawings are relayed to other players' <img> tags, so accept nothing but an inline PNG. */
@@ -142,6 +151,13 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       break;
     case "rejoin":
       handleRejoin(ws, msg.roomCode, msg.token);
+      break;
+    case "watch-rooms":
+      // The list is for people choosing a room, not for those already in one.
+      if (!wsToPlayer.has(ws)) watchRooms(ws);
+      break;
+    case "unwatch-rooms":
+      unwatchRooms(ws);
       break;
     case "start-game":
       handleStartGame(ws);
@@ -215,10 +231,13 @@ function handleCreateRoom(
     msg.faceTemplate,
     msg.skinTone,
     profile,
+    msg.visibility,
   );
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
+  unwatchRooms(ws);
   sendRoomState(ws, room, hostId);
+  publishRooms();
 }
 
 function handleJoinRoom(
@@ -240,7 +259,9 @@ function handleJoinRoom(
 
   const { room, playerId } = result;
   wsToPlayer.set(ws, { playerId, roomCode: room.code });
+  unwatchRooms(ws);
   sendRoomState(ws, room, playerId);
+  publishRooms();
 
   broadcast(
     room,
@@ -304,6 +325,8 @@ function handleStartGame(ws: WebSocket) {
     }
     startGame(room);
   }
+  // The game is on: the room is no longer joinable, so it leaves the list.
+  publishRooms();
 }
 
 function handleSubmitTheme(ws: WebSocket, text: string) {
@@ -455,6 +478,7 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     faceTemplate: room.faceTemplate,
     skinTone: room.skinTone,
     turnDuration: room.turnDuration,
+    isPublic: room.isPublic,
     phase: room.phase,
     round: room.round,
     totalRounds: room.totalRounds,

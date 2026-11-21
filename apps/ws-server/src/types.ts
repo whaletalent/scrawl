@@ -137,6 +137,19 @@ export interface Room {
   sitOutCounts: Map<string, number>;
   phaseTimer: ReturnType<typeof setTimeout> | null;
   phaseEndsAt: number;
+  /** Listed on the home page for strangers to join. Only an account can host one. */
+  isPublic: boolean;
+}
+
+/** One row of the home page's list of open rooms. Sent to anyone who asks. */
+export interface PublicRoom {
+  code: string;
+  hostName: string;
+  /** Absent when the host is a guest. */
+  hostAvatarUrl?: string;
+  gameMode: GameMode;
+  playerCount: number;
+  capacity: number;
 }
 
 export type ClientMessage =
@@ -157,7 +170,11 @@ export type ClientMessage =
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
       accessToken?: string;
+      /** Defaults to private. "public" is honoured only for a logged-in host. */
+      visibility?: "public" | "private";
     }
+  | { type: "watch-rooms" }
+  | { type: "unwatch-rooms" }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }
