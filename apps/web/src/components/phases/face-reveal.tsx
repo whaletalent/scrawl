@@ -3,11 +3,17 @@ import { useState, useRef, useEffect } from "react";
 import { loadFaceTemplateImage, loadImage } from "@/lib/face-compose";
 import type { FaceDrawing, Player } from "@/types/game";
 import { Authors } from "@/components/account/authors";
+import {
+  SaveButton,
+  type GallerySaving,
+} from "@/components/gallery/save-button";
+import { composeFaceDrawing } from "@/lib/compose-drawing";
 
 interface FaceRevealProps {
   drawings: FaceDrawing[];
   /** Both players drew every round; shown under the title with their avatars. */
   players: Player[];
+  saving: GallerySaving;
 }
 
 function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
@@ -62,7 +68,7 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
   );
 }
 
-export function FaceReveal({ drawings, players }: FaceRevealProps) {
+export function FaceReveal({ drawings, players, saving }: FaceRevealProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (drawings.length === 0) {
@@ -88,6 +94,14 @@ export function FaceReveal({ drawings, players }: FaceRevealProps) {
       </div>
 
       <CompositeCanvas drawing={drawing} />
+
+      {/* `key`: each round's drawing has its own save state. */}
+      <SaveButton
+        key={drawing.round}
+        drawing={{ round: drawing.round }}
+        compose={() => composeFaceDrawing(drawing)}
+        saving={saving}
+      />
 
       {drawings.length > 1 && (
         <div className="flex items-center gap-4">

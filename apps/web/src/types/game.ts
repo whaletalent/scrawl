@@ -96,6 +96,14 @@ export interface RoomState {
   skinTone: string;
   /** Listed on the home page for strangers to join. */
   isPublic?: boolean;
+  /** Keys of this room's drawings that are already in the gallery. */
+  savedDrawings?: string[];
+}
+
+/** Points at one finished drawing of a room. `pairId` in party mode only. */
+export interface DrawingRef {
+  round: number;
+  pairId?: string;
 }
 
 /** One row of the home page's list of open rooms. */
@@ -130,6 +138,7 @@ export type ClientMessage =
       /** Defaults to private. "public" is honoured only for a logged-in host. */
       visibility?: "public" | "private";
     }
+  | { type: "save-drawing"; drawing: DrawingRef; imageDataUrl: string }
   | { type: "watch-rooms" }
   | { type: "unwatch-rooms" }
   | { type: "start-game" }
@@ -148,6 +157,12 @@ export type ServerMessage =
       sessionToken?: string;
     }
   | { type: "public-rooms"; rooms: PublicRoom[] }
+  | { type: "drawing-saved"; key: string }
+  | {
+      type: "drawing-save-failed";
+      key: string;
+      reason: "limit" | "failed" | "not-allowed";
+    }
   | { type: "rejoin-failed" }
   | { type: "session-replaced" }
   | { type: "player-connection"; playerId: string; connected: boolean }

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage, onOpen } from "@/lib/ws-client";
 import type {
+  DrawingRef,
   RoomState,
   Phase,
   Player,
@@ -62,6 +63,10 @@ interface GameState {
   faceDrawings: FaceDrawing[];
   error: string | null;
   notice: string | null;
+  /** Keys of this room's drawings that are in the gallery. */
+  savedDrawings: string[];
+  /** Why the last attempt to save a drawing failed, by key. */
+  saveFailures: Record<string, "limit" | "failed" | "not-allowed">;
 }
 
 const initialState: GameState = {
@@ -69,6 +74,8 @@ const initialState: GameState = {
   playerId: null,
   roomState: null,
   pairAssignment: null,
+  savedDrawings: [],
+  saveFailures: {},
   roundSubmitted: false,
   rejoinFailed: false,
   sessionLost: false,
@@ -85,6 +92,9 @@ const initialState: GameState = {
   error: null,
   notice: null,
 };
+
+const drawingKeyOf = (ref: DrawingRef) =>
+  ref.pairId ? `${ref.round}:${ref.pairId}` : `${ref.round}`;
 
 export function useGameState() {
   const [state, setState] = useState<GameState>(initialState);
@@ -125,6 +135,7 @@ export function useGameState() {
           setState((s) => ({
             ...s,
             roomState: data.state,
+            savedDrawings: data.state.savedDrawings ?? [],
             playerId: data.playerId ?? s.playerId,
             error: null,
             rejoinFailed: false,
@@ -298,6 +309,21 @@ export function useGameState() {
           setState((s) => ({ ...s, error: data.message }));
           break;
 
+        case "drawing-saved":
+          setState((s) => ({
+            ...s,
+            savedDrawings: [...s.savedDrawings, data.key],
+          }));
+          break;
+
+        case "drawing-save-failed":
+          // A new object each time, so a repeated failure is still noticed.
+          setState((s) => ({
+            ...s,
+            saveFailures: { ...s.saveFailures, [data.key]: data.reason },
+          }));
+          break;
+
         case "notice":
           setState((s) => ({ ...s, notice: data.message }));
           break;
@@ -399,6 +425,18 @@ export function useGameState() {
     send({ type: "rejoin", roomCode: session.code, token: session.token });
   }, []);
 
+  const saveDrawing = useCallback(
+    (drawing: DrawingRef, imageDataUrl: string) => {
+      setState((s) => {
+        const saveFailures = { ...s.saveFailures };
+        delete saveFailures[drawingKeyOf(drawing)];
+        return { ...s, saveFailures };
+      });
+      send({ type: "save-drawing", drawing, imageDataUrl });
+    },
+    [],
+  );
+
   const startGame = useCallback(() => {
     send({ type: "start-game" });
   }, []);
@@ -432,6 +470,7 @@ export function useGameState() {
     createRoom,
     joinRoom,
     rejoinRoom,
+    saveDrawing,
     startGame,
     submitTheme,
     voteTheme,

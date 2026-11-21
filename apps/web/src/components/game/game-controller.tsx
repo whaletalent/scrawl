@@ -13,6 +13,7 @@ import { SplitDrawingPhase } from "@/components/phases/split-drawing-phase";
 import { SplitReveal } from "@/components/phases/split-reveal";
 import { FaceDrawingPhase } from "@/components/phases/face-drawing-phase";
 import { FaceReveal } from "@/components/phases/face-reveal";
+import type { GallerySaving } from "@/components/gallery/save-button";
 
 type GameControllerProps = ReturnType<typeof useGameState> & {
   /** Something the room page needs the host to know while in the lobby. */
@@ -44,6 +45,11 @@ export function GameController(props: GameControllerProps) {
   }
 
   const currentPlayer = roomState.players.find((p) => p.id === playerId);
+  const saving: GallerySaving = {
+    saved: props.savedDrawings,
+    failed: props.saveFailures,
+    save: props.saveDrawing,
+  };
   const away = roomState.players
     .filter((p) => p.connected === false)
     .map((p) => p.nickname);
@@ -146,6 +152,7 @@ export function GameController(props: GameControllerProps) {
             players={roomState.players}
             isFinal={phase === "final-results"}
             drawings={drawings}
+            saving={saving}
           />
         )}
 
@@ -166,6 +173,7 @@ export function GameController(props: GameControllerProps) {
           <SplitReveal
             drawings={props.splitDrawings}
             players={roomState.players}
+            saving={saving}
           />
         )}
 
@@ -189,6 +197,7 @@ export function GameController(props: GameControllerProps) {
           <FaceReveal
             drawings={props.faceDrawings}
             players={roomState.players}
+            saving={saving}
           />
         )}
       </div>

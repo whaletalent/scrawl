@@ -3,14 +3,20 @@ import { useState } from "react";
 import { getSilhouette } from "@/components/silhouettes";
 import type { SplitDrawing, Player } from "@/types/game";
 import { Authors } from "@/components/account/authors";
+import {
+  SaveButton,
+  type GallerySaving,
+} from "@/components/gallery/save-button";
+import { composeSplitDrawing } from "@/lib/compose-drawing";
 
 interface SplitRevealProps {
   drawings: SplitDrawing[];
   /** Both players drew every round; shown under the title with their avatars. */
   players: Player[];
+  saving: GallerySaving;
 }
 
-export function SplitReveal({ drawings, players }: SplitRevealProps) {
+export function SplitReveal({ drawings, players, saving }: SplitRevealProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (drawings.length === 0) {
@@ -90,6 +96,14 @@ export function SplitReveal({ drawings, players }: SplitRevealProps) {
       </div>
 
       {/* Navigation */}
+      {/* `key`: each round's drawing has its own save state. */}
+      <SaveButton
+        key={drawing.round}
+        drawing={{ round: drawing.round }}
+        compose={() => composeSplitDrawing(drawing)}
+        saving={saving}
+      />
+
       {drawings.length > 1 && (
         <div className="flex items-center gap-4">
           <button

@@ -2,15 +2,26 @@
 import type { Player, DrawingResult } from "@/types/game";
 import { ShareCard } from "@/components/share/share-card";
 import { Avatar } from "@/components/account/avatar";
+import {
+  SaveButton,
+  type GallerySaving,
+} from "@/components/gallery/save-button";
+import { composePartyDrawing } from "@/lib/compose-drawing";
 import { Authors, resultAuthors } from "@/components/account/authors";
 
 interface ScoreboardProps {
   players: Player[];
   isFinal: boolean;
   drawings: DrawingResult[];
+  saving: GallerySaving;
 }
 
-export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
+export function Scoreboard({
+  players,
+  isFinal,
+  drawings,
+  saving,
+}: ScoreboardProps) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   return (
@@ -68,6 +79,13 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
                 </div>
               </div>
               <ShareCard drawing={d} />
+              <div className="mt-3 flex justify-center">
+                <SaveButton
+                  drawing={{ round: d.round, pairId: d.pairId }}
+                  compose={() => composePartyDrawing(d)}
+                  saving={saving}
+                />
+              </div>
             </div>
           ))}
         </div>

@@ -86,7 +86,7 @@ const keyOf = (d: Msg) => `${d.round}:${d.pairId}`;
 /** Sends `save-drawing` and resolves with the server's answer to this client. */
 async function save(
   c: TestClient,
-  drawing: object,
+  drawing: unknown,
   imageDataUrl: unknown = IMG,
 ) {
   const answered = c.wait(
