@@ -136,7 +136,7 @@ test("saves that aren't allowed are refused, to the sender only, and nothing is 
   const { ana, clients, drawings } = await partyFinal(accounts);
   const d = drawings[0];
   const bia = clients[1];
-  const refused = async (c: TestClient, drawing: object, image?: unknown) => {
+  const refused = async (c: TestClient, drawing: unknown, image?: unknown) => {
     const answer = await save(c, drawing, image);
     assert.equal(answer.type, "drawing-save-failed");
     assert.equal(answer.reason, "not-allowed");

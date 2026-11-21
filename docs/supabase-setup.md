@@ -7,6 +7,7 @@ What lives where:
 - **Supabase Auth** — e-mail + password and Google sign-in. E-mail addresses never leave it.
 - **`profiles` table** — one public row per account: username and avatar URL.
 - **`avatars` bucket** — the avatar PNGs, public to read.
+- **`drawings` table and `gallery` bucket** — the public gallery: one row and one PNG per saved drawing. Only the game server writes them; an author or whoever saved a drawing can remove it.
 - **Game server** — checks a player's access token when they enter a room and reads their profile. It holds the secret key.
 
 ## 1. Create the project
@@ -29,7 +30,7 @@ Under **Authentication**:
 
 ## 3. Database and storage
 
-Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`](../supabase/migrations/0001_accounts.sql) and run it. It creates the `profiles` table, its access rules and the `avatars` bucket, and is safe to run again.
+Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`](../supabase/migrations/0001_accounts.sql) and run it, then do the same with [`0002_gallery.sql`](../supabase/migrations/0002_gallery.sql). The first creates the `profiles` table, its access rules and the `avatars` bucket; the second the `drawings` table and the `gallery` bucket. Both are safe to run again.
 
 ## 4. Tell the site and the game server
 
@@ -55,7 +56,8 @@ Do this once against the real project; the automated tests only ever talk to a f
 3. Sign out and back in. Sign in with Google, on localhost and on the Pages URL.
 4. Open a room in a second browser as a guest and check the avatar shows next to the username.
 5. In the browser console of a signed-in tab, try to change your own username and to create a profile for another user id — both must be refused.
-6. Sign in with Google using an address that already has an e-mail + password account, and write down below what Supabase does.
+6. Play a two-player game to the end with two accounts, press "Salvar na galeria", and check the drawing shows on the home and on the gallery page. From the other account's profile, remove it: the row disappears from `drawings` and the file from **Storage → gallery**. From a third account, confirm there is nothing to remove.
+7. Sign in with Google using an address that already has an e-mail + password account, and write down below what Supabase does.
 
 ### Same address, e-mail and Google
 
@@ -65,6 +67,8 @@ _Not verified yet — fill in after step 6._ Because e-mail addresses are not co
 
 - **A player forgot their password**: Authentication → Users → the user → "Reset password" won't reach them (no mailer). Use the user's menu to set a new password by hand and send it to them yourself. Google accounts don't have this problem.
 - **Remove an account**: Authentication → Users → delete the user. Their profile row goes with it; delete their folder in Storage → avatars too.
+- **Remove a drawing from the gallery**: delete its row in `drawings` and the file named in its `image_path` in Storage → gallery.
+- **The gallery is filling up** (1 GB on the free plan): saves start failing with a plain message; delete old rows and their files. Nothing is pruned automatically.
 - **Remove an offensive avatar or username**: delete the profile row (the player will be asked to pick again on their next visit) and the file.
 - **The project got paused**: the `Supabase keep-alive` workflow reads one row a day so this shouldn't happen. If it does, "Restore project" in the dashboard brings it back; accounts are off while it's paused and the game keeps working for guests.
 

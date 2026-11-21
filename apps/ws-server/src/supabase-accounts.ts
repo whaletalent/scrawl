@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import type { Accounts, Profile } from "./accounts.js";
+import type { Accounts, GalleryEntry, Profile } from "./accounts.js";
 import { USERNAME_PATTERN, isOwnAvatarUrl } from "./account-rules.js";
 
 /**
@@ -35,6 +35,82 @@ export function createSupabaseAccounts({
     if (now - (lastLogged.get(reason) ?? -Infinity) < 60_000) return;
     lastLogged.set(reason, now);
     log(`player treated as a guest: ${reason}`);
+  }
+
+  /** At most this many gallery saves per player per 24 hours. */
+  const DAILY_SAVES = 10;
+  const SAVE_TIMEOUT_MS = 10_000;
+  const serviceHeaders = {
+    apikey: secretKey,
+    Authorization: `Bearer ${secretKey}`,
+  };
+
+  function saveProblem(reason: string) {
+    const key = `save: ${reason}`;
+    const now = Date.now();
+    if (now - (lastLogged.get(key) ?? -Infinity) < 60_000) return;
+    lastLogged.set(key, now);
+    log(`drawing not saved to the gallery: ${reason}`);
+  }
+
+  async function store(
+    entry: GalleryEntry,
+    signal: AbortSignal,
+  ): Promise<"saved" | "limit" | "failed"> {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const recent = await fetch(
+      `${base}/rest/v1/drawings?saved_by=eq.${encodeURIComponent(entry.savedBy)}` +
+        `&created_at=gte.${encodeURIComponent(since)}&select=id&limit=${DAILY_SAVES}`,
+      { headers: serviceHeaders, signal },
+    );
+    if (!recent.ok) {
+      saveProblem(`counting today's saves answered HTTP ${recent.status}`);
+      return "failed";
+    }
+    if (((await recent.json()) as unknown[]).length >= DAILY_SAVES)
+      return "limit";
+
+    // The image first: a row must never point at a file that isn't there.
+    const imagePath = `${crypto.randomUUID()}.png`;
+    const objectUrl = `${base}/storage/v1/object/gallery/${imagePath}`;
+    const upload = await fetch(objectUrl, {
+      method: "POST",
+      headers: { ...serviceHeaders, "content-type": "image/png" },
+      body: new Uint8Array(entry.png),
+      signal,
+    });
+    if (!upload.ok) {
+      saveProblem(`uploading the image answered HTTP ${upload.status}`);
+      return "failed";
+    }
+
+    const insert = await fetch(`${base}/rest/v1/drawings`, {
+      method: "POST",
+      headers: {
+        ...serviceHeaders,
+        "content-type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        image_path: imagePath,
+        game_mode: entry.gameMode,
+        theme: entry.theme,
+        author_names: entry.authorNames,
+        author_ids: entry.authorIds,
+        saved_by: entry.savedBy,
+      }),
+      signal,
+    }).catch(() => null);
+    if (insert?.ok) return "saved";
+
+    // No row, so nobody could ever remove the image: take it back.
+    saveProblem(
+      `inserting the row answered HTTP ${insert?.status ?? "nothing"}`,
+    );
+    await fetch(objectUrl, { method: "DELETE", headers: serviceHeaders }).catch(
+      () => null,
+    );
+    return "failed";
   }
 
   async function lookup(
@@ -80,6 +156,16 @@ export function createSupabaseAccounts({
   }
 
   return {
+    async saveDrawing(entry) {
+      try {
+        return await store(entry, AbortSignal.timeout(SAVE_TIMEOUT_MS));
+      } catch (err) {
+        const e = err as { name?: string; message?: string };
+        saveProblem(`${e.name ?? "error"}: ${e.message ?? ""}`);
+        return "failed";
+      }
+    },
+
     async profileFromToken(accessToken) {
       const abort = new AbortController();
       let timer: ReturnType<typeof setTimeout> | undefined;

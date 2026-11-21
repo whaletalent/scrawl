@@ -40,7 +40,23 @@ const PIXEL = Buffer.from(
   "base64",
 );
 
-export async function startFakeSupabase({ port = 0 } = {}) {
+/** The row shape of the `drawings` table (supabase/migrations/0002_gallery.sql). */
+interface DrawingRow {
+  id: string;
+  image_path: string;
+  game_mode: string;
+  theme: string | null;
+  author_names: string[];
+  author_ids: (string | null)[];
+  saved_by: string;
+  created_at: string;
+}
+
+export async function startFakeSupabase({
+  port = 0,
+  /** What the game server must send as `apikey` to act with full rights. */
+  secretKey = "test-secret",
+} = {}) {
   const { publicKey, privateKey } = await generateKeyPair("ES256");
   const other = await generateKeyPair("ES256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "fake", alg: "ES256" };
@@ -48,6 +64,16 @@ export async function startFakeSupabase({ port = 0 } = {}) {
   const users = new Map<string, User>();
   const profiles = new Map<string, ProfileRow>();
   const files = new Map<string, Buffer>();
+  const drawings: DrawingRow[] = [];
+  const galleryFiles = new Map<string, Buffer>();
+  let failNextInsert = false;
+  /** The game server, holding the secret key: row-level security doesn't apply to it. */
+  const isService = (req: IncomingMessage) => req.headers.apikey === secretKey;
+  /** The delete rule of the `drawings` table, which the storage policy reuses. */
+  const mayRemove = (me: User | null, row: DrawingRow | undefined) =>
+    Boolean(
+      me && row && (row.saved_by === me.id || row.author_ids.includes(me.id)),
+    );
   const refreshTokens = new Map<string, string>();
   const authCodes = new Map<string, string>();
   let restDelayMs = 0;
@@ -256,9 +282,22 @@ export async function startFakeSupabase({ port = 0 } = {}) {
     query: URLSearchParams,
   ) {
     if (restDelayMs) await new Promise((r) => setTimeout(r, restDelayMs));
+    if (path === "/drawings") return drawingsRest(req, res, query);
     if (path !== "/profiles") return send(res, 404, { message: "not found" });
 
     const idFilter = query.get("id")?.replace(/^eq\./, "");
+    // `id=in.(a,b)`: the gallery looks up several authors at once.
+    const idIn = query
+      .get("id")
+      ?.match(/^in\.\((.*)\)$/)?.[1]
+      .split(",")
+      .map((v) => v.replace(/^"|"$/g, ""));
+    if (req.method === "GET" && idIn)
+      return send(
+        res,
+        200,
+        [...profiles.values()].filter((p) => idIn.includes(p.id)),
+      );
     if (req.method === "GET") {
       // `ilike` with every wildcard escaped is a case-insensitive equality.
       const name = query
@@ -327,11 +366,113 @@ export async function startFakeSupabase({ port = 0 } = {}) {
     return send(res, 405, { message: "method not allowed" });
   }
 
+  async function drawingsRest(
+    req: IncomingMessage,
+    res: ServerResponse,
+    query: URLSearchParams,
+  ) {
+    const eq = (name: string) => query.get(name)?.match(/^eq\.(.*)$/)?.[1];
+
+    if (req.method === "GET") {
+      const since = query.get("created_at")?.match(/^gte\.(.*)$/)?.[1];
+      // or=(author_ids.cs.{<id>},saved_by.eq.<id>): "drawings I'm part of".
+      const mine = query.get("or")?.match(/author_ids\.cs\.\{([^}]*)\}/)?.[1];
+      let rows = drawings.filter(
+        (d) =>
+          (eq("id") === undefined || d.id === eq("id")) &&
+          (eq("saved_by") === undefined || d.saved_by === eq("saved_by")) &&
+          (since === undefined || d.created_at >= since) &&
+          (mine === undefined ||
+            d.saved_by === mine ||
+            d.author_ids.includes(mine)),
+      );
+      if (query.get("order")?.startsWith("created_at.desc"))
+        rows = [...rows].reverse();
+      const offset = Number(query.get("offset") ?? 0);
+      const limit = Number(query.get("limit") ?? rows.length);
+      return send(res, 200, rows.slice(offset, offset + limit));
+    }
+
+    if (req.method === "POST") {
+      // No insert policy: only the game server's secret key gets through.
+      if (!isService(req))
+        return dbError(res, 403, "42501", "row-level security violation");
+      if (failNextInsert) {
+        failNextInsert = false;
+        return dbError(res, 500, "XX000", "simulated failure");
+      }
+      const row = JSON.parse((await readBody(req)).toString());
+      drawings.push({
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        theme: null,
+        ...row,
+      });
+      return send(res, 201);
+    }
+
+    if (req.method === "DELETE") {
+      // Row-level security filters silently: a stranger's delete removes nothing.
+      const me = await caller(req);
+      const index = drawings.findIndex((d) => d.id === eq("id"));
+      if (index >= 0 && (isService(req) || mayRemove(me, drawings[index])))
+        drawings.splice(index, 1);
+      return send(res, 204);
+    }
+    return send(res, 405, { message: "method not allowed" });
+  }
+
+  async function galleryStorage(
+    req: IncomingMessage,
+    res: ServerResponse,
+    path: string,
+  ) {
+    const pub = path.match(/^\/object\/public\/gallery\/(.+)$/);
+    if (pub && req.method === "GET") {
+      const file = galleryFiles.get(pub[1]);
+      if (!file) return send(res, 404, { message: "not found" });
+      return send(res, 200, file, { "content-type": "image/png" });
+    }
+
+    const one = path.match(/^\/object\/gallery\/([^/]+)$/);
+    if (one && (req.method === "POST" || req.method === "DELETE")) {
+      // Writing a single object by name: the game server only.
+      if (!isService(req))
+        return send(res, 403, { statusCode: "403", error: "Unauthorized" });
+      if (req.method === "POST") galleryFiles.set(one[1], await readBody(req));
+      else galleryFiles.delete(one[1]);
+      return send(res, 200, { Key: `gallery/${one[1]}` });
+    }
+
+    // supabase-js `remove([...])`: DELETE /object/<bucket> with the names in the body.
+    if (path === "/object/gallery" && req.method === "DELETE") {
+      const me = await caller(req);
+      const { prefixes = [] } = JSON.parse(
+        (await readBody(req)).toString() || "{}",
+      ) as { prefixes?: string[] };
+      const removed = prefixes.filter((name) =>
+        mayRemove(
+          me,
+          drawings.find((d) => d.image_path === name),
+        ),
+      );
+      for (const name of removed) galleryFiles.delete(name);
+      return send(
+        res,
+        200,
+        removed.map((name) => ({ name })),
+      );
+    }
+    return send(res, 404, { message: "not found" });
+  }
+
   async function storage(
     req: IncomingMessage,
     res: ServerResponse,
     path: string,
   ) {
+    if (/^\/object\/(public\/)?gallery(\/|$)/.test(path))
+      return galleryStorage(req, res, path);
     const pub = path.match(/^\/object\/public\/avatars\/(.+)$/);
     if (pub && req.method === "GET") {
       const file = files.get(pub[1]);
@@ -426,6 +567,12 @@ export async function startFakeSupabase({ port = 0 } = {}) {
           ...row,
         });
     },
+    secretKey,
+    /** The next insert into `drawings` fails, as if the database hiccuped. */
+    failNextDrawingInsert() {
+      failNextInsert = true;
+    },
+    galleryFileCount: () => galleryFiles.size,
     /** Makes every `/rest/v1` answer take this long. */
     delayRest(ms: number) {
       restDelayMs = ms;
