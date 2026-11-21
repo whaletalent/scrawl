@@ -11,6 +11,7 @@ import {
 } from "./room-manager.js";
 import type { Room } from "./types.js";
 import { config } from "./config.js";
+import { getAccounts, type Profile } from "./accounts.js";
 import {
   startGame,
   startSplitGame,
@@ -130,10 +131,14 @@ function isPngDataUrl(value: unknown): value is string {
 function handleMessage(ws: WebSocket, msg: ClientMessage) {
   switch (msg.type) {
     case "create-room":
-      handleCreateRoom(ws, msg);
+      withIdentity(ws, msg.accessToken, (profile) =>
+        handleCreateRoom(ws, msg, profile),
+      );
       break;
     case "join-room":
-      handleJoinRoom(ws, msg.roomCode, msg.nickname);
+      withIdentity(ws, msg.accessToken, (profile) =>
+        handleJoinRoom(ws, msg.roomCode, msg.nickname, profile),
+      );
       break;
     case "rejoin":
       handleRejoin(ws, msg.roomCode, msg.token);
@@ -165,9 +170,41 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
   }
 }
 
+/** Sockets whose access token is being verified; they can't enter a room twice meanwhile. */
+const identifying = new WeakSet<WebSocket>();
+
+/**
+ * Works out who is behind a `create-room` / `join-room` before running it.
+ * No token, accounts off, or a token that doesn't check out all mean "guest".
+ */
+function withIdentity(
+  ws: WebSocket,
+  accessToken: unknown,
+  enter: (profile: Profile | null) => void,
+) {
+  if (identifying.has(ws)) return;
+  const accounts = getAccounts();
+  if (!accounts || typeof accessToken !== "string" || !accessToken) {
+    enter(null);
+    return;
+  }
+
+  identifying.add(ws);
+  accounts
+    .profileFromToken(accessToken)
+    .catch(() => null)
+    .then((profile) => {
+      identifying.delete(ws);
+      // The socket may have closed, or entered a room, while we were waiting.
+      if (ws.readyState !== ws.OPEN || wsToPlayer.has(ws)) return;
+      enter(profile);
+    });
+}
+
 function handleCreateRoom(
   ws: WebSocket,
   msg: Extract<ClientMessage, { type: "create-room" }>,
+  profile: Profile | null,
 ) {
   const room = createRoom(
     msg.nickname,
@@ -177,14 +214,20 @@ function handleCreateRoom(
     msg.turnDuration,
     msg.faceTemplate,
     msg.skinTone,
+    profile,
   );
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
   sendRoomState(ws, room, hostId);
 }
 
-function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
-  const result = joinRoom(roomCode, nickname, ws);
+function handleJoinRoom(
+  ws: WebSocket,
+  roomCode: string,
+  nickname: string,
+  profile: Profile | null,
+) {
+  const result = joinRoom(roomCode, nickname, ws, profile);
   if (!result) {
     ws.send(
       JSON.stringify({

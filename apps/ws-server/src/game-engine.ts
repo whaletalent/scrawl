@@ -526,6 +526,10 @@ function processDrawings(room: Room) {
         room.players.get(pair.playerA)?.nickname ?? "?",
         room.players.get(pair.playerB)?.nickname ?? "?",
       ] as [string, string],
+      playerAvatars: [
+        room.players.get(pair.playerA)?.avatarUrl ?? null,
+        room.players.get(pair.playerB)?.avatarUrl ?? null,
+      ] as [string | null, string | null],
       votes: {},
     };
   });

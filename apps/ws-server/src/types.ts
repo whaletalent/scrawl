@@ -37,6 +37,9 @@ export interface Player {
   connected: boolean;
   /** Armed while disconnected; the player is removed for good when it fires. */
   graceTimer: ReturnType<typeof setTimeout> | null;
+  /** Account behind this player, or null for a guest. Never sent to clients. */
+  userId: string | null;
+  avatarUrl: string | null;
 }
 
 export interface Theme {
@@ -67,6 +70,8 @@ export interface DrawingResult {
   imageRightDataUrl: string;
   round: number;
   playerNames: [string, string];
+  /** Avatars of the two authors, in `playerNames` order; null for guests. */
+  playerAvatars: [string | null, string | null];
   votes: Record<string, { first: string; second: string; third: string }>;
 }
 
@@ -135,7 +140,13 @@ export interface Room {
 }
 
 export type ClientMessage =
-  | { type: "join-room"; roomCode: string; nickname: string }
+  | {
+      type: "join-room";
+      roomCode: string;
+      nickname: string;
+      /** Supabase access token of a logged-in player. */
+      accessToken?: string;
+    }
   | { type: "rejoin"; roomCode: string; token: string }
   | {
       type: "create-room";
@@ -145,6 +156,7 @@ export type ClientMessage =
       turnDuration?: number;
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
+      accessToken?: string;
     }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }

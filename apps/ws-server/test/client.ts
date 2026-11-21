@@ -104,10 +104,11 @@ export async function join(
   url: string,
   roomCode: string,
   nickname: string,
+  accessToken?: string,
 ): Promise<TestClient> {
   const c = await connect(url, nickname);
   const answered = c.wait((m) => m.type === "room-state" || m.type === "error");
-  c.send({ type: "join-room", roomCode, nickname });
+  c.send({ type: "join-room", roomCode, nickname, accessToken });
   await answered;
   return c;
 }
