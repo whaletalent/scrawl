@@ -65,8 +65,8 @@ The web app finds the server through `NEXT_PUBLIC_WS_URL` (default `ws://localho
 | `npm run dev`          | Start the web app and the WebSocket server               |
 | `npm run build`        | Static build of the web app into `apps/web/out/`         |
 | `npm run build:server` | Compile the WebSocket server into `apps/ws-server/dist/` |
-| `npm test`             | Server test suite (~10s)                                 |
-| `npm run test:e2e`     | Browser test suite (~1.5min)                             |
+| `npm test`             | Server and web unit suites (~10s)                        |
+| `npm run test:e2e`     | Browser test suite (~2min)                               |
 | `npm run typecheck`    | Type-check both apps and the tests                       |
 | `npm run lint`         | Lint with ESLint                                         |
 | `npm run lint:fix`     | Lint and apply automatic fixes                           |
@@ -75,8 +75,8 @@ The web app finds the server through `NEXT_PUBLIC_WS_URL` (default `ws://localho
 
 ## Tests
 
-- **Server suite** (`apps/ws-server/test`): each file starts the real server in-process on a free port and plays against it with WebSocket clients, with game phases sped up. Covers room rules, voting, the odd-player rotation, the two-player modes, leaving, reconnection and input hardening.
-- **Browser suite** (`e2e/`): Playwright drives the real app in Chromium while scripted bots play the other players over the WebSocket protocol. It starts its own servers (web on port 3100, WebSocket on port 8089), so it can run next to `npm run dev`. First time only: `npx playwright install chromium`.
+- **Server suite** (`apps/ws-server/test`): each file starts the real server in-process on a free port and plays against it with WebSocket clients, with game phases sped up. Covers room rules, voting, the odd-player rotation, the two-player modes, leaving, reconnection, input hardening and player identity (accounts).
+- **Browser suite** (`e2e/`): Playwright drives the real app in Chromium while scripted bots play the other players over the WebSocket protocol. It starts its own servers (web on port 3100, WebSocket on port 8089, and a fake Supabase on port 8090 so the account flows run without a real project), so it can run next to `npm run dev`. First time only: `npx playwright install chromium`.
 
 To play a sped-up game by hand, start the WebSocket server with `PHASE_TIME_SCALE=0.2` (every phase five times shorter).
 

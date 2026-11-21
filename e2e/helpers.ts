@@ -22,10 +22,18 @@ export async function createRoom(
     mode,
     rounds,
     turnSeconds,
-  }: { nickname?: string; mode: Mode; rounds?: number; turnSeconds?: number },
+    loggedIn = false,
+  }: {
+    nickname?: string;
+    mode: Mode;
+    rounds?: number;
+    turnSeconds?: number;
+    /** The page is signed in: there is no nickname to type. */
+    loggedIn?: boolean;
+  },
 ): Promise<string> {
   await page.goto("/");
-  await page.getByPlaceholder("Seu apelido").fill(nickname);
+  if (!loggedIn) await page.getByPlaceholder("Seu apelido").fill(nickname);
   await page.getByRole("button", { name: "Criar sala" }).click();
   if (rounds) {
     // The round picker only shows for 2-player modes, but the choice sticks
@@ -97,6 +105,57 @@ export function autoplayParty(b: TestClient) {
         b.send({ type: "vote-drawing", pairId: other.pairId, rank: 1 });
     }
   });
+}
+
+/** A username nobody else in this run has: the fake Supabase is shared by every test. */
+export function uniqueName(prefix: string): string {
+  return `${prefix}${Math.floor(Math.random() * 1e8)}`.slice(0, 16);
+}
+
+export const PASSWORD = "12345678";
+export const emailOf = (username: string) =>
+  `${username.toLowerCase()}@test.example`;
+
+/** Fills and submits the "Criar conta" form; ends on the onboarding page. */
+export async function signUpWithEmail(
+  page: Page,
+  email: string,
+  password = PASSWORD,
+) {
+  await page.goto("/login/");
+  await page.getByRole("tab", { name: "Criar conta" }).click();
+  await page.getByPlaceholder("E-mail").fill(email);
+  await page.getByPlaceholder("Senha", { exact: true }).fill(password);
+  await page.getByPlaceholder("Repita a senha").fill(password);
+  await page.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL("/welcome/");
+}
+
+/** Onboarding from /welcome/: username, one stroke on the avatar, save. Ends on the landing page. */
+export async function finishOnboarding(page: Page, username: string) {
+  await page.getByPlaceholder("Username").fill(username);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByText("Desenhe seu avatar")).toBeVisible();
+  await draw(page, [
+    [0.4, 0.3],
+    [0.6, 0.5],
+  ]);
+  await page.getByRole("button", { name: "Criar conta" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Jogando como")).toContainText(username);
+}
+
+/** A complete new account, signed in on this page. */
+export async function signUp(page: Page, username: string) {
+  await signUpWithEmail(page, emailOf(username));
+  await finishOnboarding(page, username);
+}
+
+export async function signIn(page: Page, email: string, password = PASSWORD) {
+  await page.goto("/login/");
+  await page.getByPlaceholder("E-mail").fill(email);
+  await page.getByPlaceholder("Senha", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
 }
 
 /** Fails the test if the page throws or logs an error. Call before navigating. */

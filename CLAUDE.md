@@ -32,8 +32,8 @@ npm run dev   --workspace=@scrawl/ws-server   # tsx watch
 Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs lint, format:check, typecheck, server tests, both builds and the Playwright suite — run those before pushing.
 
 ```bash
-npm test                 # server suite, ~10s (node:test via tsx)
-npm run test:e2e         # Playwright browser suite, ~1.5min
+npm test                 # server suite + web unit tests, ~10s (node:test via tsx)
+npm run test:e2e         # Playwright browser suite, ~2min
 npm run typecheck        # ws-server (src + test), web, e2e
 
 # A single server test file / a single test by name
