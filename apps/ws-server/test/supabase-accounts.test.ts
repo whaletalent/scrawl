@@ -101,3 +101,41 @@ test("end to end: a room created with a real token shows the account", async () 
     await srv.stop();
   }
 });
+
+test("failures say why in the log, without the token, and don't repeat themselves", async () => {
+  const { userId, accessToken } = await fake.addUser("Iara", "12345678");
+  const reasons: string[] = [];
+  const log = (reason: string) => reasons.push(reason);
+
+  // A token Supabase didn't sign: the classic sign of a wrong SUPABASE_URL or signing setup.
+  const forged = await fake.signToken({ sub: userId }, { wrongKey: true });
+  const a = createSupabaseAccounts({ url: fake.url, secretKey: "s", log });
+  await a.profileFromToken(forged);
+  await a.profileFromToken(forged);
+  assert.equal(
+    reasons.length,
+    1,
+    "the same reason is logged once, not per player",
+  );
+  assert.match(reasons[0], /signature/i);
+
+  // Supabase unreachable.
+  const down = createSupabaseAccounts({
+    url: "http://127.0.0.1:1",
+    secretKey: "s",
+    timeoutMs: 300,
+    log,
+  });
+  await down.profileFromToken(accessToken);
+  assert.equal(reasons.length, 2);
+
+  // A player with no profile yet is normal, not a problem.
+  const novo = await fake.addUser("Joca", "12345678", false);
+  await a.profileFromToken(novo.accessToken);
+  assert.equal(reasons.length, 2);
+
+  for (const reason of reasons) {
+    assert.equal(reason.includes(forged), false);
+    assert.equal(reason.includes(accessToken), false);
+  }
+});

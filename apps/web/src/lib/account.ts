@@ -33,6 +33,22 @@ export function accountErrorMessage(e: AccountError): string {
   return MESSAGES[e];
 }
 
+/**
+ * How long the game waits on Supabase before carrying on without it. An
+ * account is never required to play, so a slow or dead Supabase must cost a
+ * player a few seconds at most — never the page.
+ */
+export const ACCOUNT_TIMEOUT_MS = 3000;
+
+function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise).catch(() => fallback),
+    new Promise<T>((resolve) =>
+      setTimeout(() => resolve(fallback), ACCOUNT_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 /** Where Google sends the player back to. */
 const OAUTH_RETURN_PATH = "/login/";
 
@@ -121,12 +137,16 @@ export async function fetchProfile(
   userId: string,
 ): Promise<{ profile: Profile | null; failed: boolean }> {
   if (!supabase) return { profile: null, failed: true };
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, username, avatar_url")
-    .eq("id", userId)
-    .limit(1);
-  if (error) return { profile: null, failed: true };
+  const data = await withTimeout(
+    supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .eq("id", userId)
+      .limit(1)
+      .then((result) => (result.error ? null : result.data)),
+    null,
+  );
+  if (!data) return { profile: null, failed: true };
   const row = data[0];
   return {
     failed: false,
@@ -226,6 +246,8 @@ export async function getOwnLogin(): Promise<{
 
 /** A fresh access token for the game server, or null when signed out / accounts off. */
 export async function getAccessToken(): Promise<string | null> {
-  const { data } = (await supabase?.auth.getSession()) ?? { data: null };
-  return data?.session?.access_token ?? null;
+  if (!supabase) return null;
+  // Reading the session may need a token refresh over the network.
+  const result = await withTimeout(supabase.auth.getSession(), null);
+  return result?.data.session?.access_token ?? null;
 }

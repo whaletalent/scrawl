@@ -19,6 +19,6 @@ jobs:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          curl --fail --silent --show-error --max-time 30 \
+          curl --fail --silent --show-error --max-time 30 --output /dev/null \
             -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
             "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1"

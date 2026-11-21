@@ -182,7 +182,8 @@ function withIdentity(
   accessToken: unknown,
   enter: (profile: Profile | null) => void,
 ) {
-  if (identifying.has(ws)) return;
+  // One socket is one player: ignore it while it is being identified or once it is in a room.
+  if (identifying.has(ws) || wsToPlayer.has(ws)) return;
   const accounts = getAccounts();
   if (!accounts || typeof accessToken !== "string" || !accessToken) {
     enter(null);
