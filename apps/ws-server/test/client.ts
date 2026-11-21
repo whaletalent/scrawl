@@ -1,4 +1,5 @@
 import WebSocket from "ws";
+import { crc32, deflateSync } from "zlib";
 
 /** Any server → client message. Tests poke at these loosely on purpose. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +40,31 @@ export const sleep = (ms: number) =>
 /** A tiny valid PNG, used wherever a test needs to submit "a drawing". */
 export const IMG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+/** A valid, blank PNG of the given size, as a data URL (the gallery only accepts 800×600). */
+export function pngDataUrl(width: number, height: number): string {
+  const chunk = (kind: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(kind, "ascii"), data]);
+    const head = Buffer.alloc(4);
+    head.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([head, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 0, 0, 0, 0], 8); // 8-bit greyscale
+  const rows = Buffer.alloc((width + 1) * height, 0xff);
+  for (let y = 0; y < height; y++) rows[y * (width + 1)] = 0; // filter byte
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(rows)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+  return "data:image/png;base64," + png.toString("base64");
+}
 
 const open: TestClient[] = [];
 

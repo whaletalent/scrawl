@@ -193,3 +193,71 @@ test("a co-author removes a drawing from their profile: it leaves the gallery, i
   await a.page.reload();
   await expect(drawingOf(a.page, a.name, b.name)).toHaveCount(0);
 });
+
+/** The signed-in account's id, as the fake Supabase knows it. */
+const userIdOf = (page: Page) =>
+  page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) =>
+      /^sb-.*-auth-token$/.test(k),
+    )!;
+    return JSON.parse(localStorage.getItem(key)!).user.id as string;
+  });
+
+/** Makes the fake Supabase misbehave for one account (see its /__control routes). */
+const misbehave = (what: string, user: string, count: number) =>
+  fetch(`http://localhost:8090/__control/${what}?user=${user}&count=${count}`);
+
+test("a save that fails can be tried again, as many times as it takes", async ({
+  browser,
+}) => {
+  const a = await player(browser, "Ana");
+  await misbehave("fail-drawing-inserts", await userIdOf(a.page), 2);
+  await splitFinal(a.page, true);
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    await saveButton(a.page).click();
+    await expect(
+      a.page.getByText("Não deu para salvar. Tente de novo."),
+    ).toBeVisible();
+    // Not stuck on "Salvando...": the button is back and usable.
+    await expect(saveButton(a.page)).toBeEnabled();
+    await expect(a.page.getByText("Salvando...")).toHaveCount(0);
+  }
+
+  await saveButton(a.page).click();
+  await expect(a.page.getByText("Salvo na galeria")).toBeVisible();
+  await expect(
+    a.page.getByText("Não deu para salvar. Tente de novo."),
+  ).toHaveCount(0);
+});
+
+test("if the image can't be deleted, the drawing is not reported as removed", async ({
+  browser,
+}) => {
+  const a = await player(browser, "Ana");
+  await splitFinal(a.page, true);
+  await saveButton(a.page).click();
+  await expect(a.page.getByText("Salvo na galeria")).toBeVisible();
+
+  await a.page.goto("/profile/");
+  const mine = drawingOf(a.page, a.name, "Robô");
+  const src = (await mine.getAttribute("src"))!;
+  // Storage answers "nothing deleted", the way a wrong policy would.
+  await misbehave("keep-gallery-files", await userIdOf(a.page), 1);
+
+  await a.page.getByRole("button", { name: "Remover da galeria" }).click();
+  await a.page.getByRole("button", { name: "Sim, remover" }).click();
+  await expect(
+    a.page.getByText("Não deu para remover. Tente de novo."),
+  ).toBeVisible();
+  // Still listed, and still in the gallery with its image: nothing half-removed.
+  await expect(mine).toBeVisible();
+  expect((await a.page.request.get(src)).status()).toBe(200);
+  await a.page.reload();
+  await expect(mine).toBeVisible();
+
+  await a.page.getByRole("button", { name: "Remover da galeria" }).click();
+  await a.page.getByRole("button", { name: "Sim, remover" }).click();
+  await expect(mine).toHaveCount(0);
+  expect((await a.page.request.get(src)).status()).toBe(404);
+});

@@ -284,3 +284,37 @@ test("only an author or whoever saved it can remove a drawing, image included", 
   });
   assert.ok(upload.status >= 400);
 });
+
+test("the daily limit holds when saves arrive all at once", async () => {
+  const tom = await fake.addUser("Tom", "12345678");
+  const g = gallery();
+  const results = await Promise.all(
+    Array.from({ length: 13 }, () => g.saveDrawing!(entryBy(tom.userId))),
+  );
+  assert.equal(results.filter((r) => r === "saved").length, 10);
+  assert.equal(results.filter((r) => r === "limit").length, 3);
+  assert.equal((await rows(`saved_by=eq.${tom.userId}`)).length, 10);
+});
+
+test("a save Supabase never answers leaves nothing behind, even if the row had been written", async () => {
+  const uli = await fake.addUser("Uli", "12345678");
+  const files = fake.galleryFileCount();
+  const g = createSupabaseAccounts({
+    url: fake.url,
+    secretKey: fake.secretKey,
+    saveTimeoutMs: 300,
+    log: () => {},
+  });
+
+  // The insert commits, but its answer never arrives.
+  fake.stallNextDrawingInsert();
+  const started = Date.now();
+  assert.equal(await g.saveDrawing!(entryBy(uli.userId)), "failed");
+  assert.ok(Date.now() - started < 3000, "took too long to give up");
+  assert.equal((await rows(`saved_by=eq.${uli.userId}`)).length, 0);
+  assert.equal(fake.galleryFileCount(), files);
+
+  // And it can simply be saved again.
+  assert.equal(await g.saveDrawing!(entryBy(uli.userId)), "saved");
+  assert.equal((await rows(`saved_by=eq.${uli.userId}`)).length, 1);
+});

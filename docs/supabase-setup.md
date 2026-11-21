@@ -56,12 +56,12 @@ Do this once against the real project; the automated tests only ever talk to a f
 3. Sign out and back in. Sign in with Google, on localhost and on the Pages URL.
 4. Open a room in a second browser as a guest and check the avatar shows next to the username.
 5. In the browser console of a signed-in tab, try to change your own username and to create a profile for another user id — both must be refused.
-6. Play a two-player game to the end with two accounts, press "Salvar na galeria", and check the drawing shows on the home and on the gallery page. From the other account's profile, remove it: the row disappears from `drawings` and the file from **Storage → gallery**. From a third account, confirm there is nothing to remove.
+6. Play a two-player game to the end with two accounts, press "Salvar na galeria", and check the drawing shows on the home and on the gallery page. From the other account's profile, remove it, then look in the dashboard, not only at the page: the row must be gone from `drawings` **and the file from Storage → gallery**. (If the page says "Não deu para remover", the storage delete policy isn't letting the author delete the file.) From a third account, confirm there is nothing to remove.
 7. Sign in with Google using an address that already has an e-mail + password account, and write down below what Supabase does.
 
 ### Same address, e-mail and Google
 
-_Not verified yet — fill in after step 6._ Because e-mail addresses are not confirmed, anyone can register an address they don't own. If Supabase links a later Google sign-in with that address to the existing account, the person who registered first still knows its password. In Scrawl the damage is someone else being able to use that profile. The cure is turning on confirmation (next section).
+_Not verified yet — fill in after step 7._ Because e-mail addresses are not confirmed, anyone can register an address they don't own. If Supabase links a later Google sign-in with that address to the existing account, the person who registered first still knows its password. In Scrawl the damage is someone else being able to use that profile. The cure is turning on confirmation (next section).
 
 ## Everyday chores
 

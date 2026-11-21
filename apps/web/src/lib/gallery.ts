@@ -5,6 +5,7 @@
  */
 import { supabase } from "./supabase";
 import { withTimeout } from "./account";
+import { projectAvatarUrl } from "./account-rules";
 import type { GameMode } from "@/types/game";
 
 export interface GalleryAuthor {
@@ -66,7 +67,16 @@ async function hydrate(rows: Row[]): Promise<GalleryDrawing[]> {
       null,
     );
     // Without them the drawings still show, with placeholder avatars.
-    for (const p of profiles ?? []) avatars.set(p.id, p.avatar_url);
+    for (const p of profiles ?? []) {
+      // The row is written by its owner's browser: show only an avatar that
+      // really is this project's file, never an address of their choosing.
+      const url = projectAvatarUrl(
+        p.avatar_url,
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        p.id,
+      );
+      if (url) avatars.set(p.id, url);
+    }
   }
 
   return rows.map((r) => ({
@@ -131,6 +141,19 @@ export async function removeDrawing(d: GalleryDrawing): Promise<boolean> {
   if (!supabase) return false;
   const file = await supabase.storage.from("gallery").remove([d.imagePath]);
   if (file.error) return false;
+  // Storage answers "ok, nothing deleted" when its policy says no. Deleting
+  // the row then would leave a public image nobody can ever remove, so the
+  // row only goes once the image is known to be gone.
+  if (!file.data?.some((f) => f.name === d.imagePath)) {
+    const stillThere = await fetch(d.imageUrl, {
+      method: "HEAD",
+      cache: "no-store",
+    }).then(
+      (res) => res.ok,
+      () => true,
+    );
+    if (stillThere) return false;
+  }
   const row = await supabase.from("drawings").delete().eq("id", d.id);
   return !row.error;
 }

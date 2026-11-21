@@ -66,7 +66,7 @@ create policy "Remove the image of a drawing you can remove"
     and exists (
       select 1
       from public.drawings d
-      where d.image_path = name
+      where d.image_path = objects.name
         and (
           (select auth.uid()) = any (d.author_ids)
           or (select auth.uid()) = d.saved_by

@@ -1,20 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "@/hooks/use-account";
 import type { DrawingRef } from "@/types/game";
+
+export type SaveFailure = { reason: "limit" | "failed" | "not-allowed" };
 
 /** What the final screens need to put drawings in the gallery (from `useGameState`). */
 export interface GallerySaving {
   /** Keys of the drawings of this room that are already in the gallery. */
   saved: string[];
-  /** Why the last attempt on a drawing failed, by key. */
-  failed: Record<string, "limit" | "failed" | "not-allowed">;
+  /** The server's answer to the last failed attempt on a drawing, by key. A new object each time. */
+  failed: Record<string, SaveFailure>;
   save: (ref: DrawingRef, imageDataUrl: string) => void;
 }
 
 export function drawingKey(ref: DrawingRef): string {
   return ref.pairId ? `${ref.round}:${ref.pairId}` : `${ref.round}`;
 }
+
+/** How long to wait for the server's answer before giving the button back. */
+const ANSWER_TIMEOUT_MS = 15_000;
 
 interface SaveButtonProps {
   drawing: DrawingRef;
@@ -27,30 +32,49 @@ interface SaveButtonProps {
 export function SaveButton({ drawing, compose, saving }: SaveButtonProps) {
   const { status } = useAccount();
   const key = drawingKey(drawing);
-  // Which failure (if any) had already been seen when this attempt started.
-  const [pending, setPending] = useState<{ failure?: string } | null>(null);
-  const [composeFailed, setComposeFailed] = useState(false);
+  const failure = saving.failed[key];
+  // An attempt in progress, and the failure that was already on screen when
+  // it started (so it isn't mistaken for this attempt's answer).
+  const [attempt, setAttempt] = useState<{ before?: SaveFailure } | null>(null);
+  // Failed without an answer from the server: couldn't compose, or it never replied.
+  const [localFailure, setLocalFailure] = useState(false);
 
-  if (saving.saved.includes(key))
-    return <p className="text-sm text-green-400">Salvo na galeria</p>;
+  const saved = saving.saved.includes(key);
+  const answered = failure !== undefined && failure !== attempt?.before;
+  const busy = attempt !== null && !answered && !saved;
+
+  // The request can be lost (the socket dropped) or the answer never come:
+  // don't leave the button on "Salvando..." for ever.
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setTimeout(() => {
+      setAttempt(null);
+      setLocalFailure(true);
+    }, ANSWER_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [busy]);
+
+  if (saved) return <p className="text-sm text-green-400">Salvo na galeria</p>;
   if (status !== "ready") return null;
 
-  const failure = saving.failed[key];
-  // The attempt is over once the server has answered with a (new) failure.
-  const busy = pending !== null && failure === pending.failure;
-
   async function save() {
-    setComposeFailed(false);
-    setPending({ failure });
+    if (busy) return;
+    setLocalFailure(false);
+    setAttempt({ before: failure });
     try {
       saving.save(drawing, await compose());
     } catch {
-      setComposeFailed(true);
-      setPending(null);
+      setAttempt(null);
+      setLocalFailure(true);
     }
   }
 
-  const showFailure = !busy && (composeFailed || (pending && failure));
+  // Only a failure of an attempt made from this button is worth showing.
+  const shown = localFailure
+    ? "failed"
+    : attempt && answered
+      ? failure.reason
+      : null;
   return (
     <div className="flex flex-col items-center gap-1">
       <button
@@ -60,9 +84,9 @@ export function SaveButton({ drawing, compose, saving }: SaveButtonProps) {
       >
         {busy ? "Salvando..." : "Salvar na galeria"}
       </button>
-      {showFailure && (
+      {shown && (
         <p className="text-xs text-red-400 text-center">
-          {failure === "limit" && !composeFailed
+          {shown === "limit"
             ? "Você já salvou 10 desenhos hoje. Tente amanhã."
             : "Não deu para salvar. Tente de novo."}
         </p>

@@ -12,11 +12,14 @@ export function createSupabaseAccounts({
   url,
   secretKey,
   timeoutMs = 3000,
+  saveTimeoutMs = 10_000,
   log = (reason) => console.warn(`[accounts] ${reason}`),
 }: {
   url: string;
   secretKey: string;
   timeoutMs?: number;
+  /** How long one gallery save may take before it is abandoned and undone. */
+  saveTimeoutMs?: number;
   /** Told why a lookup failed. Never receives a token. */
   log?: (reason: string) => void;
 }): Accounts {
@@ -39,7 +42,6 @@ export function createSupabaseAccounts({
 
   /** At most this many gallery saves per player per 24 hours. */
   const DAILY_SAVES = 10;
-  const SAVE_TIMEOUT_MS = 10_000;
   const serviceHeaders = {
     apikey: secretKey,
     Authorization: `Bearer ${secretKey}`,
@@ -53,10 +55,38 @@ export function createSupabaseAccounts({
     log(`drawing not saved to the gallery: ${reason}`);
   }
 
+  /**
+   * Undoes a save that didn't clearly succeed. The row goes first (it may
+   * have been written even though we never heard so), then the image, so a
+   * listed drawing never points at nothing and no image is left without a
+   * row — which nobody but the owner could ever remove.
+   */
+  async function undo(imagePath: string) {
+    const attempt = (url: string) =>
+      fetch(url, {
+        method: "DELETE",
+        headers: serviceHeaders,
+        signal: AbortSignal.timeout(5000),
+      }).then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      });
+    try {
+      await attempt(
+        `${base}/rest/v1/drawings?image_path=eq.${encodeURIComponent(imagePath)}`,
+      );
+      await attempt(`${base}/storage/v1/object/gallery/${imagePath}`);
+    } catch (err) {
+      // Not rate-limited: each of these is a file to clean up by hand.
+      log(
+        `could not undo a failed gallery save (${imagePath}): ${String(err)}`,
+      );
+    }
+  }
+
   async function store(
     entry: GalleryEntry,
-    signal: AbortSignal,
   ): Promise<"saved" | "limit" | "failed"> {
+    const signal = AbortSignal.timeout(saveTimeoutMs);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const recent = await fetch(
       `${base}/rest/v1/drawings?saved_by=eq.${encodeURIComponent(entry.savedBy)}` +
@@ -70,47 +100,63 @@ export function createSupabaseAccounts({
     if (((await recent.json()) as unknown[]).length >= DAILY_SAVES)
       return "limit";
 
-    // The image first: a row must never point at a file that isn't there.
+    // From here on something may exist in Supabase: every way out that isn't
+    // "saved" goes through `undo`.
     const imagePath = `${crypto.randomUUID()}.png`;
-    const objectUrl = `${base}/storage/v1/object/gallery/${imagePath}`;
-    const upload = await fetch(objectUrl, {
-      method: "POST",
-      headers: { ...serviceHeaders, "content-type": "image/png" },
-      body: new Uint8Array(entry.png),
-      signal,
-    });
-    if (!upload.ok) {
-      saveProblem(`uploading the image answered HTTP ${upload.status}`);
+    try {
+      // The image first: a row must never point at a file that isn't there.
+      const upload = await fetch(
+        `${base}/storage/v1/object/gallery/${imagePath}`,
+        {
+          method: "POST",
+          headers: { ...serviceHeaders, "content-type": "image/png" },
+          body: new Uint8Array(entry.png),
+          signal,
+        },
+      );
+      if (!upload.ok)
+        throw new Error(`uploading answered HTTP ${upload.status}`);
+
+      const insert = await fetch(`${base}/rest/v1/drawings`, {
+        method: "POST",
+        headers: {
+          ...serviceHeaders,
+          "content-type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          image_path: imagePath,
+          game_mode: entry.gameMode,
+          theme: entry.theme,
+          author_names: entry.authorNames,
+          author_ids: entry.authorIds,
+          saved_by: entry.savedBy,
+        }),
+        signal,
+      });
+      if (!insert.ok)
+        throw new Error(`inserting answered HTTP ${insert.status}`);
+      return "saved";
+    } catch (err) {
+      const e = err as { name?: string; message?: string };
+      saveProblem(`${e.name ?? "error"}: ${e.message ?? ""}`);
+      await undo(imagePath);
       return "failed";
     }
+  }
 
-    const insert = await fetch(`${base}/rest/v1/drawings`, {
-      method: "POST",
-      headers: {
-        ...serviceHeaders,
-        "content-type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        image_path: imagePath,
-        game_mode: entry.gameMode,
-        theme: entry.theme,
-        author_names: entry.authorNames,
-        author_ids: entry.authorIds,
-        saved_by: entry.savedBy,
-      }),
-      signal,
-    }).catch(() => null);
-    if (insert?.ok) return "saved";
-
-    // No row, so nobody could ever remove the image: take it back.
-    saveProblem(
-      `inserting the row answered HTTP ${insert?.status ?? "nothing"}`,
-    );
-    await fetch(objectUrl, { method: "DELETE", headers: serviceHeaders }).catch(
-      () => null,
-    );
-    return "failed";
+  // One save at a time per player: the daily limit is "count, then write",
+  // which only holds if a player's saves can't overlap. (The game server is
+  // a single process, so a queue in memory is enough.)
+  const queues = new Map<string, Promise<unknown>>();
+  function inTurn<T>(userId: string, task: () => Promise<T>): Promise<T> {
+    const run = (queues.get(userId) ?? Promise.resolve()).then(task, task);
+    const tail = run.catch(() => {});
+    queues.set(userId, tail);
+    void tail.then(() => {
+      if (queues.get(userId) === tail) queues.delete(userId);
+    });
+    return run;
   }
 
   async function lookup(
@@ -158,7 +204,7 @@ export function createSupabaseAccounts({
   return {
     async saveDrawing(entry) {
       try {
-        return await store(entry, AbortSignal.timeout(SAVE_TIMEOUT_MS));
+        return await inTurn(entry.savedBy, () => store(entry));
       } catch (err) {
         const e = err as { name?: string; message?: string };
         saveProblem(`${e.name ?? "error"}: ${e.message ?? ""}`);

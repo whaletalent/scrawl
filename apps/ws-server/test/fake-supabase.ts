@@ -67,6 +67,15 @@ export async function startFakeSupabase({
   const drawings: DrawingRow[] = [];
   const galleryFiles = new Map<string, Buffer>();
   let failNextInsert = false;
+  let stallNextInsert = false;
+  // Scripted misbehaviour for one account, set through /__control by the browser suite.
+  const failInsertsFor = new Map<string, number>();
+  const keepFilesFor = new Map<string, number>();
+  const takeOne = (counts: Map<string, number>, id: string | undefined) => {
+    const left = (id && counts.get(id)) || 0;
+    if (id && left > 0) counts.set(id, left - 1);
+    return left > 0;
+  };
   /** The game server, holding the secret key: row-level security doesn't apply to it. */
   const isService = (req: IncomingMessage) => req.headers.apikey === secretKey;
   /** The delete rule of the `drawings` table, which the storage policy reuses. */
@@ -402,19 +411,29 @@ export async function startFakeSupabase({
         return dbError(res, 500, "XX000", "simulated failure");
       }
       const row = JSON.parse((await readBody(req)).toString());
+      if (takeOne(failInsertsFor, row.saved_by))
+        return dbError(res, 500, "XX000", "simulated failure");
+      const stall = stallNextInsert;
+      stallNextInsert = false;
       drawings.push({
         id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         theme: null,
         ...row,
       });
+      // Written, but the caller never hears back (it will time out).
+      if (stall) return;
       return send(res, 201);
     }
 
     if (req.method === "DELETE") {
       // Row-level security filters silently: a stranger's delete removes nothing.
       const me = await caller(req);
-      const index = drawings.findIndex((d) => d.id === eq("id"));
+      const index = drawings.findIndex(
+        (d) =>
+          (eq("id") !== undefined && d.id === eq("id")) ||
+          (eq("image_path") !== undefined && d.image_path === eq("image_path")),
+      );
       if (index >= 0 && (isService(req) || mayRemove(me, drawings[index])))
         drawings.splice(index, 1);
       return send(res, 204);
@@ -428,7 +447,7 @@ export async function startFakeSupabase({
     path: string,
   ) {
     const pub = path.match(/^\/object\/public\/gallery\/(.+)$/);
-    if (pub && req.method === "GET") {
+    if (pub && (req.method === "GET" || req.method === "HEAD")) {
       const file = galleryFiles.get(pub[1]);
       if (!file) return send(res, 404, { message: "not found" });
       return send(res, 200, file, { "content-type": "image/png" });
@@ -450,11 +469,15 @@ export async function startFakeSupabase({
       const { prefixes = [] } = JSON.parse(
         (await readBody(req)).toString() || "{}",
       ) as { prefixes?: string[] };
-      const removed = prefixes.filter((name) =>
-        mayRemove(
-          me,
-          drawings.find((d) => d.image_path === name),
-        ),
+      // Scripted: storage quietly refuses, the way a wrong policy would.
+      const allowed = !takeOne(keepFilesFor, me?.id);
+      const removed = prefixes.filter(
+        (name) =>
+          allowed &&
+          mayRemove(
+            me,
+            drawings.find((d) => d.image_path === name),
+          ),
       );
       for (const name of removed) galleryFiles.delete(name);
       return send(
@@ -474,7 +497,7 @@ export async function startFakeSupabase({
     if (/^\/object\/(public\/)?gallery(\/|$)/.test(path))
       return galleryStorage(req, res, path);
     const pub = path.match(/^\/object\/public\/avatars\/(.+)$/);
-    if (pub && req.method === "GET") {
+    if (pub && (req.method === "GET" || req.method === "HEAD")) {
       const file = files.get(pub[1]);
       if (!file) return send(res, 404, { message: "not found" });
       return send(res, 200, file, { "content-type": "image/png" });
@@ -517,6 +540,21 @@ export async function startFakeSupabase({
         return await rest(req, res, pathname.slice(8), searchParams);
       if (pathname.startsWith("/storage/v1"))
         return await storage(req, res, pathname.slice(11));
+      // Test controls for the browser suite, which runs this file as its own process.
+      if (pathname === "/__control/fail-drawing-inserts") {
+        failInsertsFor.set(
+          searchParams.get("user") ?? "",
+          Number(searchParams.get("count") ?? 1),
+        );
+        return send(res, 200, { ok: true });
+      }
+      if (pathname === "/__control/keep-gallery-files") {
+        keepFilesFor.set(
+          searchParams.get("user") ?? "",
+          Number(searchParams.get("count") ?? 1),
+        );
+        return send(res, 200, { ok: true });
+      }
       // Readiness probe for Playwright's webServer.
       return send(res, 200, { ok: true });
     } catch (err) {
@@ -571,6 +609,10 @@ export async function startFakeSupabase({
     /** The next insert into `drawings` fails, as if the database hiccuped. */
     failNextDrawingInsert() {
       failNextInsert = true;
+    },
+    /** The next insert into `drawings` is written but never answered. */
+    stallNextDrawingInsert() {
+      stallNextInsert = true;
     },
     galleryFileCount: () => galleryFiles.size,
     /** Makes every `/rest/v1` answer take this long. */

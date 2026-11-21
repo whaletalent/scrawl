@@ -116,6 +116,7 @@ export function createRoom(
     ]),
     resultAuthors: new Map(),
     savedDrawings: new Set(),
+    savingDrawings: new Set(),
   };
 
   rooms.set(code, room);

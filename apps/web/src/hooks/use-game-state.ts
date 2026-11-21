@@ -66,7 +66,7 @@ interface GameState {
   /** Keys of this room's drawings that are in the gallery. */
   savedDrawings: string[];
   /** Why the last attempt to save a drawing failed, by key. */
-  saveFailures: Record<string, "limit" | "failed" | "not-allowed">;
+  saveFailures: Record<string, { reason: "limit" | "failed" | "not-allowed" }>;
 }
 
 const initialState: GameState = {
@@ -92,9 +92,6 @@ const initialState: GameState = {
   error: null,
   notice: null,
 };
-
-const drawingKeyOf = (ref: DrawingRef) =>
-  ref.pairId ? `${ref.round}:${ref.pairId}` : `${ref.round}`;
 
 export function useGameState() {
   const [state, setState] = useState<GameState>(initialState);
@@ -320,7 +317,10 @@ export function useGameState() {
           // A new object each time, so a repeated failure is still noticed.
           setState((s) => ({
             ...s,
-            saveFailures: { ...s.saveFailures, [data.key]: data.reason },
+            saveFailures: {
+              ...s.saveFailures,
+              [data.key]: { reason: data.reason },
+            },
           }));
           break;
 
@@ -427,11 +427,6 @@ export function useGameState() {
 
   const saveDrawing = useCallback(
     (drawing: DrawingRef, imageDataUrl: string) => {
-      setState((s) => {
-        const saveFailures = { ...s.saveFailures };
-        delete saveFailures[drawingKeyOf(drawing)];
-        return { ...s, saveFailures };
-      });
       send({ type: "save-drawing", drawing, imageDataUrl });
     },
     [],

@@ -139,8 +139,10 @@ Design: `docs/superpowers/specs/2026-11-21-accounts-profile-home-design.md`. Own
 
 - Table `drawings` + public bucket `gallery` (`supabase/migrations/0002_gallery.sql`). **Only the game server writes them** (secret key); browsers read, and an author or whoever saved a drawing may delete it — file first, then row, because the storage policy proves the right through the row.
 - Saving: on a final screen (`final-results`, `split-final`, `face-final`) the browser composes the 800×600 PNG (`lib/compose-drawing.ts`) and sends `save-drawing { drawing: { round, pairId? }, imageDataUrl }`. `src/gallery.ts` checks the sender has an account, the phase, that the drawing exists and isn't saved, and the PNG (signature, ≤ 1.5 MB), then calls `Accounts.saveDrawing` with **mode, theme and authors from the room's own state** — `room.roster` (never shrinks, so a player who left is still named) and `room.resultAuthors` (party). `author_names` / `author_ids` are parallel arrays, `null` id for a guest.
-- The drawing's key (`"round:pairId"` in party, `"round"` otherwise) goes into `room.savedDrawings` before the write and comes out if it fails. Clients get `drawing-saved { key }` (broadcast) or `drawing-save-failed { key, reason }` (sender); `room-state.savedDrawings` covers rejoin.
-- 10 saves per player per 24h, counted in `supabase-accounts.ts`. Nothing is pruned.
+- The drawing's key (`"round:pairId"` in party, `"round"` otherwise) is claimed in `room.savingDrawings` for the duration of the write and moves to `room.savedDrawings` only when it succeeds. The image must be an 800×600 PNG (checked from its header). Clients get `drawing-saved { key }` (broadcast) or `drawing-save-failed { key, reason }` (sender); `room-state.savedDrawings` covers rejoin.
+- 10 saves per player per 24h, counted in `supabase-accounts.ts`, where a player's saves run one at a time (`inTurn`) so the count can't be raced. A save that doesn't clearly succeed is undone (`undo`: row, then image). Nothing is pruned.
+- Never render a `profiles.avatar_url` without `projectAvatarUrl` (web) / `isOwnAvatarUrl` (server): the row is written by its owner's browser.
+- `fake-supabase.ts` has `/__control/*` routes so a browser test can make saves or image deletions fail for one account.
 - Web: `lib/gallery.ts` is the third (and last) file that may import the Supabase client. `components/gallery/` has the save button, the home column, the profile list; `/gallery/` is public.
 
 ## Conventions worth knowing

@@ -34,3 +34,18 @@ export function validateEmail(email: string): string | null {
     return "Digite um e-mail válido";
   return null;
 }
+
+/**
+ * A profile's avatar URL is written by its owner's browser, so it could point
+ * anywhere. Returns it only if it is a file in this Supabase project, inside
+ * that account's own avatars folder; otherwise null (show the placeholder).
+ */
+export function projectAvatarUrl(
+  url: string | null | undefined,
+  supabaseUrl: string | undefined,
+  userId: string,
+): string | null {
+  if (!url || !supabaseUrl) return null;
+  const prefix = `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/avatars/${userId}/`;
+  return url.startsWith(prefix) ? url : null;
+}

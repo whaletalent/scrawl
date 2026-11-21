@@ -143,8 +143,10 @@ export interface Room {
   roster: Map<string, { nickname: string; userId: string | null }>;
   /** Party mode: the two player ids behind each result, by drawing key. */
   resultAuthors: Map<string, [string, string]>;
-  /** Keys of the drawings already put in the gallery (or being put there). */
+  /** Keys of the drawings that are in the gallery. */
   savedDrawings: Set<string>;
+  /** Keys being written right now: not saved yet, but nobody else may start. */
+  savingDrawings: Set<string>;
 }
 
 /** Points at one finished drawing of a room. `pairId` in party mode only. */

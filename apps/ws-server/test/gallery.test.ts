@@ -7,6 +7,7 @@ import {
   type,
   sleep,
   IMG,
+  pngDataUrl,
   type TestClient,
   type Msg,
 } from "./client.js";
@@ -36,6 +37,9 @@ function fakeAccounts(result: "saved" | "limit" | "failed" = "saved") {
   };
   return { accounts, saves };
 }
+
+/** What a browser sends: the composed 800×600 drawing. */
+const DRAWING = pngDataUrl(800, 600);
 
 let srv: Awaited<ReturnType<typeof startServer>> | undefined;
 afterEach(async () => {
@@ -87,7 +91,7 @@ const keyOf = (d: Msg) => `${d.round}:${d.pairId}`;
 async function save(
   c: TestClient,
   drawing: unknown,
-  imageDataUrl: unknown = IMG,
+  imageDataUrl: unknown = DRAWING,
 ) {
   const answered = c.wait(
     (m) => m.type === "drawing-saved" || m.type === "drawing-save-failed",
@@ -164,6 +168,10 @@ test("saves that aren't allowed are refused, to the sender only, and nothing is 
       ]).toString("base64"),
   );
   await refused(ana, refOf(d), 42);
+  // A real PNG of any other size: the gallery is not free image hosting.
+  await refused(ana, refOf(d), IMG);
+  await refused(ana, refOf(d), pngDataUrl(801, 600));
+  await refused(ana, refOf(d), pngDataUrl(4000, 3000));
 
   // A good save, then the same drawing again.
   assert.equal((await save(ana, refOf(d))).type, "drawing-saved");
@@ -211,10 +219,20 @@ test("two saves of the same drawing at the same moment make one entry", async ()
   const { ana, drawings } = await partyFinal(accounts);
   const d = drawings[0];
 
-  ana.send({ type: "save-drawing", drawing: refOf(d), imageDataUrl: IMG });
-  ana.send({ type: "save-drawing", drawing: refOf(d), imageDataUrl: IMG });
+  ana.send({ type: "save-drawing", drawing: refOf(d), imageDataUrl: DRAWING });
+  ana.send({ type: "save-drawing", drawing: refOf(d), imageDataUrl: DRAWING });
+
+  // Someone who rejoins while the write is still in flight isn't told it is saved.
+  await sleep(30);
+  const peek = await connect(srv!.url, "peek");
+  const state = peek.wait(type("room-state"));
+  peek.send({ type: "rejoin", roomCode: ana.state.code, token: ana.token });
+  assert.deepEqual((await state).state.savedDrawings, []);
+
   await sleep(400);
   assert.equal(saves.length, 1);
+  assert.equal(peek.msgs.filter(type("drawing-saved")).length, 1);
+  return;
   assert.equal(ana.msgs.filter(type("drawing-saved")).length, 1);
   assert.equal(ana.msgs.filter(type("drawing-save-failed")).length, 1);
 });
@@ -251,4 +269,40 @@ test("a split-body drawing still names the partner who left before the final scr
   );
   // Round 2 was never finished, so there is nothing to save.
   assert.equal((await save(ana, { round: 2 })).reason, "not-allowed");
+});
+
+test("a party drawing names a partner who dropped before the round ended", async () => {
+  const { accounts, saves } = fakeAccounts();
+  srv = await startServer({ accounts, timeScale: 0.03, graceMs: 20 });
+  const ana = await host(srv.url, {
+    gameMode: "party",
+    totalRounds: 1,
+    turnDuration: 15,
+  });
+  const guests: TestClient[] = [];
+  for (const name of ["Bia", "Caio", "Duda", "Edu"])
+    guests.push(await join(srv.url, ana.state.code, name));
+  let dropped: string | null = null;
+  for (const c of [ana, ...guests])
+    c.on((m) => {
+      if (m.type === "phase-change" && m.phase === "theme-creation")
+        c.send({ type: "submit-theme", text: `tema de ${c.name}` });
+      if (m.type !== "pair-assigned") return;
+      // The first guest to be paired walks away without drawing.
+      if (c !== ana && dropped === null) {
+        dropped = c.name;
+        c.close();
+      } else c.send({ type: "submit-drawing", imageDataUrl: IMG });
+    });
+  const final = ana.wait(type("final-results"), 20_000);
+  ana.send({ type: "start-game" });
+  const drawings: Msg[] = (await final).drawings;
+
+  // The final screen itself shows "?" for them (older behaviour, left alone)...
+  const theirs = drawings.find((d) => d.playerNames.includes("?"));
+  assert.ok(theirs, "expected a drawing by the player who dropped");
+  assert.equal((await save(ana, refOf(theirs))).type, "drawing-saved");
+  // ...but the gallery entry, which is public and permanent, has the name.
+  assert.equal(saves[0].authorNames.includes("?"), false);
+  assert.ok(saves[0].authorNames.includes(dropped!));
 });
