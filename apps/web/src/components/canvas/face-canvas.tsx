@@ -10,6 +10,8 @@ interface FaceCanvasProps {
   assignedRegions: FaceRegionId[];
   faceTemplate: FaceTemplateId;
   skinTone: string;
+  /** Avatar editor: draw anywhere, no region overlay. `assignedRegions` is ignored. */
+  free?: boolean;
 }
 
 export interface FaceCanvasHandle {
@@ -17,7 +19,7 @@ export interface FaceCanvasHandle {
 }
 
 export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
-  function FaceCanvas({ assignedRegions, faceTemplate, skinTone }, ref) {
+  function FaceCanvas({ assignedRegions, faceTemplate, skinTone, free }, ref) {
     const {
       canvasRef,
       tool,
@@ -33,7 +35,7 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
       exportImage,
       canvasWidth,
       canvasHeight,
-    } = useFaceCanvas(assignedRegions);
+    } = useFaceCanvas(assignedRegions, { free });
 
     useImperativeHandle(ref, () => ({ exportImage }));
 
@@ -59,42 +61,46 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
           />
           {/* Region overlay: darken non-assigned areas, label assigned ones */}
-          <svg
-            viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-            className="absolute inset-0 w-full h-full pointer-events-none"
-          >
-            {FACE_REGIONS.filter((r) => !r.isHairRegion).map((region) => {
-              const isAssigned = assignedRegions.includes(region.id);
-              return region.rects.map((rect, i) => (
-                <g key={`${region.id}-${i}`}>
-                  <rect
-                    x={rect.x}
-                    y={rect.y}
-                    width={rect.width}
-                    height={rect.height}
-                    rx={6}
-                    fill={isAssigned ? "none" : "rgba(0,0,0,0.25)"}
-                    stroke={isAssigned ? region.color : "none"}
-                    strokeWidth={isAssigned ? 2 : 0}
-                    strokeDasharray={isAssigned ? "6 3" : "none"}
-                  />
-                  {isAssigned && i === 0 && (
-                    <text
-                      x={rect.x + rect.width / 2}
-                      y={rect.y + 14}
-                      textAnchor="middle"
-                      fill={region.color}
-                      fontSize="11"
-                      fontWeight="bold"
-                      opacity="0.6"
-                    >
-                      {region.label}
-                    </text>
-                  )}
-                </g>
-              ));
-            })}
-          </svg>
+          {!free && (
+            <svg
+              viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+              className="absolute inset-0 w-full h-full pointer-events-none"
+            >
+              {FACE_REGIONS.filter((r) => !r.isHairRegion).map((region) => {
+                const isAssigned = assignedRegions.includes(
+                  region.id as FaceRegionId,
+                );
+                return region.rects.map((rect, i) => (
+                  <g key={`${region.id}-${i}`}>
+                    <rect
+                      x={rect.x}
+                      y={rect.y}
+                      width={rect.width}
+                      height={rect.height}
+                      rx={6}
+                      fill={isAssigned ? "none" : "rgba(0,0,0,0.25)"}
+                      stroke={isAssigned ? region.color : "none"}
+                      strokeWidth={isAssigned ? 2 : 0}
+                      strokeDasharray={isAssigned ? "6 3" : "none"}
+                    />
+                    {isAssigned && i === 0 && (
+                      <text
+                        x={rect.x + rect.width / 2}
+                        y={rect.y + 14}
+                        textAnchor="middle"
+                        fill={region.color}
+                        fontSize="11"
+                        fontWeight="bold"
+                        opacity="0.6"
+                      >
+                        {region.label}
+                      </text>
+                    )}
+                  </g>
+                ));
+              })}
+            </svg>
+          )}
         </div>
         <Toolbar
           tool={tool}

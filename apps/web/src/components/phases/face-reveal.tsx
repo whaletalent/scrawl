@@ -1,24 +1,10 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { getFaceTemplate } from "@/components/face-templates";
+import { loadFaceTemplateImage, loadImage } from "@/lib/face-compose";
 import type { FaceDrawing } from "@/types/game";
-import { renderToStaticMarkup } from "react-dom/server";
 
 interface FaceRevealProps {
   drawings: FaceDrawing[];
-}
-
-function svgToDataUrl(svgMarkup: string): string {
-  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup);
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
 }
 
 function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
@@ -39,25 +25,11 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
       ctx.fillRect(0, 0, 800, 600);
 
       // 2. Render face template with skin tone
-      const Template = getFaceTemplate(drawing.faceTemplate);
-      if (Template) {
-        let svgMarkup = renderToStaticMarkup(
-          <Template className="" fillColor={drawing.skinTone} />,
-        );
-        // Add xmlns if missing — required for SVG loaded as image via data URL
-        if (!svgMarkup.includes("xmlns")) {
-          svgMarkup = svgMarkup.replace(
-            "<svg",
-            '<svg xmlns="http://www.w3.org/2000/svg"',
-          );
-        }
-        try {
-          const templateImg = await loadImage(svgToDataUrl(svgMarkup));
-          ctx.drawImage(templateImg, 0, 0, 800, 600);
-        } catch {
-          // skip if SVG rendering fails
-        }
-      }
+      const templateImg = await loadFaceTemplateImage(
+        drawing.faceTemplate,
+        drawing.skinTone,
+      );
+      if (templateImg) ctx.drawImage(templateImg, 0, 0, 800, 600);
 
       // 3. Draw player images on top (they have transparent backgrounds)
       for (const src of [
