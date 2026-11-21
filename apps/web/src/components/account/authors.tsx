@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Avatar } from "./avatar";
 
 interface Author {
@@ -14,13 +15,15 @@ export function Authors({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex flex-wrap items-center gap-1.5 ${className}`}>
+    <span
+      className={`inline-flex flex-wrap items-center gap-1.5 whitespace-pre ${className}`}
+    >
       {authors.map((a, i) => (
-        <span key={i} className="inline-flex items-center gap-1.5">
-          {i > 0 && <span className="text-gray-500">+</span>}
+        <Fragment key={i}>
+          {i > 0 && " + "}
           <Avatar url={a.avatarUrl} name={a.name} size={22} />
           {a.name}
-        </span>
+        </Fragment>
       ))}
     </span>
   );
