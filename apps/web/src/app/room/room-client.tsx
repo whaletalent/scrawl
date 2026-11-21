@@ -1,16 +1,21 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGameState, readSession } from "@/hooks/use-game-state";
 import { GameController } from "@/components/game/game-controller";
 import { validateNickname } from "@/lib/room-utils";
 import { BASE_PATH, NEW_ROOM, roomPath } from "@/lib/routes";
+import { useAccount } from "@/hooks/use-account";
+import { getAccessToken } from "@/lib/account";
 
 export function RoomClient() {
   const router = useRouter();
   // "new" to create a room, otherwise the code of the room to join.
   const code = useSearchParams().get("code")?.trim() ?? "";
   const gameState = useGameState();
+  const account = useAccount();
+  // Entering a room involves an async token read; never start it twice.
+  const entering = useRef(false);
   // Someone who opened an invite link directly never went through the landing
   // page, so they have no nickname yet — ask before joining.
   const [askNickname, setAskNickname] = useState(false);
@@ -38,11 +43,38 @@ export function RoomClient() {
       return;
     }
 
-    const nickname = sessionStorage.getItem("scrawl-nickname");
+    // Who is entering: an account (username, no prompt) or a guest (nickname).
+    if (account.status === "loading") return;
+    if (account.status === "needs-profile") {
+      router.replace("/welcome/");
+      return;
+    }
+    const nickname =
+      account.profile?.username ?? sessionStorage.getItem("scrawl-nickname");
     if (!nickname) {
       setAskNickname(true);
       return;
     }
+    if (entering.current) return;
+    entering.current = true;
+    void enter(nickname, account.profile !== null);
+  }, [
+    gameState.connected,
+    gameState.roomState,
+    gameState.rejoinFailed,
+    gameState.sessionLost,
+    askNickname,
+    account.status,
+    account.profile,
+    code,
+    router,
+  ]);
+
+  async function enter(nickname: string, loggedIn: boolean) {
+    // The token is what makes the server show the account instead of a guest.
+    const accessToken = loggedIn
+      ? ((await getAccessToken()) ?? undefined)
+      : undefined;
 
     if (code === NEW_ROOM) {
       const gameMode =
@@ -66,19 +98,17 @@ export function RoomClient() {
         turnDuration,
         faceTemplate,
         skinTone,
+        accessToken,
       );
     } else {
-      gameState.joinRoom(code, nickname);
+      gameState.joinRoom(code, nickname, accessToken);
     }
-  }, [
-    gameState.connected,
-    gameState.roomState,
-    gameState.rejoinFailed,
-    gameState.sessionLost,
-    askNickname,
-    code,
-    router,
-  ]);
+  }
+
+  // A failed entry (room full, not found) or a lost socket may try again.
+  useEffect(() => {
+    if (!gameState.connected || gameState.roomState) entering.current = false;
+  }, [gameState.connected, gameState.roomState]);
 
   // The host lands on ?code=new; once the server assigns the real code,
   // put it in the URL so the address bar is a working invite link.

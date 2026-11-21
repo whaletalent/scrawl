@@ -1,13 +1,16 @@
 "use client";
 import { useState } from "react";
 import { getSilhouette } from "@/components/silhouettes";
-import type { SplitDrawing } from "@/types/game";
+import type { SplitDrawing, Player } from "@/types/game";
+import { Authors } from "@/components/account/authors";
 
 interface SplitRevealProps {
   drawings: SplitDrawing[];
+  /** Both players drew every round; shown under the title with their avatars. */
+  players: Player[];
 }
 
-export function SplitReveal({ drawings }: SplitRevealProps) {
+export function SplitReveal({ drawings, players }: SplitRevealProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (drawings.length === 0) {
@@ -24,6 +27,13 @@ export function SplitReveal({ drawings }: SplitRevealProps) {
         <p className="text-gray-400 text-sm">
           Rodada {currentIndex + 1} de {drawings.length}
         </p>
+        <Authors
+          className="text-sm text-gray-300 mt-1"
+          authors={players.map((p) => ({
+            name: p.nickname,
+            avatarUrl: p.avatarUrl,
+          }))}
+        />
       </div>
 
       <div

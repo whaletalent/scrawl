@@ -158,7 +158,10 @@ export function GameController(props: GameControllerProps) {
         )}
 
         {phase === "split-final" && (
-          <SplitReveal drawings={props.splitDrawings} />
+          <SplitReveal
+            drawings={props.splitDrawings}
+            players={roomState.players}
+          />
         )}
 
         {phase === "face-drawing" &&
@@ -177,7 +180,12 @@ export function GameController(props: GameControllerProps) {
             />
           )}
 
-        {phase === "face-final" && <FaceReveal drawings={props.faceDrawings} />}
+        {phase === "face-final" && (
+          <FaceReveal
+            drawings={props.faceDrawings}
+            players={roomState.players}
+          />
+        )}
       </div>
     </div>
   );

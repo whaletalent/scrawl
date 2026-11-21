@@ -1,6 +1,8 @@
 "use client";
 import type { Player, DrawingResult } from "@/types/game";
 import { ShareCard } from "@/components/share/share-card";
+import { Avatar } from "@/components/account/avatar";
+import { Authors, resultAuthors } from "@/components/account/authors";
 
 interface ScoreboardProps {
   players: Player[];
@@ -31,6 +33,7 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
               <span className="text-lg font-bold text-gray-500 w-6">
                 {index + 1}.
               </span>
+              <Avatar url={player.avatarUrl} name={player.nickname} size={28} />
               <span className="font-medium">{player.nickname}</span>
             </div>
             <span className="text-lg font-bold text-purple-400">
@@ -50,7 +53,7 @@ export function Scoreboard({ players, isFinal, drawings }: ScoreboardProps) {
               <p className="text-xs text-gray-500">Rodada {d.round}</p>
               <p className="text-sm text-gray-400">"{d.themeText}"</p>
               <p className="text-sm text-gray-300 mb-2">
-                {d.playerNames[0]} + {d.playerNames[1]}
+                <Authors authors={resultAuthors(d)} />
               </p>
               <div className="flex gap-0.5 rounded-lg overflow-hidden mb-3 bg-white">
                 <div className="w-1/2">

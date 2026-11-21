@@ -2,6 +2,7 @@
 import type { FaceTemplateOption, Player, GameMode } from "@/types/game";
 import { FACE_TEMPLATE_LABELS } from "@/components/face-templates";
 import { roomUrl } from "@/lib/routes";
+import { Avatar } from "@/components/account/avatar";
 
 interface LobbyProps {
   roomCode: string;
@@ -79,7 +80,8 @@ export function Lobby({
                   : "bg-gray-800"
               }`}
             >
-              <span className="font-medium">
+              <span className="font-medium flex items-center gap-2">
+                <Avatar url={p.avatarUrl} name={p.nickname} size={28} />
                 {p.nickname} {p.id === playerId && "(você)"}
                 {p.connected === false && (
                   <span className="text-gray-500 text-sm">

@@ -1,4 +1,5 @@
 "use client";
+import { Authors, resultAuthors } from "@/components/account/authors";
 import type { DrawingResult } from "@/types/game";
 
 interface RevealProps {
@@ -38,9 +39,10 @@ export function Reveal({ drawings }: RevealProps) {
                 )}
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-sm text-gray-300">
-                  {drawing.playerNames[0]} + {drawing.playerNames[1]}
-                </span>
+                <Authors
+                  authors={resultAuthors(drawing)}
+                  className="text-sm text-gray-300"
+                />
                 <span className="text-lg font-bold text-purple-400">
                   {totalScore} pts
                 </span>

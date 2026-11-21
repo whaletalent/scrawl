@@ -370,6 +370,7 @@ export function useGameState() {
       turnDuration?: number,
       faceTemplate?: FaceTemplateOption,
       skinTone?: string,
+      accessToken?: string,
     ) => {
       send({
         type: "create-room",
@@ -379,14 +380,18 @@ export function useGameState() {
         turnDuration,
         faceTemplate,
         skinTone,
+        accessToken,
       });
     },
     [],
   );
 
-  const joinRoom = useCallback((roomCode: string, nickname: string) => {
-    send({ type: "join-room", roomCode, nickname });
-  }, []);
+  const joinRoom = useCallback(
+    (roomCode: string, nickname: string, accessToken?: string) => {
+      send({ type: "join-room", roomCode, nickname, accessToken });
+    },
+    [],
+  );
 
   const rejoinRoom = useCallback((session: Session) => {
     send({ type: "rejoin", roomCode: session.code, token: session.token });

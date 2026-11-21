@@ -6,20 +6,28 @@ interface ShareCardProps {
   drawing: DrawingResult;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+function loadImage(
+  src: string | null | undefined,
+  crossOrigin = false,
+): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     if (!src) {
       resolve(null);
       return;
     }
     const img = new Image();
+    // Avatars come from another origin; without CORS they would taint the canvas.
+    if (crossOrigin) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
   });
 }
 
-async function renderCard(drawing: DrawingResult): Promise<string> {
+async function renderCard(
+  drawing: DrawingResult,
+  withAvatars: boolean,
+): Promise<string> {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1080;
@@ -58,12 +66,26 @@ async function renderCard(drawing: DrawingResult): Promise<string> {
 
   ctx.fillStyle = "#e5e7eb";
   ctx.font = "28px sans-serif";
-  ctx.fillText(
-    `${drawing.playerNames[0]} + ${drawing.playerNames[1]}`,
-    540,
-    945,
-    1000,
-  );
+  const names = `${drawing.playerNames[0]} + ${drawing.playerNames[1]}`;
+  ctx.fillText(names, 540, 945, 900);
+
+  // Each author's avatar as a circle on their side of the names.
+  if (withAvatars) {
+    const half = Math.min(ctx.measureText(names).width, 900) / 2;
+    const avatars = await Promise.all(
+      (drawing.playerAvatars ?? []).map((url) => loadImage(url, true)),
+    );
+    avatars.forEach((img, i) => {
+      if (!img) return;
+      const cx = i === 0 ? 540 - half - 36 : 540 + half + 36;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, 935, 22, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, cx - 22, 913, 44, 44);
+      ctx.restore();
+    });
+  }
 
   const score =
     drawing.votes.first * 3 + drawing.votes.second * 2 + drawing.votes.third;
@@ -84,7 +106,11 @@ export function ShareCard({ drawing }: ShareCardProps) {
   async function download() {
     setBusy(true);
     try {
-      const href = await renderCard(drawing);
+      // An avatar that can't be read back (no CORS) makes toDataURL throw:
+      // the card is then drawn again with names only. The download never breaks.
+      const href = await renderCard(drawing, true).catch(() =>
+        renderCard(drawing, false),
+      );
       if (!href) return;
       const link = document.createElement("a");
       link.download = `scrawl-${Date.now()}.png`;

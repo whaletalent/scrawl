@@ -24,6 +24,8 @@ export interface Player {
   isHost: boolean;
   /** False while the player's socket is down and the server is holding their slot. */
   connected?: boolean;
+  /** Only players who joined with an account have one. */
+  avatarUrl?: string;
 }
 
 export interface Theme {
@@ -47,6 +49,8 @@ export interface DrawingResult {
   imageRightDataUrl: string;
   round: number;
   playerNames: [string, string];
+  /** Avatars of the two authors, in `playerNames` order; null for guests. */
+  playerAvatars?: [string | null, string | null];
   votes: { first: number; second: number; third: number };
 }
 
@@ -93,7 +97,13 @@ export interface RoomState {
 }
 
 export type ClientMessage =
-  | { type: "join-room"; roomCode: string; nickname: string }
+  | {
+      type: "join-room";
+      roomCode: string;
+      nickname: string;
+      /** Supabase access token of a logged-in player. */
+      accessToken?: string;
+    }
   | { type: "rejoin"; roomCode: string; token: string }
   | {
       type: "create-room";
@@ -103,6 +113,7 @@ export type ClientMessage =
       turnDuration?: number;
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
+      accessToken?: string;
     }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
