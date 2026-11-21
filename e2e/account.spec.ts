@@ -287,3 +287,38 @@ test("a guest opening an invite link is still asked for a nickname", async ({
   await other.getByRole("button", { name: "Entrar" }).click();
   await expect(other.getByText("Caio (você)")).toBeVisible();
 });
+
+test("when Supabase stops answering, a logged-in player can still play as a guest within seconds", async ({
+  page,
+}) => {
+  const name = uniqueName("Hang");
+  await signUp(page, name);
+  const code = await createRoom(page, { mode: "Party (4-10)", loggedIn: true });
+  // Someone else in the room, so it outlives this page navigating away.
+  await bot(code, "Bia");
+
+  // Supabase accepts connections and never answers.
+  await page.route("http://localhost:8090/**", () => {});
+
+  // The profile read hangs: the landing must not sit on "Carregando...".
+  await page.goto("/");
+  await expect(page.getByPlaceholder("Seu apelido")).toBeVisible({
+    timeout: 6000,
+  });
+
+  // Worse: the stored session has expired too, so even reading it needs Supabase.
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) =>
+      /^sb-.*-auth-token$/.test(k),
+    )!;
+    const session = JSON.parse(localStorage.getItem(key)!);
+    session.expires_at = 1;
+    localStorage.setItem(key, JSON.stringify(session));
+  });
+  // They get into the room anyway, as a guest under the name they had.
+  await page.goto(`/room/?code=${code}`);
+  await expect(page.getByText(`${name} (você)`)).toBeVisible({
+    timeout: 8000,
+  });
+  await expect(page.getByAltText(`Avatar de ${name}`)).toHaveCount(0);
+});

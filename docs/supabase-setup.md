@@ -42,7 +42,7 @@ Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`
 
 The publishable key is meant to be public (it ships in the site's JavaScript; the database rules are what protect the data). **The secret key goes only into Render.** Never put it in the repository, in a GitHub _variable_, or in `apps/web/.env.local`.
 
-Then re-run the **Deploy to GitHub Pages** workflow (the two values are baked in at build time) and let Render redeploy. The game server logs `Accounts on (...)` when it found its two variables.
+Then re-run the **Deploy to GitHub Pages** workflow (the two values are baked in at build time) and let Render redeploy. The game server logs `Accounts on (...)` when it found its two variables. If players with accounts still show up as guests, its log says why (`[accounts] player treated as a guest: …`): a signature or issuer error means `SUPABASE_URL` isn't exactly the Project URL or the project doesn't use asymmetric JWT signing keys; `HTTP 401` reading profiles means the secret key is wrong.
 
 For local development put the same two public values in `apps/web/.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and start the game server with `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in its environment.
 

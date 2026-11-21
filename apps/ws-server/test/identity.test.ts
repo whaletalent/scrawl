@@ -176,3 +176,24 @@ test("rejoin keeps the identity", async () => {
   assert.equal(me.nickname, "Ana_99");
   assert.equal(me.avatarUrl, AVATAR);
 });
+
+test("a socket that is already in a room can't enter again", async () => {
+  srv = await startServer({ accounts: fake });
+  const ana = await host(srv.url, { nickname: "Ana", gameMode: "split-body" });
+  const c = await connect(srv.url, "twice");
+  const message = {
+    type: "join-room",
+    roomCode: ana.state.code,
+    nickname: "Bia",
+  };
+  const joined = c.wait(type("room-state"));
+  c.send(message);
+  await joined;
+  c.send(message);
+  c.send({ type: "create-room", nickname: "Bia" });
+  await sleep(100);
+
+  // One Bia, not a ghost second one; and no second room for this socket.
+  assert.equal(c.msgs.filter(type("room-state")).length, 1);
+  assert.equal(ana.msgs.filter(type("player-joined")).length, 1);
+});

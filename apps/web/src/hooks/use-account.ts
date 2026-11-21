@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import {
+  ACCOUNT_TIMEOUT_MS,
   completeOAuthRedirect,
   fetchProfile,
   type Profile,
@@ -51,6 +52,15 @@ function start() {
   if (started || !supabase) return;
   started = true;
   const client = supabase;
+
+  // supabase-js only reports the session once it has refreshed an expired
+  // token, and with Supabase down it keeps retrying for about half a minute.
+  // Nobody waits that long to play: past the timeout, carry on as a guest.
+  // (If the session does arrive later, the state simply updates.)
+  setTimeout(() => {
+    if (state.status === "loading" && userId === null)
+      set({ status: "off", profile: null });
+  }, ACCOUNT_TIMEOUT_MS);
 
   void completeOAuthRedirect().then(() => {
     client.auth.onAuthStateChange((_event, session) => {
