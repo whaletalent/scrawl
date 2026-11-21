@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/account";
 import { roomPath } from "@/lib/routes";
 import { CreateRoom } from "./create-room";
 import { RoomList } from "./room-list";
+import { LatestDrawings } from "@/components/gallery/latest-drawings";
 
 /** What a logged-in player lands on: start or find a game, and see what people have been drawing. */
 export function Home({ profile }: { profile: Profile }) {
@@ -91,14 +92,7 @@ export function Home({ profile }: { profile: Profile }) {
           <RoomList />
         </main>
 
-        <aside className="md:w-60 shrink-0 flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-gray-400">
-            Últimos desenhos salvos
-          </h2>
-          <p className="text-gray-500 text-sm py-6 text-center md:text-left">
-            Os desenhos salvos pela galera vão aparecer aqui.
-          </p>
-        </aside>
+        <LatestDrawings />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AccountPage } from "@/components/account/account-page";
 import { Avatar } from "@/components/account/avatar";
+import { OwnDrawings } from "@/components/gallery/own-drawings";
 import { signOutHere } from "@/components/account/account-menu";
 import {
   accountErrorMessage,
@@ -106,6 +107,7 @@ export default function ProfilePage() {
               Redesenhar avatar
             </Link>
             {login?.hasPassword && <PasswordForm />}
+            <OwnDrawings userId={profile.userId} />
             <div className="flex gap-6 text-sm">
               <Link href="/" className="text-gray-400 hover:text-gray-200">
                 Voltar

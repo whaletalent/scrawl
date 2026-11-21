@@ -40,7 +40,10 @@ export function accountErrorMessage(e: AccountError): string {
  */
 export const ACCOUNT_TIMEOUT_MS = 3000;
 
-function withTimeout<T>(promise: PromiseLike<T>, fallback: T): Promise<T> {
+export function withTimeout<T>(
+  promise: PromiseLike<T>,
+  fallback: T,
+): Promise<T> {
   return Promise.race([
     Promise.resolve(promise).catch(() => fallback),
     new Promise<T>((resolve) =>
