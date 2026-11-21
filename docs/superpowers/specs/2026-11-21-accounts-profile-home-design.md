@@ -25,7 +25,7 @@ Today a Scrawl player is a nickname typed on the landing page; nothing outlives 
 
 - Friends, followers, chat, match history, statistics, rankings.
 - Viewing other players' profile pages.
-- Password recovery, e-mail addresses, social sign-in, changing a username.
+- Password recovery, e-mail confirmation, changing a username or e-mail address, sign-in providers other than Google.
 - Captcha or other bot protection on sign-up beyond Supabase's built-in rate limits.
 - Likes/comments on gallery drawings.
 - A report button or moderation UI. The owner removes drawings from the Supabase dashboard.
@@ -37,6 +37,7 @@ Today a Scrawl player is a nickname typed on the landing page; nothing outlives 
 
 - **Requiring an account to play.** Someone who receives an invite link still joins with just a nickname, exactly as today. Guests can also still create (private) rooms.
 - Passwords or password hashes ever reaching our own server.
+- A player's e-mail address visible to anyone but themselves.
 - The Supabase secret key in the web bundle, or a player's access token / e-mail in anything broadcast to a room.
 - The test suites depending on a real Supabase project or on network access.
 - A private room showing up in the public list.
@@ -79,13 +80,15 @@ Browser (static site)
 
 ### Sign-in method
 
-**Username and password, nothing else** (owner's decision: no Google, no e-mail, "something really simple").
+**E-mail + password, and "Entrar com Google"** (owner's decision, replacing an earlier username-and-password-only idea).
 
-- Supabase Auth needs an e-mail or phone as the identifier, so the site derives a synthetic, never-shown address from the username (lower-cased username at a reserved, undeliverable domain such as `@users.scrawl.invalid`) and signs up / signs in with that plus the password. "Confirm email" is turned off in the Supabase project. The player only ever sees "username" and "senha".
-- **Username rules:** 3–16 characters; letters, digits, `_` and `.`; unique ignoring case; shown with the capitalisation the player typed. **It cannot be changed afterwards**, because it is the login.
-- **Password rules:** at least 8 characters, typed twice at sign-up. The same minimum is set in the Supabase project so the rule doesn't live only in the browser.
-- **There is no password recovery**: no e-mail exists to send a link to. A player who forgets the password loses access unless the owner resets it from the Supabase dashboard. The sign-up screen says so in one line. A logged-in player can change their password from the profile.
-- Sign-up and sign-in errors are shown in plain pt-BR ("Esse username já existe", "Username ou senha incorretos").
+- **E-mail + password** — Supabase's e-mail provider with **"Confirm email" turned off**, because the project cannot send e-mail (see Constraints). Password: at least 8 characters, typed twice at sign-up; the same minimum is set in the Supabase project. A logged-in player can change it from the profile.
+- **Google** — Supabase's Google provider, PKCE flow, redirecting back to the site. No password involved.
+- The **username is not the login**: it is the public name, chosen right after the first sign-in of either kind (see Account creation). Rules: 3–16 characters; letters, digits, `_` and `.`; unique ignoring case; shown with the capitalisation the player typed. It cannot be changed in this version.
+- The e-mail address is never shown to other players and never leaves Supabase Auth: it is not in `profiles`, not sent to the game server's rooms, not broadcast.
+- **No password recovery in this version.** A recovery link needs e-mail delivery, which needs a custom SMTP provider and a domain. Until the owner sets one up, an e-mail account whose password is forgotten is recovered only by the owner from the Supabase dashboard; the sign-up form says so in one line. Google accounts are unaffected.
+- **Known limitation of unverified e-mail:** anyone can register an address they don't own. Supabase may then link a later Google sign-in with the same address to that account, whose password the first person knows. For a drawing game the damage is someone else being able to use the profile; the cure is turning confirmation on once e-mail delivery exists. The builder should check what Supabase actually does here and note it in the setup guide.
+- Errors are shown in plain pt-BR ("Esse e-mail já tem conta", "E-mail ou senha incorretos", "Esse username já existe").
 
 ### Data (Supabase)
 
@@ -121,13 +124,13 @@ The schema and policies live in the repo as SQL (`supabase/migrations/`), so the
 
 ### Account creation (onboarding)
 
-Creating an account is one flow, "Criar conta":
+Signing up (e-mail + password) or signing in with Google for the first time leaves the player with a session but no `profiles` row. Until there is one, every page sends them to onboarding and they can't reach the home:
 
-1. **Username and password** — with a live "already taken" check; the unique index is the real guard.
+1. **Username** — with a live "already taken" check; the unique index is the real guard.
 2. **Draw your avatar** — the Face Builder canvas (`FaceCanvas` / `use-face-canvas.ts`) in a new **free mode**: the whole canvas is drawable, strokes are not clipped to regions, and no region outlines or labels are shown. (Assigning all six regions is not enough: the regions don't cover cheeks, jaw or chin, and each stroke is clipped to the region it started in.) The player picks one of the five face templates and a skin tone (same controls as room creation); brush, eraser, fill, shapes, undo/redo as in the game; no timer.
-3. On save, the browser composes background + template + drawing (the same composition `FaceReveal` does), crops a square around the face, scales it to a small PNG (256×256), uploads it and creates the profile row.
+3. On save, the browser composes background + template + drawing (the same composition `FaceReveal` does), crops a square around the face, scales it to a small PNG (256×256), uploads it and creates the profile row with the username and the avatar together.
 
-The avatar step is required, but an untouched template is a valid avatar. If the player abandons the flow after step 1, the account exists without a `profiles` row; on their next sign-in they are sent back to the avatar step and can't reach the home until it's done. The avatar can be redrawn later from the profile (same canvas, starting blank).
+The avatar step is required, but an untouched template is a valid avatar. A player who abandons onboarding has an account without a profile; their next sign-in resumes at step 1. The avatar can be redrawn later from the profile (same canvas, starting blank).
 
 ### Identity inside a room
 
@@ -208,20 +211,20 @@ Three stages, each shippable on its own:
 
 ## Manual steps for the owner
 
-The implementer can't do these: create the Supabase project; turn off "Confirm email" and set the minimum password length; run the SQL; set the two repository variables and the two Render environment variables.
+The implementer can't do these: create the Supabase project; turn off "Confirm email" and set the minimum password length; create a Google OAuth client and enable the Google provider; allow the site's URLs as redirect URLs (`https://whaletalent.github.io/scrawl/` and localhost); run the SQL; set the two repository variables and the two Render environment variables.
 
 ## Decided by the owner
 
 - Account = username + self-drawn avatar, drawn with the Face Builder used freely, at sign-up.
 - Home = list of open rooms from other players that can be joined, kept very simple, plus the latest saved drawings **from everybody** at the side.
 - Approach A (Supabase).
-- Sign-in with username and password only, with basic rules for both; no Google, no e-mail.
+- Sign-in with e-mail + password and with Google; a username and a self-drawn avatar chosen at sign-up, with basic rules for username and password.
 - Accepted as proposed: only lobby-phase rooms with a free seat are listed; the creator chooses public or private; playing without an account keeps working; avatars appear next to names in rooms; the home layout.
 
 ## Calls made by the designer (not discussed in detail — check these)
 
-- The synthetic-address technique behind username login, that usernames can't be changed, and that forgotten passwords are only recoverable by the owner.
-- Password minimum of 8 characters; password can be changed from the profile.
+- E-mail confirmation off and no password recovery until the owner has e-mail delivery; password minimum of 8 characters, changeable from the profile.
+- The username is chosen in onboarding together with the avatar, and can't be changed in this version.
 - Saving happens on final screens only; any logged-in player in the room may save; one gallery entry per drawing; the save goes through the game server with a browser-composed image.
 - An author, or whoever saved it, can remove a drawing from the gallery, file included; the owner moderates from the dashboard.
 - Profile lists drawings the player co-authored or saved.
