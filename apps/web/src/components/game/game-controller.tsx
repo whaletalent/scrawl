@@ -14,7 +14,10 @@ import { SplitReveal } from "@/components/phases/split-reveal";
 import { FaceDrawingPhase } from "@/components/phases/face-drawing-phase";
 import { FaceReveal } from "@/components/phases/face-reveal";
 
-type GameControllerProps = ReturnType<typeof useGameState>;
+type GameControllerProps = ReturnType<typeof useGameState> & {
+  /** Something the room page needs the host to know while in the lobby. */
+  lobbyNotice?: string;
+};
 
 export function GameController(props: GameControllerProps) {
   const { roomState, playerId, pairAssignment, drawings, error, notice } =
@@ -85,6 +88,7 @@ export function GameController(props: GameControllerProps) {
             gameMode={roomState.gameMode ?? "party"}
             faceTemplate={roomState.faceTemplate}
             isPublic={roomState.isPublic}
+            notice={props.lobbyNotice}
             onStart={props.startGame}
             error={error}
           />

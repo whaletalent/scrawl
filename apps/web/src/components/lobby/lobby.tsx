@@ -12,6 +12,7 @@ interface LobbyProps {
   gameMode: GameMode;
   faceTemplate?: FaceTemplateOption;
   isPublic?: boolean;
+  notice?: string;
   onStart: () => void;
   error: string | null;
 }
@@ -24,6 +25,7 @@ export function Lobby({
   gameMode,
   faceTemplate,
   isPublic,
+  notice,
   onStart,
   error,
 }: LobbyProps) {
@@ -47,6 +49,11 @@ export function Lobby({
         >
           Copiar link de convite
         </button>
+        {notice && (
+          <p className="max-w-sm mx-auto mt-3 px-4 py-2 rounded-lg bg-yellow-600/20 text-yellow-300 text-sm">
+            {notice}
+          </p>
+        )}
         {isPublic && (
           <p className="text-xs text-gray-400 mt-2">
             Sala pública · aparece na lista de salas abertas

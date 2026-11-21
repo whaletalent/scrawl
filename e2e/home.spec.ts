@@ -93,7 +93,8 @@ test("the list is empty-handed gracefully, and a room whose host left disappears
   await b.page.goto("/room/?code=ZZZZZ");
   await expect(b.page.getByText(/Sala não encontrada/)).toBeVisible();
   await b.page.getByRole("link", { name: "Voltar" }).click();
-  await expect(b.page.getByText("Salas abertas")).toBeVisible();
+  // With its count: the home subscribed again after coming back from a room page.
+  await expect(listHeading(b.page)).toBeVisible();
 });
 
 test("join by code from the home", async ({ page, browser }) => {
@@ -170,4 +171,77 @@ test("a signed-out visitor still gets the landing page, with no room list", asyn
   await expect(page.getByPlaceholder("Seu apelido")).toBeVisible();
   await expect(page.getByText("Salas abertas")).toHaveCount(0);
   await expect(page.getByText("Últimos desenhos salvos")).toHaveCount(0);
+});
+
+test("asking for a public room without a valid session says the room stayed private", async ({
+  browser,
+}) => {
+  const a = await player(browser, "Ana");
+  // The stored access token is no longer one the game server accepts.
+  await a.page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) =>
+      /^sb-.*-auth-token$/.test(k),
+    )!;
+    const session = JSON.parse(localStorage.getItem(key)!);
+    session.access_token = "not-a-token";
+    localStorage.setItem(key, JSON.stringify(session));
+  });
+  await a.page.reload();
+
+  await createRoom(a.page, {
+    mode: "Party (4-10)",
+    loggedIn: true,
+    visibility: "Pública",
+  });
+  await expect(a.page.getByText("Código da sala")).toBeVisible();
+  await expect(a.page.getByText(/a sala ficou privada/)).toBeVisible();
+  await expect(a.page.getByText("Sala pública")).toHaveCount(0);
+});
+
+test("the choice of a public room is used once and not left behind", async ({
+  browser,
+}) => {
+  const a = await player(browser, "Ana");
+  await createRoom(a.page, {
+    mode: "Party (4-10)",
+    loggedIn: true,
+    visibility: "Pública",
+  });
+  await expect(a.page.getByText("Sala pública")).toBeVisible();
+  expect(
+    await a.page.evaluate(() => sessionStorage.getItem("scrawl-visibility")),
+  ).toBeNull();
+
+  // Opening the "new room" address again by hand must not make another public room.
+  await a.page.goto("/room/?code=new");
+  await expect(a.page.getByText("Código da sala")).toBeVisible();
+  await expect(a.page.getByText("Sala pública")).toHaveCount(0);
+  await expect(a.page.getByText(/a sala ficou privada/)).toHaveCount(0);
+});
+
+test("creating a room while the game server is still waking up gets there without a reload", async ({
+  page,
+}) => {
+  let blocked = true;
+  await page.routeWebSocket(WS_URL, (ws) => {
+    if (blocked) void ws.close();
+    else ws.connectToServer();
+  });
+  await page.routeWebSocket(`${WS_URL}/**`, (ws) => {
+    if (blocked) void ws.close();
+    else ws.connectToServer();
+  });
+
+  await page.goto("/");
+  await page.getByPlaceholder("Seu apelido").fill("Ana");
+  await page.getByRole("button", { name: "Criar sala" }).click();
+  await page.getByRole("button", { name: "Criar Party" }).click();
+  await expect(page.getByText("Conectando...")).toBeVisible();
+
+  await page.waitForTimeout(1500);
+  blocked = false;
+  await expect(page.getByText("Código da sala")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText("Ana (você)")).toBeVisible();
 });

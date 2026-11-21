@@ -7,6 +7,7 @@ import { validateNickname } from "@/lib/room-utils";
 import { BASE_PATH, NEW_ROOM, roomPath } from "@/lib/routes";
 import { useAccount } from "@/hooks/use-account";
 import { getAccessToken } from "@/lib/account";
+import { isOpen, onClose, onOpen } from "@/lib/ws-client";
 
 export function RoomClient() {
   const router = useRouter();
@@ -16,6 +17,27 @@ export function RoomClient() {
   const account = useAccount();
   // Entering a room involves an async token read; never start it twice.
   const entering = useRef(false);
+  // Whether the creator asked for a public room. Read once from the handoff
+  // (and removed, so it can't leak into a later room), kept for retries.
+  const wantsPublic = useRef<boolean | null>(null);
+
+  // Enter only through a socket that is really open: the game server may be
+  // waking up, and a request sent into a connection attempt that then fails
+  // would be lost for good. Every time the socket (re)opens without us being
+  // in a room, the effect below runs again.
+  const [socketOpen, setSocketOpen] = useState(false);
+  useEffect(() => {
+    setSocketOpen(isOpen());
+    const offOpen = onOpen(() => setSocketOpen(true));
+    const offClose = onClose(() => {
+      entering.current = false;
+      setSocketOpen(false);
+    });
+    return () => {
+      offOpen();
+      offClose();
+    };
+  }, []);
   // Someone who opened an invite link directly never went through the landing
   // page, so they have no nickname yet — ask before joining.
   const [askNickname, setAskNickname] = useState(false);
@@ -27,8 +49,7 @@ export function RoomClient() {
       router.replace("/");
       return;
     }
-    if (!gameState.connected || gameState.roomState || gameState.sessionLost)
-      return;
+    if (!socketOpen || gameState.roomState || gameState.sessionLost) return;
 
     // Reloaded (or came back to) a room this tab already has a slot in:
     // reclaim it instead of joining as a new player. If the server refuses,
@@ -59,7 +80,7 @@ export function RoomClient() {
     entering.current = true;
     void enter(nickname, account.profile !== null);
   }, [
-    gameState.connected,
+    socketOpen,
     gameState.roomState,
     gameState.rejoinFailed,
     gameState.sessionLost,
@@ -77,6 +98,11 @@ export function RoomClient() {
       : undefined;
 
     if (code === NEW_ROOM) {
+      if (wantsPublic.current === null) {
+        wantsPublic.current =
+          sessionStorage.getItem("scrawl-visibility") === "public";
+        sessionStorage.removeItem("scrawl-visibility");
+      }
       const gameMode =
         (sessionStorage.getItem("scrawl-gameMode") as
           "party" | "split-body" | "face-builder") || "party";
@@ -99,19 +125,25 @@ export function RoomClient() {
         faceTemplate,
         skinTone,
         accessToken,
-        sessionStorage.getItem("scrawl-visibility") === "public"
-          ? "public"
-          : "private",
+        wantsPublic.current ? "public" : "private",
       );
     } else {
       gameState.joinRoom(code, nickname, accessToken);
     }
   }
 
-  // A failed entry (room full, not found) or a lost socket may try again.
+  // Once in a room the entry is over (a later drop is handled by rejoin).
   useEffect(() => {
-    if (!gameState.connected || gameState.roomState) entering.current = false;
-  }, [gameState.connected, gameState.roomState]);
+    if (gameState.roomState) entering.current = false;
+  }, [gameState.roomState]);
+
+  // The server only lists rooms of players whose account it could confirm. If
+  // it couldn't, the room exists but is private — say so instead of letting
+  // the host wait for strangers who will never see it.
+  const lobbyNotice =
+    wantsPublic.current && gameState.roomState?.isPublic === false
+      ? "Não deu para confirmar sua conta agora, então a sala ficou privada. Convide pelo link."
+      : undefined;
 
   // The host lands on ?code=new; once the server assigns the real code,
   // put it in the URL so the address bar is a working invite link.
@@ -180,5 +212,5 @@ export function RoomClient() {
     );
   }
 
-  return <GameController {...gameState} />;
+  return <GameController {...gameState} lobbyNotice={lobbyNotice} />;
 }
