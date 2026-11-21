@@ -11,6 +11,7 @@ interface LobbyProps {
   isHost: boolean;
   gameMode: GameMode;
   faceTemplate?: FaceTemplateOption;
+  isPublic?: boolean;
   onStart: () => void;
   error: string | null;
 }
@@ -22,6 +23,7 @@ export function Lobby({
   isHost,
   gameMode,
   faceTemplate,
+  isPublic,
   onStart,
   error,
 }: LobbyProps) {
@@ -45,6 +47,11 @@ export function Lobby({
         >
           Copiar link de convite
         </button>
+        {isPublic && (
+          <p className="text-xs text-gray-400 mt-2">
+            Sala pública · aparece na lista de salas abertas
+          </p>
+        )}
         {isSplitBody && (
           <span className="inline-block mt-2 text-xs bg-blue-600/30 text-blue-400 px-3 py-1 rounded-full">
             Modo Split Body

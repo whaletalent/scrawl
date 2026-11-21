@@ -84,6 +84,7 @@ export function GameController(props: GameControllerProps) {
             isHost={isHost}
             gameMode={roomState.gameMode ?? "party"}
             faceTemplate={roomState.faceTemplate}
+            isPublic={roomState.isPublic}
             onStart={props.startGame}
             error={error}
           />

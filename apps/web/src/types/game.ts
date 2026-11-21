@@ -94,6 +94,19 @@ export interface RoomState {
   phaseEndsAt: number;
   faceTemplate: FaceTemplateOption;
   skinTone: string;
+  /** Listed on the home page for strangers to join. */
+  isPublic?: boolean;
+}
+
+/** One row of the home page's list of open rooms. */
+export interface PublicRoom {
+  code: string;
+  hostName: string;
+  /** Absent when the host is a guest. */
+  hostAvatarUrl?: string;
+  gameMode: GameMode;
+  playerCount: number;
+  capacity: number;
 }
 
 export type ClientMessage =
@@ -114,7 +127,11 @@ export type ClientMessage =
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
       accessToken?: string;
+      /** Defaults to private. "public" is honoured only for a logged-in host. */
+      visibility?: "public" | "private";
     }
+  | { type: "watch-rooms" }
+  | { type: "unwatch-rooms" }
   | { type: "start-game" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
@@ -130,6 +147,7 @@ export type ServerMessage =
       playerId: string;
       sessionToken?: string;
     }
+  | { type: "public-rooms"; rooms: PublicRoom[] }
   | { type: "rejoin-failed" }
   | { type: "session-replaced" }
   | { type: "player-connection"; playerId: string; connected: boolean }

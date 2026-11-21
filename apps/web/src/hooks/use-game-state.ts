@@ -371,6 +371,7 @@ export function useGameState() {
       faceTemplate?: FaceTemplateOption,
       skinTone?: string,
       accessToken?: string,
+      visibility?: "public" | "private",
     ) => {
       send({
         type: "create-room",
@@ -381,6 +382,7 @@ export function useGameState() {
         faceTemplate,
         skinTone,
         accessToken,
+        visibility,
       });
     },
     [],

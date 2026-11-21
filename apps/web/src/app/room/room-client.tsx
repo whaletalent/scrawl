@@ -99,6 +99,9 @@ export function RoomClient() {
         faceTemplate,
         skinTone,
         accessToken,
+        sessionStorage.getItem("scrawl-visibility") === "public"
+          ? "public"
+          : "private",
       );
     } else {
       gameState.joinRoom(code, nickname, accessToken);
