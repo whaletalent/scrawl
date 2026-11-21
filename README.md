@@ -27,7 +27,8 @@ Scrawl is a browser party game for friends on a call or in the same room. One pl
 2. Rooms live in the server's memory: a room has a five-character code, a list of players and a phase. Restarting the server ends every game.
 3. The server drives the game as a state machine (`lobby → theme-creation → drawing → voting → reveal → …`), broadcasting a `phase-change` with a deadline; clients only render the current phase and send their input.
 4. Drawings are made on an 800×600 canvas clipped to the player's own area and sent as PNG data URLs when the player submits (or automatically just before the deadline).
-5. A player whose connection drops, or who reloads the page, keeps their slot for 20 seconds and is put back into the running game when they return.
+5. Accounts are optional. A player can sign up (e-mail and password, or Google), pick a username and draw their own avatar, which then shows next to their name in every room. Accounts live in a [Supabase](https://supabase.com) project; guests keep playing with just a nickname, and without a Supabase project the game simply has no login.
+6. A player whose connection drops, or who reloads the page, keeps their slot for 20 seconds and is put back into the running game when they return.
 
 ## Tech stack
 
@@ -37,6 +38,7 @@ Scrawl is a browser party game for friends on a call or in the same room. One pl
 | [Tailwind CSS 4](https://tailwindcss.com)   | Styling                                                     |
 | HTML5 Canvas                                | Drawing tools: brush, eraser, fill, line, rectangle, circle |
 | [ws](https://github.com/websockets/ws)      | The WebSocket game server (Node.js)                         |
+| [Supabase](https://supabase.com)            | Optional accounts: sign-in, profiles and avatar storage     |
 | TypeScript                                  | Both apps, strict mode                                      |
 | `node:test` + [tsx](https://tsx.is)         | Server test suite, against the real server in-process       |
 | [Playwright](https://playwright.dev)        | Browser test suite, with scripted bots as the other players |
@@ -116,6 +118,7 @@ docs/                     screenshot, design specs, implementation plans, mode i
 
   `render.yaml` is a [Render](https://render.com) Blueprint for it: in Render choose New > Blueprint and pick this repository, then put the service's address in the `WS_URL` repository variable (`wss://<name>.onrender.com`) and re-run the deploy workflow. Rooms live in memory, so run a single instance.
 
+- **Accounts** are off until a Supabase project is connected: [`docs/supabase-setup.md`](docs/supabase-setup.md) has the steps. A scheduled workflow (`supabase-keepalive.yml`) reads one row a day so the free project isn't paused for inactivity.
 - Dependabot keeps npm packages, GitHub Actions and the Docker base image up to date.
 
 ## License

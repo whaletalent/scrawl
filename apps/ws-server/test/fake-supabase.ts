@@ -14,7 +14,6 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import type { AddressInfo } from "net";
-import { pathToFileURL } from "url";
 import { SignJWT, exportJWK, generateKeyPair, jwtVerify } from "jose";
 import { USERNAME_PATTERN } from "../src/account-rules.js";
 
@@ -439,11 +438,8 @@ export async function startFakeSupabase({ port = 0 } = {}) {
   };
 }
 
-// tsx runs this file as CommonJS, so no top-level await.
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+// Run directly (the browser suite does): listen on PORT.
+if (require.main === module) {
   void startFakeSupabase({ port: Number(process.env.PORT) || 8090 }).then(
     (fake) => console.log(`[fake-supabase] listening on ${fake.url}`),
   );

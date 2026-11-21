@@ -115,6 +115,17 @@ A fresh socket is anonymous to the server, so slots are reclaimed with a per-pla
 - `rejoin-failed` → the page falls back to a normal join (or shows an error if it was mid-session). `session-replaced` is sent to the old socket when the same token rejoins from another tab; that tab stops reconnecting so two tabs don't steal the slot back and forth.
 - Never put `token` in anything broadcast — use `publicPlayer` / `publicPlayers` from room-manager.ts to serialize players.
 
+### Accounts (optional, Supabase)
+
+Design: `docs/superpowers/specs/2026-11-21-accounts-profile-home-design.md`. Owner's setup steps: `docs/supabase-setup.md`. Schema: `supabase/migrations/`.
+
+- Sign-in (e-mail + password, Google) is Supabase Auth, called straight from the browser. The **username is not the login**: it is the public name, chosen with a self-drawn avatar in onboarding and stored in the public `profiles` table (`id`, `username`, `avatar_url`). E-mail addresses never leave Supabase Auth.
+- **Accounts are off when Supabase isn't configured** — web: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; server: `SUPABASE_URL` + `SUPABASE_SECRET_KEY`. Off means no login UI and everyone is a guest. An account is never required to play.
+- Web: `lib/supabase.ts` (client or `null`) and `lib/account.ts` are the only files that import supabase-js; components use `hooks/use-account.ts` (`status`: `off` / `loading` / `signed-out` / `needs-profile` / `ready`). Pages guard themselves on the client (static export): `needs-profile` always goes to `/welcome/`.
+- Server: `create-room` / `join-room` take an optional `accessToken`. `withIdentity` (handlers.ts) resolves it through the `Accounts` interface (`src/accounts.ts`) before the player enters the room; a profile replaces the nickname with the username and sets `avatarUrl`. Anything wrong, slow (3s) or unreachable means "guest", never an error. `src/supabase-accounts.ts` is the real implementation (JWKS verification with `jose`, then one REST read).
+- **The profile row is written by the browser, so the server trusts nothing in it**: username must match `USERNAME_PATTERN`, and the avatar must be a file inside this project's `avatars/<userId>/` (`isOwnAvatarUrl`). `userId`, access tokens and e-mails are never broadcast.
+- Tests never touch a real project. Server tests pass a fake `Accounts` to `startServer({ accounts })`, or use `test/fake-supabase.ts` — an in-process fake of the Supabase HTTP API that the browser suite also runs (port 8090), so accounts are **on** during e2e.
+
 ## Conventions worth knowing
 
 - Path alias `@/*` maps to `apps/web/src/*` (web only).
