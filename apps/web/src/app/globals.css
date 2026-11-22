@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+/* The landing page has its own stylesheets (components/landing/kit.tsx), with
+   class names of their own: `grid`, `start-7`... Tailwind must not read them
+   as utilities. */
+@source not "../components/landing";
+@source not "../../public";

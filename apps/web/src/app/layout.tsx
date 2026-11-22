@@ -13,7 +13,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
+    // The data attributes configure the landing page's design kit (see
+    // components/landing/kit.tsx); without its stylesheets they do nothing.
+    // The kit also adds classes to <html> before React hydrates.
+    <html
+      lang="pt-BR"
+      data-type="software"
+      data-radius="round"
+      data-buttons="solid"
+      data-motion=""
+      suppressHydrationWarning
+    >
       <body className="bg-gray-950 text-white min-h-screen">{children}</body>
     </html>
   );
