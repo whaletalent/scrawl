@@ -44,8 +44,12 @@ create policy "Authors and savers remove drawings"
   );
 
 -- No insert or update policy, and no such privilege for browsers either.
-revoke insert, update on public.drawings from anon, authenticated;
-revoke delete on public.drawings from anon;
+-- Privileges in full, for the same reason as in 0001.
+revoke all on public.drawings from anon, authenticated, service_role;
+grant select on public.drawings to anon, authenticated;
+grant delete on public.drawings to authenticated;
+-- The game server: count a player's saves, add a drawing, undo a failed save.
+grant select, insert, delete on public.drawings to service_role;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('gallery', 'gallery', true, 2097152, array['image/png'])

@@ -45,9 +45,13 @@ create policy "Users update their own profile"
 
 -- Usernames are permanent: the only column a player may change is the avatar.
 -- No delete policy: accounts are removed by the owner from the dashboard.
-revoke update, delete on public.profiles from anon, authenticated;
-grant update (avatar_url) on public.profiles to authenticated;
-revoke insert on public.profiles from anon;
+-- Privileges are spelled out in full: a new Supabase project gives the API
+-- roles nothing on a new table, and an older one gives them everything.
+revoke all on public.profiles from anon, authenticated, service_role;
+grant select on public.profiles to anon, authenticated;
+grant insert, update (avatar_url) on public.profiles to authenticated;
+-- The game server only reads profiles.
+grant select on public.profiles to service_role;
 
 -- Avatars: public to read, 200 KB PNGs, each user writes only inside their own folder.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

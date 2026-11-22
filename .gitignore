@@ -12,3 +12,6 @@ next-env.d.ts
 out/
 .superpowers/**/state/
 .superpowers/brainstorm/.last-*
+
+# Supabase CLI link state
+supabase/.temp/

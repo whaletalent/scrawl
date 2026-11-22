@@ -32,6 +32,10 @@ Under **Authentication**:
 
 Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`](../supabase/migrations/0001_accounts.sql) and run it, then do the same with [`0002_gallery.sql`](../supabase/migrations/0002_gallery.sql). The first creates the `profiles` table, its access rules and the `avatars` bucket; the second the `drawings` table and the `gallery` bucket. Both are safe to run again.
 
+With the Supabase CLI logged in (`supabase login`, then `supabase link --project-ref <ref>`) the same can be done from the repository: `supabase db query --linked -f supabase/migrations/0001_accounts.sql` (and `0002_gallery.sql`), and `supabase config push` applies the auth settings of step 2.1 and 2.3 from [`supabase/config.toml`](../supabase/config.toml). The CLI prints the secret key masked — copy that one from the dashboard (**Secret keys**, starts with `sb_secret_`; the one starting with `sb_publishable_` is the public key).
+
+The migrations spell out every table privilege themselves: a new project gives the API roles nothing on a table created by SQL, so without those `grant` lines every read answers "permission denied".
+
 ## 4. Tell the site and the game server
 
 | Where                                                                         | Name                       | Value                               |
@@ -45,7 +49,7 @@ The publishable key is meant to be public (it ships in the site's JavaScript; th
 
 Then re-run the **Deploy to GitHub Pages** workflow (the two values are baked in at build time) and let Render redeploy. The game server logs `Accounts on (...)` when it found its two variables. If players with accounts still show up as guests, its log says why (`[accounts] player treated as a guest: …`): a signature or issuer error means `SUPABASE_URL` isn't exactly the Project URL or the project doesn't use asymmetric JWT signing keys; `HTTP 401` reading profiles means the secret key is wrong.
 
-For local development put the same two public values in `apps/web/.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and start the game server with `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in its environment.
+For local development put the same two public values in `apps/web/.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and start the game server with `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in its environment. A git-ignored `apps/ws-server/.env.local` holding those two lines works: `set -a; . apps/ws-server/.env.local; set +a` before `npm run dev`.
 
 ## 5. First-run check
 
