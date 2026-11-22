@@ -306,3 +306,25 @@ test("a party drawing names a partner who dropped before the round ended", async
   assert.equal(saves[0].authorNames.includes("?"), false);
   assert.ok(saves[0].authorNames.includes(dropped!));
 });
+
+test("a save still being written when the host starts another game is not announced in the new one", async () => {
+  const { accounts, saves } = fakeAccounts();
+  accounts.delayMs = 200;
+  const { ana, clients, drawings } = await partyFinal(accounts);
+  const lobby = clients[1].wait(
+    (m) => m.type === "room-state" && m.state.phase === "lobby",
+  );
+  ana.send({
+    type: "save-drawing",
+    drawing: refOf(drawings[0]),
+    imageDataUrl: DRAWING,
+  });
+  await sleep(20);
+  ana.send({ type: "play-again" });
+  assert.deepEqual((await lobby).state.savedDrawings, []);
+
+  await sleep(300);
+  // The drawing did reach the gallery, but the new game knows nothing of it.
+  assert.equal(saves.length, 1);
+  for (const c of clients) assert.ok(!c.seen(type("drawing-saved")));
+});

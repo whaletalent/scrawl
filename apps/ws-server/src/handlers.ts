@@ -22,6 +22,8 @@ import {
   handleFaceDrawingSubmit,
   handlePlayerLeft,
   resyncPlayer,
+  resetForNewGame,
+  FINAL_PHASES,
 } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
@@ -179,6 +181,9 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
     case "start-game":
       handleStartGame(ws);
       break;
+    case "play-again":
+      handlePlayAgain(ws);
+      break;
     case "submit-theme":
       handleSubmitTheme(ws, msg.text);
       break;
@@ -314,7 +319,7 @@ function handleStartGame(ws: WebSocket) {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: "O modo Split Body precisa de exatamente 2 jogadores",
+          message: "O modo Monstrinho precisa de exatamente 2 jogadores",
         }),
       );
       return;
@@ -325,7 +330,7 @@ function handleStartGame(ws: WebSocket) {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: "O modo Face Builder precisa de exatamente 2 jogadores",
+          message: "O modo Caricatura a dois precisa de exatamente 2 jogadores",
         }),
       );
       return;
@@ -344,6 +349,27 @@ function handleStartGame(ws: WebSocket) {
     startGame(room);
   }
   // The game is on: the room is no longer joinable, so it leaves the list.
+  publishRooms();
+}
+
+/** The host takes everyone from a final screen back to the lobby of the same room. */
+function handlePlayAgain(ws: WebSocket) {
+  const info = wsToPlayer.get(ws);
+  const room = info && getRoom(info.roomCode);
+  if (!info || !room) return;
+  const refuse = (message: string) =>
+    ws.send(JSON.stringify({ type: "error", message }));
+
+  if (!room.players.get(info.playerId)?.isHost)
+    return refuse("Só o host pode começar outra partida");
+  if (!FINAL_PHASES.includes(room.phase))
+    return refuse("A partida ainda não terminou");
+
+  resetForNewGame(room);
+  // Scores, round and saved drawings changed: everyone gets the whole state.
+  for (const p of room.players.values())
+    if (p.connected) sendRoomState(p.ws, room, p.id);
+  // Back in the lobby a public room can take players again.
   publishRooms();
 }
 

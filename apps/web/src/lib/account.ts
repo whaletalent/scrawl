@@ -3,7 +3,7 @@
  * the only place that knows Supabase exists; components go through
  * `useAccount` and the functions below.
  */
-import { supabase } from "./supabase";
+import { googleSignInEnabled, supabase } from "./supabase";
 import { BASE_PATH } from "./routes";
 
 export interface Profile {
@@ -104,6 +104,11 @@ export async function signInWithEmail(
     password,
   });
   return error ? authError(error) : null;
+}
+
+/** Whether to offer "Entrar com Google": only when the project has it on. */
+export function canSignInWithGoogle(): Promise<boolean> {
+  return withTimeout(googleSignInEnabled(), false);
 }
 
 /** Leaves the site for Google; the player comes back to /login/. */

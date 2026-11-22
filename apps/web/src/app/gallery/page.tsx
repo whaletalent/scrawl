@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Wordmark } from "@/components/brand/wordmark";
 import { DrawingCaption, DrawingCard } from "@/components/gallery/drawing-card";
 import {
   GALLERY_PAGE_SIZE,
@@ -44,66 +45,80 @@ export default function GalleryPage() {
   }, [selected]);
 
   return (
-    <main className="min-h-screen w-full max-w-5xl mx-auto flex flex-col gap-6 px-4 sm:px-6 py-6">
-      <header className="flex items-center justify-between">
+    <main className="min-h-screen w-full flex flex-col gap-7 px-4 sm:px-8 lg:px-14 pt-8 pb-14">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <Link href="/">
+          <Wordmark large />
+        </Link>
         <Link
           href="/"
-          className="text-2xl font-black tracking-tight bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent"
+          className="tag min-h-11 px-4 flex items-center font-semibold hover:text-brand"
         >
-          Scrawl
-        </Link>
-        <Link href="/" className="text-sm text-gray-400 hover:text-gray-200">
           Voltar
         </Link>
       </header>
-      <h1 className="text-2xl font-bold">Galeria</h1>
+      <div className="sheet flex flex-col gap-7 p-6 sm:p-12">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 pr-10">
+          <h1 className="text-5xl sm:text-7xl leading-none">Galeria</h1>
+          <p className="text-lg leading-normal max-w-[40ch]">
+            Os desenhos que os jogadores salvaram no fim das partidas, do mais
+            novo para o mais antigo.
+          </p>
+        </div>
 
-      {drawings.length === 0 && state === "end" && (
-        <p className="text-gray-500">
-          Ninguém salvou um desenho ainda. Jogue uma partida e salve o primeiro.
-        </p>
-      )}
-      {state === "failed" && (
-        <p className="text-gray-500">Não deu para carregar a galeria agora.</p>
-      )}
+        {drawings.length === 0 && state === "end" && (
+          <p className="text-muted">
+            Ninguém salvou um desenho ainda. Jogue uma partida e salve o
+            primeiro.
+          </p>
+        )}
+        {state === "failed" && (
+          <p className="text-muted">Não deu para carregar a galeria agora.</p>
+        )}
 
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {drawings.map((d) => (
-          <li key={d.id}>
-            <DrawingCard drawing={d} onSelect={() => setSelected(d)} />
-          </li>
-        ))}
-      </ul>
+        <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-x-5 gap-y-6">
+          {drawings.map((d) => (
+            <li
+              key={d.id}
+              className={`bg-card p-2 shadow-hard ${d === drawings[0] ? "taped" : ""}`}
+            >
+              <DrawingCard drawing={d} onSelect={() => setSelected(d)} />
+            </li>
+          ))}
+        </ul>
 
-      {state === "loading" && <p className="text-gray-500">Carregando...</p>}
-      {(state === "idle" || state === "failed") && (
-        <button
-          onClick={() => loadMore(drawings.length)}
-          className="self-center px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold transition-colors"
-        >
-          {state === "failed" ? "Tentar de novo" : "Carregar mais"}
-        </button>
-      )}
+        {state === "loading" && <p className="text-muted">Carregando...</p>}
+        {(state === "idle" || state === "failed") && (
+          <button
+            onClick={() => loadMore(drawings.length)}
+            className="press self-center min-h-12 px-6 bg-brand text-white hover:bg-brand-dark font-display font-bold text-lg"
+          >
+            {state === "failed" ? "Tentar de novo" : "Carregar mais"}
+          </button>
+        )}
+      </div>
 
       {selected && (
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-10"
+          className="fixed inset-0 bg-ink/80 flex items-center justify-center p-4 z-20"
           onClick={() => setSelected(null)}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-label={`Desenho de ${authorsLabel(selected)}`}
-            className="w-full max-w-2xl bg-gray-900 rounded-2xl p-4 flex flex-col gap-3"
+            className="taped w-full max-w-2xl bg-paper-deep shadow-hard-lg px-4 sm:px-6 pt-9 pb-5 flex flex-col gap-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <DrawingCard drawing={selected} />
-            <div className="flex items-end justify-between gap-4">
+            <div className="bg-white p-1.5 shadow-hard">
+              <DrawingCard drawing={selected} />
+            </div>
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <DrawingCaption drawing={selected} />
               <button
                 onClick={() => setSelected(null)}
                 autoFocus
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold transition-colors"
+                className="press min-h-11 px-5 bg-brand text-white hover:bg-brand-dark font-display font-bold"
               >
                 Fechar
               </button>

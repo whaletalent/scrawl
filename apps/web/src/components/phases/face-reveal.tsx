@@ -1,19 +1,23 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { loadFaceTemplateImage, loadImage } from "@/lib/face-compose";
+import { FACE_REGIONS } from "@/lib/face-regions";
 import type { FaceDrawing, Player } from "@/types/game";
-import { Authors } from "@/components/account/authors";
 import {
   SaveButton,
   type GallerySaving,
 } from "@/components/gallery/save-button";
+import { DownloadDrawing } from "@/components/share/download-drawing";
 import { composeFaceDrawing } from "@/lib/compose-drawing";
+import { PairCard, PairResults, PLAYER_FILL, nameOf } from "./pair-results";
 
 interface FaceRevealProps {
   drawings: FaceDrawing[];
-  /** Both players drew every round; shown under the title with their avatars. */
+  /** Both players drew every round. */
   players: Player[];
   saving: GallerySaving;
+  isHost: boolean;
+  onPlayAgain: () => void;
 }
 
 function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
@@ -60,7 +64,7 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
 
   return (
     <div
-      className="relative w-full bg-white rounded-xl overflow-hidden"
+      className="relative w-full bg-white border-2 border-soft-strong overflow-hidden"
       style={{ aspectRatio: "800 / 600" }}
     >
       <canvas ref={canvasRef} className="w-full h-full" />
@@ -68,80 +72,62 @@ function CompositeCanvas({ drawing }: { drawing: FaceDrawing }) {
   );
 }
 
-export function FaceReveal({ drawings, players, saving }: FaceRevealProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
+export function FaceReveal({
+  drawings,
+  players,
+  saving,
+  isHost,
+  onPlayAgain,
+}: FaceRevealProps) {
   if (drawings.length === 0) {
-    return <p className="text-gray-400">Nenhum desenho para mostrar.</p>;
+    return (
+      <p className="sheet px-8 py-6 text-muted">Nenhum desenho para mostrar.</p>
+    );
   }
 
-  const drawing = drawings[currentIndex];
+  // Which parts of the face each player drew, in the order of FACE_REGIONS.
+  const parts = (d: FaceDrawing) =>
+    [d.player1Id, d.player2Id].map((id, i) => ({
+      name: nameOf(players, id),
+      fill: PLAYER_FILL[i],
+      what: FACE_REGIONS.filter((r) =>
+        d.assignments.some((a) => a.regionId === r.id && a.playerId === id),
+      )
+        .map((r) => r.label.toLowerCase())
+        .join(", "),
+    }));
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">
-          Rodada {currentIndex + 1} de {drawings.length}
-        </p>
-        <Authors
-          className="text-sm text-gray-300 mt-1"
-          authors={players.map((p) => ({
-            name: p.nickname,
-            avatarUrl: p.avatarUrl,
-          }))}
+    <PairResults
+      mode="Caricatura a dois"
+      players={players}
+      rounds={drawings.length}
+      isHost={isHost}
+      onPlayAgain={onPlayAgain}
+      title={`Vocês montaram ${drawings.length} ${drawings.length === 1 ? "caricatura" : "caricaturas"}`}
+      summary="Cada rosto tem seis partes, três para cada um, sem ver o que o outro desenhou."
+    >
+      {drawings.map((drawing) => (
+        <PairCard
+          key={drawing.round}
+          round={drawing.round}
+          total={drawings.length}
+          picture={<CompositeCanvas drawing={drawing} />}
+          parts={parts(drawing)}
+          footer={
+            <>
+              <div className="flex-1 min-w-0">
+                <SaveButton
+                  drawing={{ round: drawing.round }}
+                  compose={() => composeFaceDrawing(drawing)}
+                  saving={saving}
+                />
+              </div>
+              <DownloadDrawing compose={() => composeFaceDrawing(drawing)} />
+            </>
+          }
         />
-      </div>
-
-      <CompositeCanvas drawing={drawing} />
-
-      {/* `key`: each round's drawing has its own save state. */}
-      <SaveButton
-        key={drawing.round}
-        drawing={{ round: drawing.round }}
-        compose={() => composeFaceDrawing(drawing)}
-        saving={saving}
-      />
-
-      {drawings.length > 1 && (
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentIndex === 0
-                ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                : "bg-gray-700 hover:bg-gray-600 text-white"
-            }`}
-          >
-            ← Anterior
-          </button>
-          <div className="flex gap-2">
-            {drawings.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentIndex(i)}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  i === currentIndex ? "bg-purple-500" : "bg-gray-600"
-                }`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={() =>
-              setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))
-            }
-            disabled={currentIndex === drawings.length - 1}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentIndex === drawings.length - 1
-                ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                : "bg-purple-600 hover:bg-purple-500 text-white"
-            }`}
-          >
-            Próximo →
-          </button>
-        </div>
-      )}
-    </div>
+      ))}
+    </PairResults>
   );
 }

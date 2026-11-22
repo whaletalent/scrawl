@@ -29,61 +29,77 @@ export function DrawingVoting({
   }
 
   const rankLabels: Record<number, string> = { 1: "1º", 2: "2º", 3: "3º" };
+  const rankFill: Record<number, string> = {
+    1: "bg-amber",
+    2: "bg-sky",
+    3: "bg-blush",
+  };
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 w-full max-w-2xl">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold">Vote nos melhores</h2>
-        <p className="text-gray-400 mt-1">Escolha o 1º, 2º e 3º lugar</p>
+    <div className="w-full flex flex-col gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3 pr-10">
+        <h2 className="text-4xl sm:text-6xl leading-none">Vote nos melhores</h2>
+        <p className="text-lg leading-normal max-w-[40ch]">
+          Escolha o 1º, 2º e 3º lugar.
+          {ownPairId && " O desenho da sua dupla fica de fora."}
+        </p>
       </div>
 
-      <div className="w-full flex flex-col gap-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] items-start gap-x-7 gap-y-9">
         {voteable.map((drawing) => {
           const currentRank = Object.entries(votes).find(
             ([, id]) => id === drawing.pairId,
           )?.[0];
 
           return (
-            <div key={drawing.pairId} className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-2">
-                Tema: {drawing.themeText}
-              </p>
-              <div className="flex gap-0.5 rounded-lg overflow-hidden">
-                {drawing.imageLeftDataUrl && (
-                  <img
-                    src={drawing.imageLeftDataUrl}
-                    alt="Metade esquerda"
-                    className="w-1/2"
-                  />
-                )}
-                {drawing.imageRightDataUrl && (
-                  <img
-                    src={drawing.imageRightDataUrl}
-                    alt="Metade direita"
-                    className="w-1/2"
-                  />
-                )}
+            <article
+              key={drawing.pairId}
+              className="taped shadow-hard flex flex-col gap-3 bg-card border-2 border-soft-strong px-3.5 pt-4 pb-4"
+            >
+              <h3 className="text-2xl leading-tight break-words">
+                {drawing.themeText}
+              </h3>
+              <div className="flex aspect-[4/3] border-2 border-soft-strong bg-white">
+                <div className="w-1/2">
+                  {drawing.imageLeftDataUrl && (
+                    <img
+                      src={drawing.imageLeftDataUrl}
+                      alt="Metade esquerda"
+                      className="w-full h-full object-fill"
+                    />
+                  )}
+                </div>
+                <div className="w-1/2">
+                  {drawing.imageRightDataUrl && (
+                    <img
+                      src={drawing.imageRightDataUrl}
+                      alt="Metade direita"
+                      className="w-full h-full object-fill"
+                    />
+                  )}
+                </div>
               </div>
-              <div className="flex gap-2 mt-3">
+              <div
+                role="group"
+                aria-label={`Lugar para ${drawing.themeText}`}
+                className="grid grid-cols-3 gap-2.5"
+              >
                 {([1, 2, 3] as const).map((rank) => (
                   <button
                     key={rank}
                     onClick={() => handleVote(drawing.pairId, rank)}
-                    className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${
+                    aria-pressed={Number(currentRank) === rank}
+                    className={`press min-h-13 border-[3px] border-ink font-display font-extrabold text-xl ${
                       Number(currentRank) === rank
-                        ? rank === 1
-                          ? "bg-yellow-600"
-                          : rank === 2
-                            ? "bg-gray-400 text-black"
-                            : "bg-orange-700"
-                        : "bg-gray-700 hover:bg-gray-600"
+                        ? rankFill[rank]
+                        : "bg-paper hover:bg-soft"
                     }`}
                   >
                     {rankLabels[rank]}
                   </button>
                 ))}
               </div>
-            </div>
+            </article>
           );
         })}
       </div>

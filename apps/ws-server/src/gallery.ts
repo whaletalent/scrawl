@@ -123,6 +123,7 @@ export function handleSaveDrawing(
   // anyone, a moment later) is refused instead of making a second entry.
   // It only counts as saved — and is only announced — once the write is done.
   room.savingDrawings.add(key);
+  const game = room.game;
   accounts
     .saveDrawing({
       png,
@@ -132,6 +133,8 @@ export function handleSaveDrawing(
     })
     .catch(() => "failed" as const)
     .then((result) => {
+      // "Jogar de novo" while this was being written: the old game's keys are gone.
+      if (room.game !== game) return;
       room.savingDrawings.delete(key);
       if (result === "saved") {
         room.savedDrawings.add(key);

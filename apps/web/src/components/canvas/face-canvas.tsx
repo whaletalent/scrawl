@@ -42,10 +42,19 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
     const Template = getFaceTemplate(faceTemplate);
 
     return (
-      <div className="flex flex-col gap-3 items-center w-full">
-        <div className="relative w-full" style={{ maxWidth: canvasWidth }}>
+      <Toolbar
+        tool={tool}
+        onToolChange={setTool}
+        onClear={clear}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        framed={!free}
+      >
+        <div className="relative w-full">
           {/* White background + face template behind transparent canvas */}
-          <div className="absolute inset-0 bg-white rounded-xl pointer-events-none">
+          <div className="absolute inset-0 bg-white pointer-events-none">
             <Template className="w-full h-full" fillColor={skinTone} />
           </div>
           <canvas
@@ -57,7 +66,7 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
-            className="relative w-full rounded-xl border-2 border-gray-700 cursor-crosshair touch-none"
+            className="relative w-full border-2 border-dashed border-line-strong cursor-crosshair touch-none"
             style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
           />
           {/* Region overlay: darken non-assigned areas, label assigned ones */}
@@ -102,16 +111,7 @@ export const FaceCanvas = forwardRef<FaceCanvasHandle, FaceCanvasProps>(
             </svg>
           )}
         </div>
-        <Toolbar
-          tool={tool}
-          onToolChange={setTool}
-          onClear={clear}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-        />
-      </div>
+      </Toolbar>
     );
   },
 );

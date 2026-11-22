@@ -35,36 +35,38 @@ export function OwnDrawings({ userId }: { userId: string }) {
 
   if (drawings === null) return null;
   return (
-    <section className="w-full flex flex-col gap-3">
-      <h2 className="font-semibold">Seus desenhos na galeria</h2>
+    <section className="w-full flex flex-col gap-5">
+      <h2 className="text-3xl sm:text-4xl leading-none pr-10">
+        Seus desenhos na galeria
+      </h2>
       {drawings.length === 0 && (
-        <p className="text-sm text-gray-500">
+        <p className="text-lg text-muted">
           Você ainda não tem desenhos na galeria.
         </p>
       )}
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      <ul className="flex flex-col gap-4">
+      {error && <p className="font-semibold text-red-600">{error}</p>}
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] items-start gap-x-5 gap-y-7">
         {drawings.map((d) => (
           <li
             key={d.id}
-            className="bg-gray-800 rounded-xl p-3 flex flex-col gap-2"
+            className="shadow-hard bg-card border-2 border-soft-strong p-2.5 flex flex-col gap-2"
           >
             <DrawingCard drawing={d} />
             <DrawingCaption drawing={d} />
             {confirming === d.id ? (
-              <div className="flex items-center gap-3 text-sm">
-                <span className="text-gray-300">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="font-semibold">
                   Sai da galeria para todo mundo. Remover?
                 </span>
                 <button
                   onClick={() => remove(d)}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg font-semibold"
+                  className="press min-h-11 px-4 bg-red-600 text-white hover:bg-red-700 font-display font-bold"
                 >
                   Sim, remover
                 </button>
                 <button
                   onClick={() => setConfirming(null)}
-                  className="text-gray-400 hover:text-gray-200"
+                  className="min-h-11 underline"
                 >
                   Cancelar
                 </button>
@@ -72,7 +74,7 @@ export function OwnDrawings({ userId }: { userId: string }) {
             ) : (
               <button
                 onClick={() => setConfirming(d.id)}
-                className="self-start text-sm text-gray-400 hover:text-red-300 underline"
+                className="self-start min-h-11 font-semibold text-red-700 underline"
               >
                 Remover da galeria
               </button>

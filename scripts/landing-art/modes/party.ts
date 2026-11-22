@@ -176,7 +176,7 @@ async function playGame(browser: Browser, game: number) {
   );
 
   const final = await host.next("final-results", 300_000);
-  await host.page.getByRole("heading", { name: "Resultado final!" }).waitFor();
+  await host.page.getByRole("heading", { name: "Placar final" }).waitFor();
   await host.page.waitForTimeout(800);
   if (shots) await screenshot(host.page, "screen-party-results.png");
   await saveResults(host, final.drawings as PartyResult[]);

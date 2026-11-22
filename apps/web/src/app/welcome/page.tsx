@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "@phosphor-icons/react";
 import { AccountPage } from "@/components/account/account-page";
 import { AvatarEditor } from "@/components/account/avatar-editor";
 import { signOutHere } from "@/components/account/account-menu";
@@ -18,6 +19,15 @@ export default function WelcomePage() {
   const [step, setStep] = useState<"username" | "avatar">("username");
   const [error, setError] = useState<string | null>(null);
   const [taken, setTaken] = useState(false);
+  const editor = useRef<HTMLDivElement>(null);
+
+  // The drawing step starts below the heading: bring the canvas into view.
+  useEffect(() => {
+    if (step === "avatar")
+      editor.current?.querySelector("canvas")?.scrollIntoView({
+        block: "nearest",
+      });
+  }, [step]);
 
   // Live "already taken" check, a moment after the player stops typing.
   useEffect(() => {
@@ -62,12 +72,12 @@ export default function WelcomePage() {
           {/* Both steps stay mounted so going back to fix the username keeps the drawing. */}
           <form
             onSubmit={next}
-            className={`w-full max-w-sm flex-col gap-3 ${step === "username" ? "flex" : "hidden"}`}
+            className={`w-full flex-col gap-4 ${step === "username" ? "flex" : "hidden"}`}
             noValidate
           >
-            <p className="text-sm text-gray-400 text-center">
-              É o nome que os outros jogadores vão ver. Não dá para trocar
-              depois.
+            <p className="text-lg leading-normal">
+              É o nome que os outros jogadores vão ver nas salas e nos desenhos
+              da galeria. Não dá para trocar depois.
             </p>
             <input
               type="text"
@@ -80,25 +90,28 @@ export default function WelcomePage() {
                 setUsername(e.target.value);
                 setError(null);
               }}
-              className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
+              aria-label="Username"
+              className="w-full h-14 px-4 bg-soft border-b-4 border-ink font-semibold text-xl text-ink placeholder-faint focus:outline-none focus:border-brand"
             />
             <button
               type="submit"
-              className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
+              className="press min-h-15 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl"
             >
               Continuar
+              <ArrowRight aria-hidden="true" weight="bold" size={28} />
             </button>
             {(error || taken) && (
-              <p className="text-red-400 text-sm text-center">
+              <p className="text-red-600 font-semibold">
                 {error ?? accountErrorMessage("username-taken")}
               </p>
             )}
           </form>
 
           <div
-            className={`w-full flex-col items-center gap-4 ${step === "avatar" ? "flex" : "hidden"}`}
+            ref={editor}
+            className={`w-full flex-col items-start gap-5 ${step === "avatar" ? "flex" : "hidden"}`}
           >
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-lg leading-normal">
               Vai ser a sua foto, <strong>{username}</strong>. Desenhe por cima
               do rosto como quiser.
             </p>
@@ -119,7 +132,7 @@ export default function WelcomePage() {
             />
             <button
               onClick={() => setStep("username")}
-              className="text-sm text-gray-500 hover:text-gray-300"
+              className="min-h-11 font-semibold underline"
             >
               Trocar username
             </button>
@@ -127,7 +140,7 @@ export default function WelcomePage() {
 
           <button
             onClick={signOutHere}
-            className="text-sm text-gray-500 hover:text-gray-300"
+            className="min-h-11 text-muted underline"
           >
             Sair
           </button>

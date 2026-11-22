@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Check } from "@phosphor-icons/react";
 import { useAccount } from "@/hooks/use-account";
 import type { DrawingRef } from "@/types/game";
 
@@ -54,7 +55,13 @@ export function SaveButton({ drawing, compose, saving }: SaveButtonProps) {
     return () => clearTimeout(timer);
   }, [busy]);
 
-  if (saved) return <p className="text-sm text-green-400">Salvo na galeria</p>;
+  if (saved)
+    return (
+      <p className="min-h-12 px-4 flex items-center justify-center gap-2 bg-mint font-display font-bold text-lg">
+        <Check aria-hidden="true" weight="bold" size={22} />
+        Salvo na galeria
+      </p>
+    );
   if (status !== "ready") return null;
 
   async function save() {
@@ -76,16 +83,16 @@ export function SaveButton({ drawing, compose, saving }: SaveButtonProps) {
       ? failure.reason
       : null;
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="w-full flex flex-col gap-1">
       <button
         onClick={save}
         disabled={busy}
-        className="px-5 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-60 rounded-lg text-sm font-semibold transition-colors"
+        className="press w-full min-h-12 px-4 bg-brand text-white hover:bg-brand-dark disabled:opacity-60 font-display font-bold text-lg"
       >
         {busy ? "Salvando..." : "Salvar na galeria"}
       </button>
       {shown && (
-        <p className="text-xs text-red-400 text-center">
+        <p className="text-sm font-semibold text-red-600">
           {shown === "limit"
             ? "Você já salvou 10 desenhos hoje. Tente amanhã."
             : "Não deu para salvar. Tente de novo."}

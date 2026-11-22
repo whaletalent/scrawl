@@ -93,6 +93,24 @@ const initialState: GameState = {
   notice: null,
 };
 
+/** Everything that belongs to one game, cleared when the room plays again. */
+const PER_GAME: Partial<GameState> = {
+  pairAssignment: null,
+  roundSubmitted: false,
+  drawings: [],
+  splitRound: 0,
+  splitSide: null,
+  silhouetteId: null,
+  splitDrawings: [],
+  faceRegions: [],
+  faceTemplate: null,
+  faceSkinTone: null,
+  faceRound: 0,
+  faceDrawings: [],
+  notice: null,
+  saveFailures: {},
+};
+
 export function useGameState() {
   const [state, setState] = useState<GameState>(initialState);
   // The session this page is actually playing with (set once the server accepts us).
@@ -131,6 +149,8 @@ export function useGameState() {
           }
           setState((s) => ({
             ...s,
+            // Back in the lobby ("Jogar de novo"): nothing of the last game stays.
+            ...(data.state.phase === "lobby" ? PER_GAME : {}),
             roomState: data.state,
             savedDrawings: data.state.savedDrawings ?? [],
             playerId: data.playerId ?? s.playerId,
@@ -208,6 +228,9 @@ export function useGameState() {
                   ...s.roomState,
                   phase: data.phase,
                   phaseEndsAt: data.phaseEndsAt,
+                  // The server starts every round's theme list empty.
+                  themes:
+                    data.phase === "theme-creation" ? [] : s.roomState.themes,
                   round: data.round ?? s.roomState.round,
                 }
               : null,
@@ -436,6 +459,10 @@ export function useGameState() {
     send({ type: "start-game" });
   }, []);
 
+  const playAgain = useCallback(() => {
+    send({ type: "play-again" });
+  }, []);
+
   const submitTheme = useCallback((text: string) => {
     send({ type: "submit-theme", text });
   }, []);
@@ -467,6 +494,7 @@ export function useGameState() {
     rejoinRoom,
     saveDrawing,
     startGame,
+    playAgain,
     submitTheme,
     voteTheme,
     submitDrawing,

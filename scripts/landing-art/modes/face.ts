@@ -34,7 +34,9 @@ async function playGame(browser: Browser, number: number) {
   const code = await roomCode(host);
   const guest = await enter(browser, "Léo", code);
   await roomCode(guest);
-  await host.page.getByRole("button", { name: "Começar Face Builder" }).click();
+  await host.page
+    .getByRole("button", { name: "Começar Caricatura a dois" })
+    .click();
 
   const turn = async (player: Player, seed: number, shake: number) => {
     const start = await player.next("face-round-start");
@@ -61,13 +63,13 @@ async function playGame(browser: Browser, number: number) {
 
   // The final screen composes template + both layers on a canvas of its own.
   await host.next("face-final-results");
-  await host.page.getByText("Resultado!").waitFor();
+  await host.page.getByRole("heading", { name: /^Vocês montaram/ }).waitFor();
   await host.page.waitForTimeout(1500);
   const file = `drawing-face-${number}.png`;
   savePng(
     file,
     await host.page
-      .locator("canvas")
+      .locator("canvas:not([data-desk-trail])")
       .evaluate((c: HTMLCanvasElement) => c.toDataURL("image/png")),
   );
   await record({

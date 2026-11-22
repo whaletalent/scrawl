@@ -197,6 +197,12 @@ export async function startFakeSupabase({
   ) {
     if (path === "/.well-known/jwks.json")
       return send(res, 200, { keys: [jwk] });
+    if (path === "/settings" && req.method === "GET")
+      return send(res, 200, {
+        external: { email: true, google: true },
+        disable_signup: false,
+        mailer_autoconfirm: true,
+      });
 
     // Stands in for Google's consent screen: straight back with a code.
     if (path === "/authorize" && req.method === "GET") {

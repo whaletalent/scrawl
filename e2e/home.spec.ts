@@ -15,7 +15,7 @@ async function player(browser: Browser, prefix: string) {
   return { page, name };
 }
 
-const listHeading = (page: Page) => page.getByText(/^Salas abertas \(\d+\)$/);
+const listHeading = (page: Page) => page.getByText(/esperando jogadores$/);
 
 const rowOf = (page: Page, hostName: string) =>
   page.getByRole("listitem").filter({ hasText: `Sala de ${hostName}` });
@@ -28,7 +28,7 @@ test("a public room shows on another player's home and can be joined from there"
   const errors = failOnPageErrors(b.page);
 
   await createRoom(a.page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     loggedIn: true,
     visibility: "Pública",
   });
@@ -36,7 +36,7 @@ test("a public room shows on another player's home and can be joined from there"
 
   const row = rowOf(b.page, a.name);
   await expect(row).toBeVisible();
-  await expect(row).toContainText("Party");
+  await expect(row).toContainText("Racha-tema");
   await expect(row).toContainText("1/10");
   await expect(row.getByAltText(`Avatar de ${a.name}`)).toBeVisible();
 
@@ -50,7 +50,7 @@ test("a public room shows on another player's home and can be joined from there"
 test("a private room is not listed", async ({ browser }) => {
   const a = await player(browser, "Ana");
   const b = await player(browser, "Bia");
-  await createRoom(a.page, { mode: "Party (4-10)", loggedIn: true });
+  await createRoom(a.page, { mode: "Racha-tema (4-10)", loggedIn: true });
   await expect(a.page.getByText("Código da sala")).toBeVisible();
   await expect(a.page.getByText("Sala pública")).toHaveCount(0);
 
@@ -63,12 +63,12 @@ test("a room that fills up leaves the list", async ({ browser }) => {
   const b = await player(browser, "Bia");
   const c = await player(browser, "Caio");
   await createRoom(a.page, {
-    mode: "Split Body (2)",
+    mode: "Monstrinho (2)",
     loggedIn: true,
     visibility: "Pública",
   });
 
-  await expect(rowOf(c.page, a.name)).toContainText("1/2");
+  await expect(rowOf(c.page, a.name)).toContainText("1 de 2");
   await rowOf(b.page, a.name).getByRole("button", { name: "Entrar" }).click();
   await expect(b.page.getByText(`${b.name} (você)`)).toBeVisible();
   await expect(rowOf(c.page, a.name)).toHaveCount(0);
@@ -80,7 +80,7 @@ test("the list is empty-handed gracefully, and a room whose host left disappears
   const a = await player(browser, "Ana");
   const b = await player(browser, "Bia");
   await createRoom(a.page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     loggedIn: true,
     visibility: "Pública",
   });
@@ -98,7 +98,7 @@ test("the list is empty-handed gracefully, and a room whose host left disappears
 });
 
 test("join by code from the home", async ({ page, browser }) => {
-  const code = await createRoom(page, { mode: "Party (4-10)" });
+  const code = await createRoom(page, { mode: "Racha-tema (4-10)" });
   const b = await player(browser, "Bia");
 
   await b.page.getByRole("button", { name: "Entrar com código" }).click();
@@ -159,7 +159,7 @@ test("on a phone the home is one column with no sideways scroll", async ({
   expect(overflow).toBeLessThanOrEqual(0);
   const list = (await page.getByText("Salas abertas").boundingBox())!;
   const drawings = (await page
-    .getByText("Últimos desenhos salvos")
+    .getByText("Últimos desenhos", { exact: true })
     .boundingBox())!;
   expect(drawings.y).toBeGreaterThan(list.y);
 });
@@ -170,7 +170,9 @@ test("a signed-out visitor still gets the landing page, with no room list", asyn
   await page.goto("/");
   await expect(page.getByPlaceholder("Seu apelido")).toBeVisible();
   await expect(page.getByText("Salas abertas")).toHaveCount(0);
-  await expect(page.getByText("Últimos desenhos salvos")).toHaveCount(0);
+  await expect(page.getByText("Últimos desenhos", { exact: true })).toHaveCount(
+    0,
+  );
 });
 
 test("asking for a public room without a valid session says the room stayed private", async ({
@@ -189,7 +191,7 @@ test("asking for a public room without a valid session says the room stayed priv
   await a.page.reload();
 
   await createRoom(a.page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     loggedIn: true,
     visibility: "Pública",
   });
@@ -203,7 +205,7 @@ test("the choice of a public room is used once and not left behind", async ({
 }) => {
   const a = await player(browser, "Ana");
   await createRoom(a.page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     loggedIn: true,
     visibility: "Pública",
   });
@@ -235,7 +237,7 @@ test("creating a room while the game server is still waking up gets there withou
   await page.goto("/");
   await page.getByPlaceholder("Seu apelido").fill("Ana");
   await page.getByRole("button", { name: "Criar sala" }).click();
-  await page.getByRole("button", { name: "Criar Party" }).click();
+  await page.getByRole("button", { name: "Criar Racha-tema" }).click();
   await expect(page.getByText("Conectando...")).toBeVisible();
 
   await page.waitForTimeout(1500);

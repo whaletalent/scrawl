@@ -147,6 +147,8 @@ export interface Room {
   savedDrawings: Set<string>;
   /** Keys being written right now: not saved yet, but nobody else may start. */
   savingDrawings: Set<string>;
+  /** Counts the games played in this room ("Jogar de novo"); a save still in flight from an older game is not announced. */
+  game: number;
 }
 
 /** Points at one finished drawing of a room. `pairId` in party mode only. */
@@ -193,6 +195,7 @@ export type ClientMessage =
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }
+  | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }

@@ -7,7 +7,7 @@ test("two browsers play Face Builder; a reload rejoins; a partner leaving ends t
 }) => {
   const errors = failOnPageErrors(host);
   const code = await createRoom(host, {
-    mode: "Face Builder (2)",
+    mode: "Caricatura a dois (2)",
     turnSeconds: 180,
   });
 
@@ -16,17 +16,20 @@ test("two browsers play Face Builder; a reload rejoins; a partner leaving ends t
   await guest.getByPlaceholder("Seu apelido").fill("Bia");
   await guest.getByRole("button", { name: "Entrar" }).click();
 
-  await host.getByRole("button", { name: "Começar Face Builder" }).click();
+  await host.getByRole("button", { name: "Começar Caricatura a dois" }).click();
   for (const p of [host, guest]) {
     await expect(
       p.getByRole("heading", { name: "Monte o rosto!" }),
     ).toBeVisible();
-    await expect(p.getByText("Rodada 1/3").first()).toBeVisible();
+    await expect(p.getByText("Rodada 1 de 3").first()).toBeVisible();
   }
 
   // Each player gets 3 of the 6 regions, and together they cover the face.
   const regions = async (p: typeof host) =>
-    p.locator("h2 + div > span").allInnerTexts();
+    p
+      .getByRole("list", { name: "Suas partes do rosto" })
+      .getByRole("listitem")
+      .allInnerTexts();
   const all = [...(await regions(host)), ...(await regions(guest))].sort();
   expect(all).toEqual(
     ["Boca", "Cabelo", "Nariz", "Olhos", "Ombros", "Orelhas"].sort(),

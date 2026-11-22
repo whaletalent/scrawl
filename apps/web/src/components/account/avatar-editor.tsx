@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { Check } from "@phosphor-icons/react";
 import {
   FaceCanvas,
   type FaceCanvasHandle,
@@ -45,25 +46,27 @@ export function AvatarEditor({ onSave, saveLabel }: AvatarEditorProps) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-        <div className="flex gap-1.5" role="group" aria-label="Rosto">
+    <div className="flex flex-col items-start gap-5 w-full">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Rosto">
           {TEMPLATES.map((id) => (
             <button
               key={id}
               onClick={() => setFaceTemplate(id)}
               aria-pressed={faceTemplate === id}
-              className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                faceTemplate === id
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+              className={`min-h-11 px-3.5 border-[3px] border-ink font-display font-bold ${
+                faceTemplate === id ? "bg-amber" : "bg-paper hover:bg-soft"
               }`}
             >
               {FACE_TEMPLATE_LABELS[id]}
             </button>
           ))}
         </div>
-        <div className="flex gap-1.5" role="group" aria-label="Tom de pele">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Tom de pele"
+        >
           {SKIN_TONES.map((tone) => (
             <button
               key={tone.id}
@@ -71,10 +74,10 @@ export function AvatarEditor({ onSave, saveLabel }: AvatarEditorProps) {
               title={tone.label}
               aria-label={tone.label}
               aria-pressed={skinTone === tone.color}
-              className={`w-7 h-7 rounded-full border-2 transition-transform ${
+              className={`w-11 h-11 rounded-full border-[3px] border-paper ${
                 skinTone === tone.color
-                  ? "border-white scale-110"
-                  : "border-gray-600"
+                  ? "ring-4 ring-brand"
+                  : "ring-2 ring-ink/25"
               }`}
               style={{ backgroundColor: tone.color }}
             />
@@ -94,11 +97,12 @@ export function AvatarEditor({ onSave, saveLabel }: AvatarEditorProps) {
       <button
         onClick={save}
         disabled={saving}
-        className="px-8 py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl font-bold text-lg transition-colors"
+        className="press w-full max-w-md min-h-17 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark disabled:bg-soft disabled:text-faint font-display font-extrabold text-2xl sm:text-3xl"
       >
         {saving ? "Salvando..." : saveLabel}
+        <Check aria-hidden="true" weight="bold" size={30} />
       </button>
-      {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+      {error && <p className="text-red-600 font-semibold">{error}</p>}
     </div>
   );
 }

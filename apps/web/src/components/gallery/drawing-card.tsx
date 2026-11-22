@@ -14,7 +14,7 @@ export function DrawingCard({
       src={drawing.imageUrl}
       alt={`Desenho de ${authorsLabel(drawing)}`}
       loading="lazy"
-      className="w-full rounded-lg bg-white"
+      className="w-full bg-white"
       style={{ aspectRatio: "800 / 600" }}
     />
   );
@@ -22,7 +22,7 @@ export function DrawingCard({
   return (
     <button
       onClick={onSelect}
-      className="block w-full rounded-lg hover:ring-2 hover:ring-purple-500 focus-visible:ring-2 focus-visible:ring-purple-500 outline-none transition-shadow"
+      className="block w-full outline-none ring-brand hover:ring-4 focus-visible:ring-4"
     >
       {image}
     </button>
@@ -32,16 +32,20 @@ export function DrawingCard({
 /** Who drew it, the theme (party) and when. */
 export function DrawingCaption({ drawing }: { drawing: GalleryDrawing }) {
   return (
-    <div className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-1">
       <Authors
-        className="text-gray-200"
+        className="text-ink"
         authors={drawing.authors.map((a) => ({
           name: a.name,
           avatarUrl: a.avatarUrl,
         }))}
       />
-      {drawing.theme && <p className="text-gray-400">"{drawing.theme}"</p>}
-      <p className="text-xs text-gray-500">
+      {drawing.theme && (
+        <p className="font-display font-bold text-lg leading-tight">
+          "{drawing.theme}"
+        </p>
+      )}
+      <p className="text-sm text-muted">
         {MODE_LABEL[drawing.gameMode]} ·{" "}
         {new Date(drawing.createdAt).toLocaleDateString("pt-BR")}
       </p>

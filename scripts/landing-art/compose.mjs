@@ -26,54 +26,96 @@ const KEY_ART = [
   ["drawing-party-1", "drawing-face-1", "drawing-party-6", "drawing-split-5"],
 ];
 
+/*
+  The page never shows a whole window: each picture is one part of a screen.
+  The captures are 2880x1800 (a 1440x900 window at 2x).
+  - "desk": the drawing paper with its two rails, found by looking for what
+    is not desk-coloured, then widened to 16:10.
+  - a rectangle: read off the capture; check the result after re-capturing,
+    since these follow the layout of the screen.
+*/
+const CUTS = {
+  "screen-party-drawing.png": "desk",
+  "screen-split-drawing.png": "desk",
+  "screen-face-drawing.png": "desk",
+  // one drawing to vote on, with its 1st / 2nd / 3rd buttons
+  "screen-party-voting.png": { left: 780, top: 414, width: 1327, height: 1197 },
+  // the final screen's "obras-primas" paper
+  "screen-party-results.png": { left: 870, top: 28, width: 1974, height: 1154 },
+  // the lobby: the room code, the players, the start button
+  "screen-lobby.png": { left: 1010, top: 150, width: 860, height: 1360 },
+};
+
+const DESK = [0xd6, 0x3c, 0x17];
+
+/** The box around the paper and its rails, as a 16:10 rectangle. */
+async function deskCut(file) {
+  const scale = 10;
+  const { data, info } = await sharp(file)
+    .resize({ width: 288 })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = info;
+  const paper = (x, y) => {
+    const i = (y * w + x) * 3;
+    return (
+      Math.abs(data[i] - DESK[0]) +
+        Math.abs(data[i + 1] - DESK[1]) +
+        Math.abs(data[i + 2] - DESK[2]) >
+      90
+    );
+  };
+  // Rows the paper crosses: over half of the row is not desk.
+  const rows = [];
+  for (let y = 0; y < h; y++) {
+    let n = 0;
+    for (let x = 0; x < w; x++) if (paper(x, y)) n++;
+    if (n > w * 0.5) rows.push(y);
+  }
+  // Columns of the paper and of the rails: not desk on a third of those rows.
+  const cols = [];
+  for (let x = 0; x < w; x++) {
+    let n = 0;
+    for (const y of rows) if (paper(x, y)) n++;
+    if (n > rows.length * 0.3) cols.push(x);
+  }
+  // A little desk on each side; hardly any above, where the theme's tag is.
+  const padX = 4;
+  const padY = 1;
+  let left = (cols[0] - padX) * scale;
+  let top = (rows[0] - padY) * scale;
+  let width = (cols.at(-1) - cols[0] + 1 + padX * 2) * scale;
+  let height = (rows.at(-1) - rows[0] + 1 + padY * 2) * scale;
+  // Widen or heighten around the middle until it is 16:10.
+  if (width / height < 1.6) {
+    const wider = Math.round(height * 1.6);
+    left -= Math.round((wider - width) / 2);
+    width = wider;
+  } else {
+    const taller = Math.round(width / 1.6);
+    top -= Math.round((taller - height) / 2);
+    height = taller;
+  }
+  left = Math.max(0, Math.min(left, 2880 - width));
+  top = Math.max(0, Math.min(top, 1800 - height));
+  return { left, top, width, height };
+}
+
 async function toWebp() {
   const names = (await readdir(RAW)).filter((n) =>
     /^(drawing|screen)-.*\.png$/.test(n),
   );
   for (const name of names) {
-    if (name === "screen-lobby.png") {
-      await lobby(name);
-      continue;
-    }
     const width = name.startsWith("screen-") ? 1600 : 800;
-    await sharp(raw(name))
+    const how = CUTS[name];
+    const cut = how === "desk" ? await deskCut(raw(name)) : how;
+    await (cut ? sharp(raw(name)).extract(cut) : sharp(raw(name)))
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: 82 })
+      .webp({ quality: 84 })
       .toFile(out(name.replace(/\.png$/, ".webp")));
   }
   return names.length;
-}
-
-/**
- * The lobby is a narrow column in a wide, empty window: keep its top half
- * (the room code, the invite link, the first players) with some of its own
- * background around it, at 2:1.
- */
-async function lobby(name) {
-  const trimmed = await sharp(raw(name)).trim({ threshold: 12 }).toBuffer();
-  const { width: w, height: h } = await sharp(trimmed).metadata();
-  const { dominant } = await sharp(raw(name))
-    .extract({ left: 0, top: 0, width: 16, height: 16 })
-    .stats();
-  const keep = Math.round(h * 0.52);
-  const top = Math.round(keep * 0.12);
-  const height = keep + top;
-  const width = height * 2;
-  // sharp resizes before it extends, whatever the order written: two passes.
-  const padded = await sharp(trimmed)
-    .extract({ left: 0, top: 0, width: w, height: keep })
-    .extend({
-      top,
-      left: Math.round((width - w) / 2),
-      right: Math.ceil((width - w) / 2),
-      background: dominant,
-    })
-    .png()
-    .toBuffer();
-  await sharp(padded)
-    .resize({ width: 1600, withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toFile(out(name.replace(/\.png$/, ".webp")));
 }
 
 /** One drawing as a sheet of paper with round corners. */
@@ -180,12 +222,37 @@ async function mascots() {
   await (
     await cutout(src("trophy.png"), { width: 800 })
   ).toFile(out("mascot-trophy.webp"));
-  // One picture, three toys side by side: one per game mode.
-  const { width, height } = await sharp(src("trio.png")).metadata();
-  const third = Math.floor(width / 3);
+  // One picture, three toys side by side: one per game mode. They are not
+  // the same width, so each is cut at the empty columns between them.
+  const trio = await sharp(src("trio.png"))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width, height } = trio.info;
+  const filled = [];
+  for (let x = 0; x < width; x++) {
+    let n = 0;
+    for (let y = 0; y < height; y++)
+      if (trio.data[(y * width + x) * 4 + 3] >= 225) n++;
+    filled.push(n > 2);
+  }
+  // Runs of filled columns, the three widest being the toys.
+  const runs = [];
+  for (let x = 0; x < width; x++) {
+    if (!filled[x]) continue;
+    const last = runs.at(-1);
+    if (last && x - last.end <= 6) last.end = x;
+    else runs.push({ start: x, end: x });
+  }
+  const toys = runs
+    .sort((a, b) => b.end - b.start - (a.end - a.start))
+    .slice(0, 3)
+    .sort((a, b) => a.start - b.start);
   for (const [i, mode] of ["party", "split-body", "face-builder"].entries()) {
+    const left = Math.max(0, toys[i].start - 4);
+    const right = Math.min(width, toys[i].end + 5);
     const part = await sharp(src("trio.png"))
-      .extract({ left: i * third + 20, top: 0, width: third - 40, height })
+      .extract({ left, top: 0, width: right - left, height })
       .png()
       .toBuffer();
     await (

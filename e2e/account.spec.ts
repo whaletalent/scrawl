@@ -20,7 +20,7 @@ const avatarOf = (page: Page, username: string) =>
 /** Alpha of one pixel of the drawing canvas, in its 800×600 coordinates. */
 const inkAt = (page: Page, x: number, y: number) =>
   page
-    .locator("canvas")
+    .locator("canvas:not([data-desk-trail])")
     .evaluate(
       (c: HTMLCanvasElement, [px, py]) =>
         c.getContext("2d")!.getImageData(px, py, 1, 1).data[3],
@@ -96,7 +96,7 @@ test("e-mail, password and username rules are enforced", async ({ page }) => {
   const name = uniqueName("Rul");
   await page.goto("/login/");
   await page.getByRole("tab", { name: "Criar conta" }).click();
-  const submit = page.getByRole("button", { name: "Criar conta" });
+  const submit = page.getByRole("button", { name: "Criar conta", exact: true });
   const fill = async (email: string, password: string, again: string) => {
     await page.getByPlaceholder("E-mail").fill(email);
     await page.getByPlaceholder("Senha", { exact: true }).fill(password);
@@ -121,7 +121,7 @@ test("e-mail, password and username rules are enforced", async ({ page }) => {
   for (const bad of ["ab", "ana maria", "aná"]) {
     await page.getByPlaceholder("Username").fill(bad);
     await page.getByRole("button", { name: "Continuar" }).click();
-    await expect(page.locator("p.text-red-400")).toBeVisible();
+    await expect(page.locator("p.text-red-600")).toBeVisible();
     await expect(page.getByText("Escolha seu username")).toBeVisible();
   }
 });
@@ -139,7 +139,7 @@ test("an e-mail that already has an account is refused", async ({
   await other.getByPlaceholder("E-mail").fill(emailOf(name).toUpperCase());
   await other.getByPlaceholder("Senha", { exact: true }).fill(PASSWORD);
   await other.getByPlaceholder("Repita a senha").fill(PASSWORD);
-  await other.getByRole("button", { name: "Criar conta" }).click();
+  await other.getByRole("button", { name: "Criar conta", exact: true }).click();
   await expect(other.getByText("Esse e-mail já tem conta")).toBeVisible();
   await expect(other).toHaveURL("/login/");
 });
@@ -240,7 +240,10 @@ test("a logged-in player hosts a room; a guest sees their username and avatar bu
   const errors = failOnPageErrors(page);
   const name = uniqueName("Host");
   await signUp(page, name);
-  const code = await createRoom(page, { mode: "Party (4-10)", loggedIn: true });
+  const code = await createRoom(page, {
+    mode: "Racha-tema (4-10)",
+    loggedIn: true,
+  });
 
   const guest = await bot(code, "Bia");
   const host = guest.state.players[0];
@@ -264,7 +267,7 @@ test("a logged-in player opening an invite link skips the nickname prompt", asyn
   page,
   browser,
 }) => {
-  const code = await createRoom(page, { mode: "Party (4-10)" });
+  const code = await createRoom(page, { mode: "Racha-tema (4-10)" });
 
   const other = await (await browser.newContext()).newPage();
   const name = uniqueName("Inv");
@@ -280,7 +283,7 @@ test("a guest opening an invite link is still asked for a nickname", async ({
   page,
   browser,
 }) => {
-  const code = await createRoom(page, { mode: "Party (4-10)" });
+  const code = await createRoom(page, { mode: "Racha-tema (4-10)" });
   const other = await (await browser.newContext()).newPage();
   await other.goto(`/room/?code=${code}`);
   await other.getByPlaceholder("Seu apelido").fill("Caio");
@@ -293,7 +296,10 @@ test("when Supabase stops answering, a logged-in player can still play as a gues
 }) => {
   const name = uniqueName("Hang");
   await signUp(page, name);
-  const code = await createRoom(page, { mode: "Party (4-10)", loggedIn: true });
+  const code = await createRoom(page, {
+    mode: "Racha-tema (4-10)",
+    loggedIn: true,
+  });
   // Someone else in the room, so it outlives this page navigating away.
   await bot(code, "Bia");
 
@@ -321,4 +327,26 @@ test("when Supabase stops answering, a logged-in player can still play as a gues
     timeout: 8000,
   });
   await expect(page.getByAltText(`Avatar de ${name}`)).toHaveCount(0);
+});
+
+test("without Google turned on in the project there is no Google button, only e-mail", async ({
+  page,
+}) => {
+  await page.route("**/auth/v1/settings", (route) =>
+    route.fulfill({ json: { external: { email: true, google: false } } }),
+  );
+  await page.goto("/login/");
+  await expect(page.getByPlaceholder("E-mail")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Google/ })).toHaveCount(0);
+  await expect(page.getByText("ou com e-mail")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Criar conta" }).click();
+  await expect(page.getByRole("button", { name: /Google/ })).toHaveCount(0);
+});
+
+test("creating an account offers Google too", async ({ page }) => {
+  await page.goto("/login/");
+  await page.getByRole("tab", { name: "Criar conta" }).click();
+  await expect(
+    page.getByRole("button", { name: "Criar conta com Google" }),
+  ).toBeVisible();
 });

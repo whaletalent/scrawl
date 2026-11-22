@@ -105,7 +105,7 @@ export class Pen {
     }
     if (size !== this.size) {
       await this.page
-        .locator("button:has(> div.rounded-full.bg-white)")
+        .locator("button:has(> div.rounded-full.bg-ink)")
         .nth(SIZES.indexOf(size))
         .click();
       this.size = size;
@@ -113,7 +113,9 @@ export class Pen {
   }
 
   private async toPage(): Promise<(p: Pt) => [number, number]> {
-    const box = (await this.page.locator("canvas").boundingBox())!;
+    const box = (await this.page
+      .locator("canvas:not([data-desk-trail])")
+      .boundingBox())!;
     return (p) => [
       box.x + (p.x / 800) * box.width,
       box.y + (p.y / 600) * box.height,
@@ -178,7 +180,7 @@ export class Pen {
     await this.page.getByTitle("Balde").click();
     this.tool = "fill";
 
-    const canvas = this.page.locator("canvas");
+    const canvas = this.page.locator("canvas:not([data-desk-trail])");
     const before = await canvas.evaluate(
       (c: HTMLCanvasElement, [px, py]) => {
         const ctx = c.getContext("2d")!;

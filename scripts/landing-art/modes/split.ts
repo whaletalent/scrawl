@@ -43,7 +43,7 @@ async function playGame(browser: Browser, numbers: number[]) {
   const code = await roomCode(host);
   const guest = await enter(browser, "Caio", code);
   await roomCode(guest);
-  await host.page.getByRole("button", { name: "Começar Split Body" }).click();
+  await host.page.getByRole("button", { name: "Começar Monstrinho" }).click();
 
   const silhouettes: string[] = [];
   for (let round = 1; round <= numbers.length; round++) {
@@ -56,7 +56,7 @@ async function playGame(browser: Browser, numbers: number[]) {
       const { page } = player;
       await page
         .getByRole("paragraph")
-        .filter({ hasText: `Rodada ${round}/${numbers.length}` })
+        .filter({ hasText: `Rodada ${round} de ${numbers.length}` })
         .waitFor();
       await page.getByRole("button", { name: "Enviar Desenho" }).waitFor();
       const pen = new Pen(page, {

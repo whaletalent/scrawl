@@ -20,3 +20,4 @@ supabase/.temp/
 # Design checks of the landing page (design-taste skill): history, shots
 .taste-skill/
 shots/
+.reanimate/

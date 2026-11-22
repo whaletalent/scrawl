@@ -24,7 +24,7 @@ export function Avatar({ url, name, size = 32 }: AvatarProps) {
       aria-hidden
       data-initial={name.trim().charAt(0) || "?"}
       style={{ ...style, fontSize: size * 0.45 }}
-      className="rounded-full bg-gray-700 text-gray-300 font-bold shrink-0 inline-flex items-center justify-center uppercase before:content-[attr(data-initial)]"
+      className="rounded-full font-display bg-amber text-ink font-bold shrink-0 inline-flex items-center justify-center uppercase before:content-[attr(data-initial)]"
     />
   );
 }

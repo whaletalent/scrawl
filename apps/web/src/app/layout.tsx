@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { DeskTrail } from "@/components/brand/desk-trail";
 
 export const metadata: Metadata = {
   title: "Scrawl — Party game de desenho",
@@ -19,12 +20,15 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       data-type="software"
-      data-radius="round"
+      data-radius="sharp"
       data-buttons="solid"
       data-motion=""
       suppressHydrationWarning
     >
-      <body className="bg-gray-950 text-white min-h-screen">{children}</body>
+      <body className="desk text-ink min-h-screen">
+        <DeskTrail />
+        {children}
+      </body>
     </html>
   );
 }

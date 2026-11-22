@@ -25,7 +25,7 @@ export function storeRoomOptions(o: RoomOptions) {
 }
 
 export const CREATE_LABEL: Record<GameMode, string> = {
-  party: "Criar Party",
-  "split-body": "Criar Split Body",
-  "face-builder": "Criar Face Builder",
+  party: "Criar Racha-tema",
+  "split-body": "Criar Monstrinho",
+  "face-builder": "Criar Caricatura a dois",
 };

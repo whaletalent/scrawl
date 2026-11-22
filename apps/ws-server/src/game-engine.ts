@@ -590,6 +590,37 @@ function endPartyGame(room: Room) {
   transitionTo(room, "final-results");
 }
 
+/** The final screens: a game is over and the room may play again. */
+export const FINAL_PHASES: Phase[] = [
+  "final-results",
+  "split-final",
+  "face-final",
+];
+
+/**
+ * "Jogar de novo": the same players, mode and options, back in the lobby with
+ * the scores at zero and nothing of the last game left behind.
+ */
+export function resetForNewGame(room: Room) {
+  if (room.phaseTimer) clearTimeout(room.phaseTimer);
+  room.phaseTimer = null;
+  room.game++;
+  room.round = 0;
+  room.themes = [];
+  room.pairs = [];
+  room.drawings = [];
+  room.results = [];
+  room.allResults = [];
+  room.sitOutCounts = new Map();
+  room.splitDrawings = [];
+  room.faceDrawings = [];
+  room.resultAuthors = new Map();
+  room.savedDrawings = new Set();
+  room.savingDrawings = new Set();
+  for (const p of room.players.values()) p.score = 0;
+  transitionTo(room, "lobby");
+}
+
 const IDLE_PHASES: Phase[] = [
   "lobby",
   "final-results",

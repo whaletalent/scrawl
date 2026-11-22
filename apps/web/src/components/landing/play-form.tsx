@@ -7,9 +7,9 @@ import { FACE_TEMPLATE_LABELS, SKIN_TONES } from "@/components/face-templates";
 import { CREATE_LABEL, storeRoomOptions } from "@/lib/room-options";
 
 const MODES: { id: GameMode; label: string }[] = [
-  { id: "party", label: "Party (4-10)" },
-  { id: "split-body", label: "Split Body (2)" },
-  { id: "face-builder", label: "Face Builder (2)" },
+  { id: "party", label: "Racha-tema (4-10)" },
+  { id: "split-body", label: "Monstrinho (2)" },
+  { id: "face-builder", label: "Caricatura a dois (2)" },
 ];
 
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180];

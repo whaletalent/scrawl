@@ -11,17 +11,17 @@ export async function signOutHere() {
 
 export function AccountMenu({ profile }: { profile: Profile }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="tag flex items-center gap-3 py-2 pl-2 pr-4">
       <Link
         href="/profile/"
-        className="flex items-center gap-2 font-semibold hover:text-purple-300"
+        className="flex items-center gap-2 font-semibold text-lg hover:text-brand"
       >
-        <Avatar url={profile.avatarUrl} name={profile.username} size={36} />
+        <Avatar url={profile.avatarUrl} name={profile.username} size={40} />
         {profile.username}
       </Link>
       <button
         onClick={signOutHere}
-        className="text-sm text-gray-500 hover:text-gray-300"
+        className="min-h-11 px-2 text-muted underline hover:text-ink"
       >
         Sair
       </button>

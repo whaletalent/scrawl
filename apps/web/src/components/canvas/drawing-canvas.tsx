@@ -54,8 +54,8 @@ export const DrawingCanvas = forwardRef<
   }));
 
   return (
-    <div className="flex flex-col gap-3 items-center w-full">
-      <div className="relative w-full" style={{ maxWidth: canvasWidth }}>
+    <Toolbar tool={tool} onToolChange={setTool} onClear={clear}>
+      <div className="relative w-full">
         <canvas
           ref={canvasRef}
           onMouseDown={startDrawing}
@@ -65,7 +65,7 @@ export const DrawingCanvas = forwardRef<
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
-          className="w-full rounded-xl border-2 border-gray-700 cursor-crosshair touch-none"
+          className="w-full bg-white border-2 border-dashed border-line-strong cursor-crosshair touch-none"
           style={{ aspectRatio: `${canvasWidth} / ${canvasHeight}` }}
         />
         {silhouetteOverlay && (
@@ -79,37 +79,43 @@ export const DrawingCanvas = forwardRef<
         {side !== "full" && (side === "left" || side === "right") && (
           <>
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-gray-600 opacity-50 pointer-events-none"
+              className="absolute top-0 bottom-0 border-l-[3px] border-dashed border-brand pointer-events-none"
               style={{ left: "50%" }}
             />
             <div
-              className="absolute top-0 bottom-0 bg-gray-900/30 pointer-events-none rounded-xl"
+              className="partner-area absolute top-0 bottom-0 pointer-events-none flex items-center justify-center p-4"
               style={
                 side === "left"
                   ? { left: "50%", right: 0 }
                   : { left: 0, right: "50%" }
               }
-            />
+            >
+              <span className="font-display font-bold text-lg text-muted text-center">
+                Área do parceiro
+              </span>
+            </div>
           </>
         )}
         {side !== "full" && (side === "top" || side === "bottom") && (
           <>
             <div
-              className="absolute left-0 right-0 h-0.5 border-t-2 border-dashed border-blue-500 opacity-50 pointer-events-none"
+              className="absolute left-0 right-0 border-t-[3px] border-dashed border-brand pointer-events-none"
               style={{ top: "50%" }}
             />
             <div
-              className="absolute left-0 right-0 bg-gray-900/30 pointer-events-none rounded-xl flex items-center justify-center"
+              className="partner-area absolute left-0 right-0 pointer-events-none flex items-center justify-center p-4"
               style={
                 side === "top"
                   ? { top: "50%", bottom: 0 }
                   : { top: 0, bottom: "50%" }
               }
             >
-              <span className="text-gray-500 text-sm">Área do parceiro</span>
+              <span className="font-display font-bold text-lg text-muted text-center">
+                Área do parceiro
+              </span>
             </div>
             <span
-              className="absolute left-2 text-[10px] font-bold tracking-wider text-blue-500/70 pointer-events-none"
+              className="absolute left-2 px-2 py-0.5 bg-brand text-white font-display font-bold text-xs pointer-events-none"
               style={side === "top" ? { top: 6 } : { bottom: 6 }}
             >
               SUA ÁREA
@@ -117,7 +123,6 @@ export const DrawingCanvas = forwardRef<
           </>
         )}
       </div>
-      <Toolbar tool={tool} onToolChange={setTool} onClear={clear} />
-    </div>
+    </Toolbar>
   );
 });

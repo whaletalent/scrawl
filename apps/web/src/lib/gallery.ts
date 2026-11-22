@@ -39,9 +39,9 @@ interface Row {
 export const GALLERY_PAGE_SIZE = 24;
 
 export const MODE_LABEL: Record<GameMode, string> = {
-  party: "Party",
-  "split-body": "Split Body",
-  "face-builder": "Face Builder",
+  party: "Racha-tema",
+  "split-body": "Monstrinho",
+  "face-builder": "Caricatura a dois",
 };
 
 /** "Ana + Bia" — also the image's alt text. */

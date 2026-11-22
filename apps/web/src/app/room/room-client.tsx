@@ -174,14 +174,14 @@ export function RoomClient() {
   if (askNickname && !gameState.roomState) {
     return (
       <main className="flex items-center justify-center min-h-screen px-4">
-        <div className="w-full max-w-sm flex flex-col gap-4 text-center">
-          <h1 className="text-2xl font-bold">
+        <div className="sheet w-full max-w-lg flex flex-col gap-5 p-7 sm:p-12">
+          <h1 className="text-4xl sm:text-5xl leading-none pr-10">
             {code === NEW_ROOM ? (
               "Criar sala"
             ) : (
               <>
                 Entrar na sala{" "}
-                <span className="text-purple-400">{code.toUpperCase()}</span>
+                <span className="text-brand">{code.toUpperCase()}</span>
               </>
             )}
           </h1>
@@ -196,16 +196,17 @@ export function RoomClient() {
             }}
             onKeyDown={(e) => e.key === "Enter" && submitNickname()}
             maxLength={16}
-            className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
+            aria-label="Seu apelido"
+            className="w-full h-14 px-4 bg-soft border-b-4 border-ink font-semibold text-xl text-ink placeholder-faint focus:outline-none focus:border-brand"
           />
           <button
             onClick={submitNickname}
-            className="w-full py-3 bg-pink-600 hover:bg-pink-500 rounded-xl font-bold text-lg transition-colors"
+            className="press min-h-15 px-7 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl"
           >
             Entrar
           </button>
           {nicknameError && (
-            <p className="text-red-400 text-sm">{nicknameError}</p>
+            <p className="text-red-600 font-semibold">{nicknameError}</p>
           )}
         </div>
       </main>

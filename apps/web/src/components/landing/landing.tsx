@@ -10,7 +10,7 @@ import { PlayForm } from "./play-form";
         rhythm space, buttons solid, mark arc; palette from the owner's
         reference images (cream, brown ink, orange; mint key art), radius
         round, type Gabarito + Figtree
-  moments: liquid-type on the statement (#lenda)
+  moments: liquid-type on the hero's headline and on the statement (#lenda)
   The page is a stack of screens: the hero alone on the first, every other
   section and the footer exactly one, its h2 first. Every picture is the
   game's own output: `scripts/landing-art/` plays real matches to make them.
@@ -24,36 +24,36 @@ const GALLERY = `${BASE_PATH}/gallery/`;
 const MODES = [
   {
     id: "party",
-    name: "Party",
+    name: "Racha-tema",
     players: "De 4 a 10 jogadores",
-    title: "Party, de 4 a 10 jogadores",
+    title: "Racha-tema, de 4 a 10 jogadores",
     text: "Cada um escreve um tema, as duplas são sorteadas a cada rodada e a sala vota nos desenhos.",
     screen: "screen-party-drawing",
-    alt: "Tela de desenho do modo Party, com o tema da rodada, o papel dividido ao meio e a barra de ferramentas",
+    alt: "Tela de desenho do modo Racha-tema, com o tema da rodada, o papel dividido ao meio e a barra de ferramentas",
     thumb: "drawing-party-1",
-    thumbAlt: "Desenho de uma dupla no modo Party",
+    thumbAlt: "Desenho de uma dupla no modo Racha-tema",
   },
   {
     id: "split-body",
-    name: "Split Body",
+    name: "Monstrinho",
     players: "2 jogadores",
-    title: "Split Body, para 2 jogadores",
+    title: "Monstrinho, para 2 jogadores",
     text: "Um desenha a cabeça e o tronco, o outro as pernas, por cima da mesma silhueta. Depois vocês trocam.",
     screen: "screen-split-drawing",
-    alt: "Tela do modo Split Body, com a metade de cima de um personagem desenhada sobre a silhueta",
+    alt: "Tela do modo Monstrinho, com a metade de cima de um personagem desenhada sobre a silhueta",
     thumb: "drawing-split-1",
-    thumbAlt: "Personagem desenhado por dois jogadores no modo Split Body",
+    thumbAlt: "Personagem desenhado por dois jogadores no modo Monstrinho",
   },
   {
     id: "face-builder",
-    name: "Face Builder",
+    name: "Caricatura a dois",
     players: "2 jogadores",
-    title: "Face Builder, para 2 jogadores",
+    title: "Caricatura a dois, para 2 jogadores",
     text: "As seis partes de um rosto são sorteadas, três para cada um: cabelo, olhos, nariz, boca, orelhas e ombros.",
     screen: "screen-face-drawing",
-    alt: "Tela do modo Face Builder, com as partes do rosto de um jogador desenhadas sobre a moldura",
+    alt: "Tela do modo Caricatura a dois, com as partes do rosto de um jogador desenhadas sobre a moldura",
     thumb: "drawing-face-1",
-    thumbAlt: "Rosto desenhado por dois jogadores no modo Face Builder",
+    thumbAlt: "Rosto desenhado por dois jogadores no modo Caricatura a dois",
   },
 ];
 
@@ -82,66 +82,112 @@ const ROUND = [
 
 /** Finished drawings on the gallery wall, in reading order. */
 const WALL = [
-  ["drawing-party-2", "Desenho de uma dupla no modo Party"],
-  ["drawing-split-2", "Personagem do modo Split Body"],
-  ["drawing-face-2", "Rosto do modo Face Builder"],
-  ["drawing-party-3", "Desenho de uma dupla no modo Party"],
-  ["drawing-split-3", "Personagem do modo Split Body"],
-  ["drawing-party-4", "Desenho de uma dupla no modo Party"],
-  ["drawing-face-3", "Rosto do modo Face Builder"],
-  ["drawing-split-4", "Personagem do modo Split Body"],
+  ["drawing-party-2", "Desenho de uma dupla no modo Racha-tema"],
+  ["drawing-split-2", "Personagem do modo Monstrinho"],
+  ["drawing-face-2", "Rosto do modo Caricatura a dois"],
+  ["drawing-party-3", "Desenho de uma dupla no modo Racha-tema"],
+  ["drawing-split-3", "Personagem do modo Monstrinho"],
+  ["drawing-party-4", "Desenho de uma dupla no modo Racha-tema"],
+  ["drawing-face-3", "Rosto do modo Caricatura a dois"],
+  ["drawing-split-4", "Personagem do modo Monstrinho"],
 ];
 
 /*
-  Page CSS: the brand bar, the hero's art, what sits inside a visual or the
-  play form, and the page's own motion. The kit already moves the hero's
+  Page CSS: the drawing desk (the same look as the game screens, see
+  globals.css) laid over the kit: the desk, the bar, the hero's art, each
+  section as a sheet of paper as tall as its content, and the page's motion. The kit already moves the hero's
   words on load, every hover and press, and the big headline in #lenda; added
   here, each once:
-  - the hero's mascots arrive (the crew, then the flyer 200ms later), then
-    float slowly: the crew 10px up and down, the flyer on its own small arc;
+  - the hero's crew arrives, then floats 10px up and down, slowly; the flyer
+    above the headline sways on its own small arc;
   - a step of the play form (options, room code) fades up as it replaces the
     last one, and a field's error fades in.
   Reduced motion keeps the fades and drops every movement.
 */
 const PAGE_CSS = `
 html.ld-wait body > :is(header, main, footer) { visibility: hidden; }
-/* the brand bar: orange, with the page links in one darker pill */
+
+/* THE DESK: orange, with a faint cutting-mat grid; paper has square corners */
+body { background-color: var(--p-accent); background-image: linear-gradient(rgb(255 255 255 / .07) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .07) 1px, transparent 1px); background-size: 40px 40px; }
+html[data-radius] { --r-sm: 0px; --r-md: 0px; --r-lg: 0px; --r-btn: 0px; }
+html[data-radius] .card { --c-r: 0px; }
+html[data-radius] .panel { --p-r: 0px; }
+.btn { box-shadow: 5px 5px 0 rgb(51 32 15 / .28); font-family: var(--font-display); font-weight: 700; }
+
+/* the bar lies on the desk: white words, the page links on one darker tab */
 header.nav { --bg: var(--p-accent); --ink: #ffffff; --muted: #ffffff; --line: transparent; --line-strong: rgb(255 255 255 / .5); --accent: #ffffff; --action: var(--p-bg); --action-ink: var(--p-ink); }
 header.nav .nav__menu, header.nav.is-open { --bg: var(--p-bg); --ink: var(--p-ink); --muted: var(--p-muted); --action: var(--p-action); --action-ink: var(--p-action-ink); --line: color-mix(in oklab, var(--p-ink) 11%, transparent); }
+.nav__logo { font-weight: 800; }
+.nav__logo .logo-mark { flex: none; width: 36px; height: 36px; max-width: none; margin-right: var(--s-2); border-radius: 28%; }
+.menu-card .panel { --ratio: 75%; }
 @media (min-width: 1024px) {
-  header.nav .nav__links { flex: none; height: 44px; align-self: center; margin-right: auto; margin-left: var(--s-6); padding: 0 var(--s-2); border-radius: 999px; background: rgb(0 0 0 / .14); }
+  header.nav .nav__links { flex: none; height: 44px; align-self: center; margin-right: auto; margin-left: var(--s-6); padding: 0 var(--s-2); background: rgb(0 0 0 / .16); }
 }
-/* the hero: the same orange, the sheets on its right */
-.hero--photo { background: var(--p-accent); }
-.hero-art { overflow: hidden; background: var(--p-accent); color: rgb(255 255 255 / .2); }
+
+/* THE HERO: straight on the desk. The flyer and the words on the left, the crew on the right */
+.hero--photo { background: none; }
+.hero-art { overflow: visible; background: none; color: rgb(255 255 255 / .2); }
 .hero-art__doodles { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hero-art__crew { position: absolute; right: 1vw; top: 50%; width: 50vw; max-width: none; height: auto; margin-top: -12vw; }
-.hero-art__flyer { position: absolute; right: 6vw; top: calc(var(--nav) + 2vw); width: 11vw; min-width: 96px; height: auto; }
+.hero-flyer { display: block; width: clamp(170px, 15vw, 240px); height: auto; margin-bottom: var(--s-3); }
 .hero--photo .btn-row { --action: var(--p-bg); --action-ink: var(--p-ink); }
 @media (max-width: 1023px) {
-  /* the kit moves the words under the picture, onto the page ground: here they stay on the orange, in white */
-  .hero.hero--photo[data-tone] { background: var(--p-accent); color: #fff; --ink: #fff; --muted: #fff; }
-  .hero--photo .btn-row { --ink: #fff; --line-strong: rgb(255 255 255 / .6); }
-  .hero-art__crew { right: auto; left: 4vw; top: 50%; width: 92vw; margin-top: -24vw; }
-  .hero-art__flyer { display: none; }
+  /* the kit moves the words under the picture, onto the page ground: here they stay on the desk, in white */
+  .hero.hero--photo[data-tone] { background: none; color: #fff; --ink: #fff; --muted: #fff; }
+  /* the crew fits whole in the band over the words, whatever the phone's shape */
+  .hero-art__crew { left: 5vw; right: 5vw; top: 16px; bottom: 16px; width: calc(100% - 10vw); height: calc(100% - 32px); margin: 0; object-fit: contain; }
+  .hero-flyer { display: none; }
 }
-/* the logo, a toy on each mode's card, the trophy */
-.nav__logo .logo-mark { flex: none; width: 36px; height: 36px; max-width: none; margin-right: var(--s-2); border-radius: 10px; }
-#modos .card { position: relative; overflow: visible; }
+
+/* THE SHEETS: every section is a sheet of paper lying on the desk, as tall as what it holds */
+main#top > section.section, footer.closing { height: auto; min-height: 0; padding-block: var(--s-6); }
+main#top > section.section > .wrap { box-sizing: border-box; height: auto; padding: clamp(24px, 4vw, 56px); background: var(--bg); box-shadow: 10px 10px 0 rgb(51 32 15 / .28); clip-path: polygon(0 0, calc(100% - 56px) 0, 100% 56px, 100% calc(100% + 12px), 0 calc(100% + 12px)); }
+main#top > section.section > .wrap::before { content: ""; position: absolute; top: 0; right: 0; width: 56px; height: 56px; background: #e9dfc6; clip-path: polygon(0 0, 0 100%, 100% 100%); }
+main#top > section.section > .wrap.ground-inverse::before { background: rgb(0 0 0 / .25); }
+footer.closing { margin-top: var(--s-8); padding-block: var(--s-9) var(--s-6); }
+footer.closing > .wrap { height: auto; display: grid; gap: var(--s-9); }
+
+/* the game's screens are shown whole, at their own 16:10 */
+#modos .card { position: relative; overflow: visible; border: 0; box-shadow: 6px 6px 0 rgb(51 32 15 / .25); }
+#modos .panel { --p-h: 0px; aspect-ratio: 16 / 10; }
+#modos .card > h3 { padding-right: 92px; }
+#modos .grid { row-gap: var(--s-8); }
+/* each picture is one part of a screen, cut by compose.mjs: the frames take its proportions */
+#rodada .frame { --ratio: 90.2%; }
+#lenda .frame { --ratio: 58.46%; }
+.play-col .frame { --ratio: 158.14%; max-width: 300px; }
+.frame--photo { box-shadow: 6px 6px 0 rgb(51 32 15 / .25); }
+#lenda .frame--photo { box-shadow: 6px 6px 0 rgb(0 0 0 / .3); }
 .mode-toy { position: absolute; top: -34px; right: var(--s-5); width: 88px; height: 88px; object-fit: contain; }
-#lenda .wrap { position: relative; }
-.trophy { position: absolute; right: 0; top: -24px; width: 24vw; max-width: 340px; height: auto; }
+.trophy { position: absolute; right: clamp(24px, 4vw, 56px); top: clamp(24px, 4vw, 56px); width: 22vw; max-width: 300px; height: auto; }
+@media (min-width: 1024px) { #lenda .section-head { padding-right: min(26vw, 340px); } }
 @media (max-width: 1023px) { .trophy { display: none; } }
 @media (max-width: 639px) { .mode-toy { width: 72px; height: 72px; top: -28px; } }
-/* motion (see the note above PAGE_CSS) */
+
+/* the wall: each drawing a card pinned to the sheet */
+.wall { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-5); }
+.wall img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: #fff; border: 6px solid #fff; box-sizing: border-box; box-shadow: 5px 5px 0 rgb(51 32 15 / .25); }
+
+/* the play form: a darker sheet of its own */
+.play { background: #f0e7cf; padding: var(--s-7); }
+.play .field > span { font-size: var(--t-small); font-weight: 500; }
+.play-col { display: grid; gap: var(--s-6); }
+.play__code { text-transform: uppercase; letter-spacing: 0.2em; }
+.opt { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.opt button { min-width: 44px; height: 44px; padding: 0 var(--s-4); border: 2px solid var(--p-ink); background: var(--p-bg); color: var(--ink); font: 700 var(--t-small)/1 var(--font-display); cursor: pointer; }
+.opt button[aria-pressed="true"] { background: var(--p-action); border-color: var(--p-action); color: #fff; }
+.opt--swatch button { width: 44px; padding: 0; border-radius: 999px; border-width: 2px; }
+.opt--swatch button[aria-pressed="true"] { border-color: var(--ink); outline: 3px solid var(--p-action); outline-offset: 2px; }
+
+/* MOTION (see the note above PAGE_CSS) */
 @media (prefers-reduced-motion: no-preference) {
   .hero-art__crew { animation: sheet-in 700ms var(--m-ease-enter) both, sheet-float 7s ease-in-out 0.7s infinite alternate; }
-  .hero-art__flyer { animation: sheet-in 700ms var(--m-ease-enter) 200ms both, flyer-float 5s ease-in-out 0.9s infinite alternate; }
+  .hero-flyer { animation: flyer-float 5s ease-in-out infinite alternate; }
   .play .step { transition: opacity 200ms var(--ease), transform 200ms var(--ease); }
   @starting-style { .play .step { opacity: 0; transform: translateY(8px); } }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-art__crew, .hero-art__flyer { animation: sheet-fade 600ms var(--m-ease-enter) both; }
+  .hero-art__crew { animation: sheet-fade 600ms var(--m-ease-enter) both; }
   .play .step { transition: opacity 200ms var(--ease); }
   @starting-style { .play .step { opacity: 0; } }
 }
@@ -149,49 +195,32 @@ header.nav .nav__menu, header.nav.is-open { --bg: var(--p-bg); --ink: var(--p-in
 @starting-style { .play .field__error { opacity: 0; } }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(24px) scale(0.96); } }
 @keyframes sheet-fade { from { opacity: 0; } }
-@keyframes flyer-float { from { transform: translate(0, 8px) rotate(-3deg); } to { transform: translate(-10px, -8px) rotate(3deg); } }
+@keyframes flyer-float { from { transform: translate(0, 6px) rotate(-3deg); } to { transform: translate(8px, -6px) rotate(3deg); } }
 @keyframes sheet-float { from { transform: translateY(-10px); } to { transform: translateY(10px); } }
-#modos .panel { --p-h: 0px; aspect-ratio: 5 / 4; }
-.wall { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; border-radius: var(--r-lg); overflow: clip; }
-.wall img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #fff; }
-.play { background: var(--surface); box-shadow: 0 12px 32px rgb(51 32 15 / .08); padding: var(--s-7); border-radius: var(--r-lg); }
-.play .field > span { font-size: var(--t-small); font-weight: 500; }
-.play-col { display: grid; gap: var(--s-5); }
-.play-col .frame { --ratio: 50%; }
-#lenda .frame__img { object-position: 50% 100%; }
-.play__code { text-transform: uppercase; letter-spacing: 0.2em; }
-.opt { display: flex; flex-wrap: wrap; gap: var(--s-2); }
-.opt button { min-width: 44px; height: 44px; padding: 0 var(--s-4); border: 1px solid var(--line); border-radius: var(--r-sm); background: transparent; color: var(--ink); font: 500 var(--t-small)/1 var(--font-text); cursor: pointer; }
-.opt button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-.opt--swatch button { width: 44px; padding: 0; border-radius: 999px; border-width: 2px; }
-.opt--swatch button[aria-pressed="true"] { border-color: var(--ink); outline: 2px solid var(--bg); outline-offset: -4px; }
-@media (min-width: 1024px) and (max-width: 1279px) {
-  /* the three modes stay side by side, so the section stays one screen */
-  #modos .grid > .card { grid-column: span 4; }
-  #modos .panel { aspect-ratio: 16 / 10; }
-}
+
 @media (max-width: 1023px) {
-  #rodada .frame, #lenda .frame { --ratio: 62.5%; }
-  .play { background: none; padding: 0; border-radius: 0; }
+  .play { padding: var(--s-5); }
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   :is(#rodada, #jogar) .rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--gutter); }
   :is(#rodada, #jogar) .rows > li:first-child { padding-top: var(--s-4); }
   .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .wall img:nth-child(n + 5) { display: none; }
-  .play-col .frame { --ratio: 40%; }
-  #modos .panel { aspect-ratio: 16 / 10; }
   /* each mode a row: its words beside its screen */
   #modos .grid > .card { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); column-gap: var(--gutter); align-content: start; }
-  #modos .card > :not(.panel) { grid-column: 1; }
+  #modos .card > :not(.panel, .mode-toy) { grid-column: 1; }
   #modos .card > .panel { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
 }
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #modos .grid > .card { grid-column: span 4; }
+}
 @media (max-width: 639px) {
-  .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .wall img:nth-child(n + 7) { display: none; }
-  #rodada .frame { --ratio: 100%; }
-  /* the phone keeps the form and the room: the small print stays on wider screens */
-  #jogar .rows { display: none; }
+  /* on a phone the second hero action is a text link: white, on the desk */
+  .hero--photo .btn-row { --ink: #fff; --line-strong: rgb(255 255 255 / .6); }
+  /* a smaller fold, clear of the headings; the text-link button casts no shadow */
+  main#top > section.section > .wrap { clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% calc(100% + 12px), 0 calc(100% + 12px)); }
+  main#top > section.section > .wrap::before { width: 28px; height: 28px; }
+  .btn--secondary { box-shadow: none; }
+  .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
 }
 `;
 
@@ -391,20 +420,22 @@ export function Landing({
               data-source="client"
               data-subject="the game's mascots"
             />
-            <img
-              className="hero-art__flyer"
-              src={`${IMG}/mascot-flyer-sm.webp`}
-              alt=""
-              width={300}
-              height={257}
-              data-source="client"
-              data-subject="the game's mascot"
-            />
           </div>
           <div className="wrap">
             <div className="hero-text">
               <div className="hero__text">
-                <h1 id="hero-h">Scrawl, party game de desenho</h1>
+                <img
+                  className="hero-flyer"
+                  src={`${IMG}/mascot-flyer-sm.webp`}
+                  alt=""
+                  width={300}
+                  height={257}
+                  data-source="client"
+                  data-subject="the game's mascot"
+                />
+                <h1 id="hero-h" data-moment="liquid-type">
+                  Scrawl, party game de desenho
+                </h1>
                 <p className="hero__lead">
                   Crie uma sala, mande o link e desenhe em dupla, cada um numa
                   metade do papel. De 2 a 10 jogadores.
@@ -434,8 +465,8 @@ export function Landing({
             <div className="section-head">
               <h2 id="modos-h">Os 3 modos de Scrawl</h2>
               <p>
-                Party para a turma inteira. Split Body e Face Builder para jogar
-                a dois.
+                Racha-tema para a turma inteira. Monstrinho e Caricatura a dois
+                para jogar a dois.
               </p>
             </div>
             <div className="grid">
@@ -477,7 +508,7 @@ export function Landing({
           </div>
         </section>
 
-        {/* THE CREW AT WORK: one Party round, step by step, beside the vote. */}
+        {/* THE CREW AT WORK: one Racha-tema round, step by step, beside the vote. */}
         <section
           className="section"
           id="rodada"
@@ -488,7 +519,7 @@ export function Landing({
             <div className="grid grid--top">
               <div className="span-5">
                 <div className="section-head">
-                  <h2 id="rodada-h">Uma rodada de Party</h2>
+                  <h2 id="rodada-h">Uma rodada de Racha-tema</h2>
                   <p>
                     Quatro fases, todas com relógio. Com número ímpar de
                     jogadores, um fica de jurado.
@@ -508,11 +539,11 @@ export function Landing({
                 <img
                   className="frame__img"
                   src={`${IMG}/screen-party-voting.webp`}
-                  srcSet={`${IMG}/screen-party-voting-sm.webp 800w, ${IMG}/screen-party-voting.webp 1600w`}
+                  srcSet={`${IMG}/screen-party-voting-sm.webp 663w, ${IMG}/screen-party-voting.webp 1327w`}
                   sizes="(min-width: 1024px) 56vw, (min-width: 640px) 100vw, 150vw"
-                  alt="Tela de votação do modo Party, com os desenhos das duplas e os botões de 1º, 2º e 3º lugar"
-                  width={1600}
-                  height={1000}
+                  alt="Um desenho na votação do Racha-tema, com os botões de 1º, 2º e 3º lugar"
+                  width={1327}
+                  height={1197}
                   loading="lazy"
                   data-source="client"
                   data-subject="a screen of the game"
@@ -523,12 +554,8 @@ export function Landing({
         </section>
 
         {/* THE MOMENT: the page's one brand line, set large; it ripples under the pointer. */}
-        <section
-          className="section ground-inverse"
-          id="lenda"
-          aria-labelledby="lenda-h"
-        >
-          <div className="wrap">
+        <section className="section" id="lenda" aria-labelledby="lenda-h">
+          <div className="wrap ground-inverse">
             <img
               className="trophy"
               src={`${IMG}/mascot-trophy-sm.webp`}
@@ -554,15 +581,15 @@ export function Landing({
                 vez, cada um com o nome da dupla que fez.
               </p>
             </div>
-            <div className="frame frame--photo fit-screen">
+            <div className="frame frame--photo">
               <img
                 className="frame__img"
                 src={`${IMG}/screen-party-results.webp`}
                 srcSet={`${IMG}/screen-party-results-sm.webp 800w, ${IMG}/screen-party-results.webp 1600w`}
                 sizes="(min-width: 1024px) 90vw, 100vw"
-                alt="Tela de resultado final de uma partida de Party, com o placar e os desenhos de todas as rodadas"
+                alt="As obras-primas no fim de uma partida de Racha-tema: três desenhos com tema e autores"
                 width={1600}
-                height={1000}
+                height={935}
                 loading="lazy"
                 data-source="client"
                 data-subject="a screen of the game"
@@ -635,7 +662,7 @@ export function Landing({
                   </li>
                   <li>
                     <span className="rows__name">Limite</span>
-                    <p>Party só começa com 4 jogadores na sala.</p>
+                    <p>Racha-tema só começa com 4 jogadores na sala.</p>
                   </li>
                 </ul>
               </div>
@@ -646,11 +673,11 @@ export function Landing({
                     <img
                       className="frame__img"
                       src={`${IMG}/screen-lobby.webp`}
-                      srcSet={`${IMG}/screen-lobby-sm.webp 601w, ${IMG}/screen-lobby.webp 1202w`}
+                      srcSet={`${IMG}/screen-lobby-sm.webp 430w, ${IMG}/screen-lobby.webp 860w`}
                       sizes="(min-width: 1024px) 45vw, 100vw"
-                      alt="Sala de espera de uma partida de Party, com o código da sala, o link de convite e os jogadores que já entraram"
-                      width={1202}
-                      height={601}
+                      alt="Sala de espera: o código da sala, o link de convite, os seis jogadores e o botão de começar"
+                      width={860}
+                      height={1360}
                       loading="lazy"
                       data-source="client"
                       data-subject="a screen of the game"

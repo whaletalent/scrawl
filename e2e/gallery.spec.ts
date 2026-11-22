@@ -22,13 +22,13 @@ async function player(browser: Browser, prefix: string) {
 /** Plays a one-round Split Body game against a bot, up to the final screen. */
 async function splitFinal(page: Page, loggedIn: boolean) {
   const code = await createRoom(page, {
-    mode: "Split Body (2)",
+    mode: "Monstrinho (2)",
     rounds: 1,
     turnSeconds: 180,
     loggedIn,
   });
   const partner = await bot(code, "Robô");
-  await page.getByRole("button", { name: "Começar Split Body" }).click();
+  await page.getByRole("button", { name: "Começar Monstrinho" }).click();
   await expect(page.getByText("SUA ÁREA")).toBeVisible();
   await draw(page, [
     [0.3, 0.1],
@@ -37,7 +37,9 @@ async function splitFinal(page: Page, loggedIn: boolean) {
   ]);
   await page.getByRole("button", { name: "Enviar Desenho" }).click();
   partner.send({ type: "submit-split-drawing", imageDataUrl: IMG });
-  await expect(page.getByRole("heading", { name: "Resultado!" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Vocês montaram/ }),
+  ).toBeVisible();
   return { code, partner };
 }
 
@@ -75,7 +77,7 @@ test("a party final has one save button per drawing, and saving one leaves the o
 }) => {
   const a = await player(browser, "Ana");
   const code = await createRoom(a.page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     rounds: 1,
     turnSeconds: 15,
     loggedIn: true,
@@ -86,7 +88,7 @@ test("a party final has one save button per drawing, and saving one leaves the o
 
   // The page just lets the timers run: its half is submitted automatically.
   await expect(
-    a.page.getByRole("heading", { name: "Resultado final!" }),
+    a.page.getByRole("heading", { name: "Placar final" }),
   ).toBeVisible({ timeout: 60_000 });
   await expect(saveButton(a.page)).toHaveCount(2);
   await saveButton(a.page).first().click();
@@ -110,14 +112,14 @@ test("a saved drawing shows on another player's home and on the gallery page, wi
   // On someone else's home, in the side column.
   await b.page.reload();
   await expect(drawingOf(b.page, a.name, "Robô")).toBeVisible();
-  await b.page.getByRole("link", { name: "Ver todos" }).click();
+  await b.page.getByRole("link", { name: "Abrir a galeria" }).click();
   await expect(b.page).toHaveURL("/gallery/");
   await drawingOf(b.page, a.name, "Robô").click();
 
   const detail = b.page.getByRole("dialog");
   await expect(detail).toContainText(a.name);
   await expect(detail).toContainText("Robô");
-  await expect(detail).toContainText("Split Body");
+  await expect(detail).toContainText("Monstrinho");
   // The account's avatar next to its name; the guest gets the placeholder.
   await expect(detail.getByAltText(`Avatar de ${a.name}`)).toBeVisible();
   await expect(detail.locator('[data-initial="R"]')).toBeVisible();
@@ -138,14 +140,14 @@ test("a co-author removes a drawing from their profile: it leaves the gallery, i
 
   // A and B play one Split Body round together.
   const code = await createRoom(a.page, {
-    mode: "Split Body (2)",
+    mode: "Monstrinho (2)",
     rounds: 1,
     turnSeconds: 180,
     loggedIn: true,
   });
   await b.page.goto(`/room/?code=${code}`);
   await expect(b.page.getByText(`${b.name} (você)`)).toBeVisible();
-  await a.page.getByRole("button", { name: "Começar Split Body" }).click();
+  await a.page.getByRole("button", { name: "Começar Monstrinho" }).click();
   for (const [p, y] of [
     [a.page, 0.2],
     [b.page, 0.8],
@@ -158,7 +160,7 @@ test("a co-author removes a drawing from their profile: it leaves the gallery, i
     await p.getByRole("button", { name: "Enviar Desenho" }).click();
   }
   await expect(
-    a.page.getByRole("heading", { name: "Resultado!" }),
+    a.page.getByRole("heading", { name: /^Vocês montaram/ }),
   ).toBeVisible();
   await saveButton(a.page).click();
   // B, who didn't press anything, sees it saved too.

@@ -3,12 +3,12 @@ import { join, IMG, type TestClient } from "../apps/ws-server/test/client";
 
 export const WS_URL = "ws://localhost:8089";
 
-type Mode = "Party (4-10)" | "Split Body (2)" | "Face Builder (2)";
+type Mode = "Racha-tema (4-10)" | "Monstrinho (2)" | "Caricatura a dois (2)";
 
 const CREATE_BUTTON: Record<Mode, string> = {
-  "Party (4-10)": "Criar Party",
-  "Split Body (2)": "Criar Split Body",
-  "Face Builder (2)": "Criar Face Builder",
+  "Racha-tema (4-10)": "Criar Racha-tema",
+  "Monstrinho (2)": "Criar Monstrinho",
+  "Caricatura a dois (2)": "Criar Caricatura a dois",
 };
 
 /**
@@ -41,7 +41,7 @@ export async function createRoom(
   if (rounds) {
     // The round picker only shows for 2-player modes, but the choice sticks
     // when switching back to Party.
-    await page.getByRole("button", { name: "Split Body (2)" }).click();
+    await page.getByRole("button", { name: "Monstrinho (2)" }).click();
     await page
       .getByRole("button", { name: String(rounds), exact: true })
       .click();
@@ -58,7 +58,9 @@ export async function createRoom(
 
 /** Drags the mouse across the canvas; points are fractions of its width/height. */
 export async function draw(page: Page, points: [number, number][]) {
-  const box = (await page.locator("canvas").boundingBox())!;
+  const box = (await page
+    .locator("canvas:not([data-desk-trail])")
+    .boundingBox())!;
   const at = ([fx, fy]: [number, number]) =>
     [box.x + fx * box.width, box.y + fy * box.height] as const;
   await page.mouse.move(...at(points[0]));
@@ -70,18 +72,20 @@ export async function draw(page: Page, points: [number, number][]) {
 
 /** Whether anything other than white was painted on the canvas. */
 export function canvasHasInk(page: Page): Promise<boolean> {
-  return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
-    const { data } = canvas
-      .getContext("2d")!
-      .getImageData(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < data.length; i += 4) {
-      const opaque = data[i + 3] > 0;
-      const white =
-        data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255;
-      if (opaque && !white) return true;
-    }
-    return false;
-  });
+  return page
+    .locator("canvas:not([data-desk-trail])")
+    .evaluate((canvas: HTMLCanvasElement) => {
+      const { data } = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < data.length; i += 4) {
+        const opaque = data[i + 3] > 0;
+        const white =
+          data[i] === 255 && data[i + 1] === 255 && data[i + 2] === 255;
+        if (opaque && !white) return true;
+      }
+      return false;
+    });
 }
 
 /** A scripted player that joins over the raw WebSocket protocol. */
@@ -131,8 +135,9 @@ export async function signUpWithEmail(
   await page.getByPlaceholder("E-mail").fill(email);
   await page.getByPlaceholder("Senha", { exact: true }).fill(password);
   await page.getByPlaceholder("Repita a senha").fill(password);
-  await page.getByRole("button", { name: "Criar conta" }).click();
-  await expect(page).toHaveURL("/welcome/");
+  await page.getByRole("button", { name: "Criar conta", exact: true }).click();
+  // The first sign-up of a run waits for next dev to compile /welcome/.
+  await expect(page).toHaveURL("/welcome/", { timeout: 30_000 });
 }
 
 /** Onboarding from /welcome/: username, one stroke on the avatar, save. Ends on the landing page. */
@@ -144,7 +149,7 @@ export async function finishOnboarding(page: Page, username: string) {
     [0.4, 0.3],
     [0.6, 0.5],
   ]);
-  await page.getByRole("button", { name: "Criar conta" }).click();
+  await page.getByRole("button", { name: "Criar conta", exact: true }).click();
   await expectHome(page, username);
 }
 

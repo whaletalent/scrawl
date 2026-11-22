@@ -13,11 +13,10 @@ import { BASE_PATH } from "@/lib/routes";
 const KIT = `${BASE_PATH}/assets`;
 
 const STYLESHEETS = [
-  "https://fonts.googleapis.com/css2?family=Gabarito:wght@400..700&family=Figtree:wght@400..600&display=swap",
+  "https://fonts.googleapis.com/css2?family=Shantell+Sans:wght@500;700;800&family=Figtree:wght@400..600&display=swap",
   `${KIT}/system.css`,
   `${KIT}/ui/cards.css`,
   `${KIT}/motion/motion.css`,
-  `${KIT}/backgrounds/backgrounds.css`,
   `${KIT}/layout/layout.css`,
   `${KIT}/icons/icon.css`,
   `${KIT}/moments/liquid-type/moment.css`,
@@ -31,19 +30,20 @@ const SCRIPTS = [
 ];
 
 /**
- * Palette and type, after the owner's reference (refs/ref2.webp): an orange
- * brand ground, cream paper, white cards and one indigo block, with Gabarito
- * set bold over Figtree. It has to come after layout.css, which resets `--ly-scale`.
+ * Palette and type: the same drawing desk as the game screens (globals.css).
+ * `--p-bg` is the paper; the orange desk is `--p-accent`, painted on <body>
+ * by the page CSS; indigo is the action colour. It has to come after
+ * layout.css, which resets `--ly-scale`.
  */
 const TOKENS = `
 :root {
-  --p-bg: #fff8e4; --p-surface: #ffffff; --p-ink: #33200f; --p-muted: #75614c;
-  --p-accent: #d63c17; --p-accent-ink: #ffffff; --p-action: #d63c17; --p-action-ink: #ffffff;
+  --p-bg: #fffdf6; --p-surface: #ffffff; --p-ink: #33200f; --p-muted: #5a4733;
+  --p-accent: #d63c17; --p-accent-ink: #ffffff; --p-action: #3d2fc4; --p-action-ink: #ffffff;
   --p-inv-bg: #3d2fc4; --p-inv-surface: #4b3dd6; --p-inv-ink: #ffffff; --p-inv-muted: #d5d0f7;
   --p-inv-accent: #ffb224; --p-inv-accent-ink: #33200f; --p-inv-action: #ffb224; --p-inv-action-ink: #33200f;
-  --font-display: "Gabarito", system-ui, sans-serif;
+  --font-display: "Shantell Sans", "Figtree", system-ui, sans-serif;
   --font-text: "Figtree", system-ui, sans-serif;
-  --display-weight: 700;
+  --display-weight: 800;
   --display-tracking: -0.02em;
   --display-tracking-xl: -0.025em;
   --ly-scale: 0.98;

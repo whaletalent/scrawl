@@ -6,50 +6,55 @@ interface RevealProps {
   drawings: DrawingResult[];
 }
 
-export function Reveal({ drawings }: RevealProps) {
-  return (
-    <div className="flex flex-col items-center gap-6 px-4 w-full max-w-2xl">
-      <h2 className="text-2xl font-bold">Revelação!</h2>
+const score = (d: DrawingResult) =>
+  d.votes.first * 3 + d.votes.second * 2 + d.votes.third;
 
-      <div className="w-full flex flex-col gap-6">
-        {drawings.map((drawing) => {
-          const totalScore =
-            drawing.votes.first * 3 +
-            drawing.votes.second * 2 +
-            drawing.votes.third;
-          return (
-            <div key={drawing.pairId} className="bg-gray-800 rounded-xl p-4">
-              <p className="text-sm text-gray-400 mb-2">
-                "{drawing.themeText}"
-              </p>
-              <div className="flex gap-0.5 rounded-lg overflow-hidden">
+const PLACE = ["bg-amber", "bg-sky", "bg-blush"];
+
+export function Reveal({ drawings }: RevealProps) {
+  const ranked = [...drawings].sort((a, b) => score(b) - score(a));
+
+  return (
+    <div className="w-full flex flex-col gap-8">
+      <h2 className="text-4xl sm:text-6xl leading-none pr-10">Revelação!</h2>
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] items-start gap-x-6 gap-y-9">
+        {ranked.map((drawing, i) => (
+          <article
+            key={drawing.pairId}
+            className="taped shadow-hard flex flex-col gap-2.5 bg-card border-2 border-soft-strong px-3 pt-3 pb-4"
+          >
+            <div className="flex aspect-[4/3] border-2 border-soft-strong bg-white">
+              <div className="w-1/2">
                 {drawing.imageLeftDataUrl && (
                   <img
                     src={drawing.imageLeftDataUrl}
                     alt="Metade esquerda"
-                    className="w-1/2"
+                    className="w-full h-full object-fill"
                   />
                 )}
+              </div>
+              <div className="w-1/2">
                 {drawing.imageRightDataUrl && (
                   <img
                     src={drawing.imageRightDataUrl}
                     alt="Metade direita"
-                    className="w-1/2"
+                    className="w-full h-full object-fill"
                   />
                 )}
               </div>
-              <div className="mt-2 flex items-center justify-between">
-                <Authors
-                  authors={resultAuthors(drawing)}
-                  className="text-sm text-gray-300"
-                />
-                <span className="text-lg font-bold text-purple-400">
-                  {totalScore} pts
-                </span>
-              </div>
             </div>
-          );
-        })}
+            <h3 className="text-2xl leading-tight break-words">
+              "{drawing.themeText}"
+            </h3>
+            <Authors authors={resultAuthors(drawing)} />
+            <span
+              className={`self-start px-3 py-1 font-display font-extrabold text-xl ${PLACE[i] ?? "bg-soft"}`}
+            >
+              {score(drawing)} pts
+            </span>
+          </article>
+        ))}
       </div>
     </div>
   );

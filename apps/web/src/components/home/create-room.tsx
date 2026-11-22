@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "@phosphor-icons/react";
 import { ModeSelector } from "@/components/lobby/mode-selector";
 import { CREATE_LABEL, storeRoomOptions } from "@/lib/room-options";
 import { NEW_ROOM, roomPath } from "@/lib/routes";
@@ -44,7 +45,10 @@ export function CreateRoom({ username }: { username: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 bg-gray-900 rounded-xl p-4">
+    <div className="flex flex-col gap-6 bg-paper-deep p-5 sm:p-8">
+      <h2 className="text-3xl sm:text-4xl leading-none">
+        Qual é o jogo de hoje?
+      </h2>
       <ModeSelector
         gameMode={gameMode}
         totalRounds={totalRounds}
@@ -57,17 +61,15 @@ export function CreateRoom({ username }: { username: string }) {
         skinTone={skinTone}
         onSkinToneChange={setSkinTone}
       />
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm text-gray-400 px-2 mb-1">
+      <fieldset className="flex flex-col gap-2 max-w-xl">
+        <legend className="font-display font-bold text-lg mb-2.5">
           Quem pode entrar
         </legend>
         {VISIBILITY.map((v) => (
           <label
             key={v.id}
-            className={`flex items-start gap-3 px-3 py-2 rounded-lg cursor-pointer border ${
-              visibility === v.id
-                ? "border-purple-500 bg-purple-900/20"
-                : "border-gray-800"
+            className={`flex items-start gap-3 px-3.5 py-2.5 cursor-pointer ${
+              visibility === v.id ? "bg-amber/60" : "bg-paper"
             }`}
           >
             <input
@@ -76,20 +78,21 @@ export function CreateRoom({ username }: { username: string }) {
               aria-label={v.label}
               checked={visibility === v.id}
               onChange={() => setVisibility(v.id)}
-              className="mt-1 accent-purple-500"
+              className="mt-1 w-5 h-5 accent-brand"
             />
             <span>
-              <span className="font-medium">{v.label}</span>
-              <span className="block text-xs text-gray-400">{v.hint}</span>
+              <span className="font-semibold text-lg">{v.label}</span>
+              <span className="block text-muted">{v.hint}</span>
             </span>
           </label>
         ))}
       </fieldset>
       <button
         onClick={create}
-        className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-xl font-bold text-lg transition-colors"
+        className="press w-full max-w-md min-h-17 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-xl sm:text-3xl text-left"
       >
         {CREATE_LABEL[gameMode]}
+        <ArrowRight aria-hidden="true" weight="bold" size={30} />
       </button>
     </div>
   );

@@ -13,17 +13,17 @@ test("a Split Body round: draw your half, submit, see the combined result", asyn
 }) => {
   const errors = failOnPageErrors(page);
   const code = await createRoom(page, {
-    mode: "Split Body (2)",
+    mode: "Monstrinho (2)",
     rounds: 1,
     turnSeconds: 180,
   });
   const partner = await bot(code, "Robô");
 
-  await page.getByRole("button", { name: "Começar Split Body" }).click();
+  await page.getByRole("button", { name: "Começar Monstrinho" }).click();
   await expect(
     page.getByRole("heading", { name: "Complete o personagem!" }),
   ).toBeVisible();
-  await expect(page.getByText("Rodada 1/1").first()).toBeVisible();
+  await expect(page.getByText("Rodada 1 de 1").first()).toBeVisible();
   // the host draws the top half in round 1
   await expect(page.getByText("cabeça e tronco")).toBeVisible();
   await expect(page.getByText("SUA ÁREA")).toBeVisible();
@@ -48,7 +48,9 @@ test("a Split Body round: draw your half, submit, see the combined result", asyn
   ).toBeVisible();
 
   partner.send({ type: "submit-split-drawing", imageDataUrl: IMG });
-  await expect(page.getByRole("heading", { name: "Resultado!" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Vocês montaram/ }),
+  ).toBeVisible();
   await expect(page.getByText("Rodada 1 de 1")).toBeVisible();
   await expect(page.getByAltText("Metade de cima")).toBeVisible();
   await expect(page.getByAltText("Metade de baixo")).toBeVisible();
@@ -70,7 +72,7 @@ test.describe("on a phone", () => {
       );
 
     const code = await createRoom(page, {
-      mode: "Split Body (2)",
+      mode: "Monstrinho (2)",
       rounds: 1,
       turnSeconds: 180,
     });
@@ -78,15 +80,58 @@ test.describe("on a phone", () => {
     await expect(page.getByText("Jogadores (2/2)")).toBeVisible();
     expect(await fits()).toBe(true);
 
-    await page.getByRole("button", { name: "Começar Split Body" }).click();
+    await page.getByRole("button", { name: "Começar Monstrinho" }).click();
     await expect(page.getByText("SUA ÁREA")).toBeVisible();
     expect(await fits()).toBe(true);
 
     // touch drawing works too
-    const box = (await page.locator("canvas").boundingBox())!;
+    const box = (await page
+      .locator("canvas:not([data-desk-trail])")
+      .boundingBox())!;
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.2);
     await expect(
       page.getByRole("button", { name: "Enviar Desenho" }),
     ).toBeInViewport();
   });
+});
+
+test("Jogar de novo takes both players back to the same room for another game", async ({
+  page,
+}) => {
+  const errors = failOnPageErrors(page);
+  const code = await createRoom(page, {
+    mode: "Monstrinho (2)",
+    rounds: 1,
+    turnSeconds: 180,
+  });
+  const partner = await bot(code, "Robô");
+  partner.on((m) => {
+    if (m.type === "split-round-start")
+      partner.send({ type: "submit-split-drawing", imageDataUrl: IMG });
+  });
+
+  await page.getByRole("button", { name: "Começar Monstrinho" }).click();
+  await page.getByRole("button", { name: "Enviar Desenho" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Vocês montaram 1 monstrinho" }),
+  ).toBeVisible();
+
+  const backInLobby = partner.wait(
+    (m) => m.type === "room-state" && m.state.phase === "lobby",
+  );
+  await page.getByRole("button", { name: "Jogar de novo" }).click();
+  await backInLobby;
+  await expect(page.getByText(`Código da sala`)).toBeVisible();
+  await expect(page.getByText(code, { exact: true })).toBeVisible();
+  await expect(page.getByText("Jogadores (2/2)")).toBeVisible();
+
+  // The second game starts from scratch: one round, nothing left from the first.
+  await page.getByRole("button", { name: "Começar Monstrinho" }).click();
+  await expect(page.getByText("SUA ÁREA")).toBeVisible();
+  await page.getByRole("button", { name: "Enviar Desenho" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Vocês montaram 1 monstrinho" }),
+  ).toBeVisible();
+  await expect(page.getByText("Rodada 1 de 1")).toHaveCount(1);
+  expect(errors).toEqual([]);
 });

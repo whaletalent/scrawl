@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import type { DrawingResult } from "@/types/game";
 
 interface ShareCardProps {
@@ -34,15 +35,16 @@ async function renderCard(
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  ctx.fillStyle = "#0a0a0a";
+  // The brand orange, with white and cream words (see globals.css).
+  ctx.fillStyle = "#d63c17";
   ctx.fillRect(0, 0, 1080, 1080);
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "#a855f7";
+  ctx.fillStyle = "#ffffff";
   ctx.font = "bold 48px sans-serif";
   ctx.fillText("SCRAWL", 540, 60);
 
-  ctx.fillStyle = "#9ca3af";
+  ctx.fillStyle = "#fff8e4";
   ctx.font = "24px sans-serif";
   ctx.fillText(`"${drawing.themeText}"`, 540, 110, 1000);
 
@@ -64,7 +66,7 @@ async function renderCard(
   ctx.lineTo(540, 890);
   ctx.stroke();
 
-  ctx.fillStyle = "#e5e7eb";
+  ctx.fillStyle = "#ffffff";
   ctx.font = "28px sans-serif";
   const names = `${drawing.playerNames[0]} + ${drawing.playerNames[1]}`;
   ctx.fillText(names, 540, 945, 900);
@@ -89,11 +91,11 @@ async function renderCard(
 
   const score =
     drawing.votes.first * 3 + drawing.votes.second * 2 + drawing.votes.third;
-  ctx.fillStyle = "#a855f7";
+  ctx.fillStyle = "#ffffff";
   ctx.font = "bold 36px sans-serif";
   ctx.fillText(`${score} pts`, 540, 995);
 
-  ctx.fillStyle = "#6b7280";
+  ctx.fillStyle = "#fff8e4";
   ctx.font = "20px sans-serif";
   ctx.fillText("Jogue em scrawl.gg", 540, 1045);
 
@@ -125,9 +127,11 @@ export function ShareCard({ drawing }: ShareCardProps) {
     <button
       onClick={download}
       disabled={busy}
-      className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 rounded-xl font-bold transition-colors"
+      aria-label="Baixar card"
+      title="Baixar card"
+      className="press flex-none w-12 h-12 grid place-items-center bg-white text-ink border-[3px] border-ink disabled:opacity-60"
     >
-      Baixar card
+      <DownloadSimple aria-hidden="true" weight="bold" size={24} />
     </button>
   );
 }

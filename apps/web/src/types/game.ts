@@ -142,6 +142,7 @@ export type ClientMessage =
   | { type: "watch-rooms" }
   | { type: "unwatch-rooms" }
   | { type: "start-game" }
+  | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }

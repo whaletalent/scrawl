@@ -12,7 +12,7 @@ test("a full Party game: theme, drawing, voting, reveal, final results and share
 }) => {
   const errors = failOnPageErrors(page);
   const code = await createRoom(page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     rounds: 1,
     turnSeconds: 30,
   });
@@ -58,7 +58,7 @@ test("a full Party game: theme, drawing, voting, reveal, final results and share
 
   await expect(page.getByRole("heading", { name: "Revelação!" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Resultado final!" }),
+    page.getByRole("heading", { name: "Placar final" }),
   ).toBeVisible();
   for (const name of ["Ana", "Bia", "Caio", "Duda"])
     await expect(page.getByText(name).first()).toBeVisible();
@@ -84,7 +84,7 @@ test("with an odd number of players, everyone takes a turn as the judge", async 
   test.setTimeout(150_000);
   // 5 players and 5 rounds: the sit-out rotation guarantees our turn comes.
   const code = await createRoom(page, {
-    mode: "Party (4-10)",
+    mode: "Racha-tema (4-10)",
     rounds: 5,
     turnSeconds: 15,
   });
@@ -92,14 +92,34 @@ test("with an odd number of players, everyone takes a turn as the judge", async 
     autoplayParty(await bot(code, name));
   await page.getByRole("button", { name: "Começar jogo" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Você é o jurado desta rodada" }),
-  ).toBeVisible({ timeout: 100_000 });
-  await expect(page.locator("canvas")).toHaveCount(0);
+  const judge = page.getByRole("heading", {
+    name: "Você é o jurado desta rodada",
+  });
+  const drawing = page.getByRole("heading", { name: /^Desenhe: / });
+  // Ana sits out exactly one round, which may be the first one.
+  let judged = false;
+  async function judgeRound() {
+    await expect(page.locator("canvas:not([data-desk-trail])")).toHaveCount(0);
+    // the judge isn't in any pair, so they can rank both drawings
+    await expect(
+      page.getByRole("heading", { name: "Vote nos melhores" }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "1º" })).toHaveCount(2);
+    judged = true;
+  }
 
-  // the judge isn't in any pair, so they can rank both drawings
-  await expect(
-    page.getByRole("heading", { name: "Vote nos melhores" }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "1º" })).toHaveCount(2);
+  // A theme sent in round 1 doesn't count against round 2's quota.
+  await page.getByPlaceholder(/Shrek/).fill("Um tema da Ana");
+  await page.getByPlaceholder(/Shrek/).press("Enter");
+  await expect(page.getByText("(1/2 enviados)")).toBeVisible();
+  await expect(judge.or(drawing)).toBeVisible({ timeout: 30_000 });
+  if (await judge.isVisible()) await judgeRound();
+  await expect(page.getByText("(0/2 enviados)")).toBeVisible({
+    timeout: 100_000,
+  });
+
+  if (!judged) {
+    await expect(judge).toBeVisible({ timeout: 100_000 });
+    await judgeRound();
+  }
 });

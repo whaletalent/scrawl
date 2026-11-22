@@ -25,7 +25,8 @@ Under **Authentication**:
    - In <https://console.cloud.google.com> create (or pick) a project, configure the OAuth consent screen (external, app name "Scrawl"), then **Credentials → Create credentials → OAuth client ID → Web application**.
    - **Authorized JavaScript origins**: `https://whaletalent.github.io` and `http://localhost:3000`.
    - **Authorized redirect URIs**: the callback URL Supabase shows on the Google provider page (`https://<project-ref>.supabase.co/auth/v1/callback`).
-   - Paste the client id and secret into Supabase.
+   - Paste the client id and secret into Supabase — or, with the CLI linked (section 3), export them and push: `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=… SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=… supabase config push` (`supabase/config.toml` reads both from the environment; never write them into the file).
+   - The site asks the project whether Google is on (`/auth/v1/settings`) and only shows "Entrar com Google" when it is, so until this step is done the login page simply offers e-mail.
 3. **URL Configuration**: **Site URL** `https://whaletalent.github.io/scrawl/`; **Redirect URLs** `https://whaletalent.github.io/scrawl/**` and `http://localhost:3000/**`.
 
 ## 3. Database and storage

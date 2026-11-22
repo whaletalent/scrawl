@@ -1,20 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/account/avatar";
+import { art, type ArtName } from "@/components/brand/art";
 import { usePublicRooms } from "@/hooks/use-public-rooms";
 import { roomPath } from "@/lib/routes";
 import type { GameMode } from "@/types/game";
 
-const MODE: Record<GameMode, { label: string; className: string }> = {
-  party: { label: "Party", className: "bg-purple-600/20 text-purple-400" },
-  "split-body": {
-    label: "Split Body",
-    className: "bg-blue-600/20 text-blue-400",
-  },
-  "face-builder": {
-    label: "Face Builder",
-    className: "bg-green-600/20 text-green-400",
-  },
+const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
+  party: { label: "Racha-tema", toy: "mode-party" },
+  "split-body": { label: "Monstrinho", toy: "mode-split-body" },
+  "face-builder": { label: "Caricatura a dois", toy: "mode-face-builder" },
 };
 
 /** Open public rooms, live from the game server. */
@@ -23,42 +18,51 @@ export function RoomList() {
   const { rooms, status } = usePublicRooms();
 
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-gray-400">
-        Salas abertas{status === "ready" && ` (${rooms.length})`}
-      </h2>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-3xl">Salas abertas</h2>
+        {status === "ready" && (
+          <span className="text-muted">
+            {rooms.length === 0
+              ? "nenhuma esperando jogadores"
+              : `${rooms.length} ${rooms.length === 1 ? "sala" : "salas"} esperando jogadores`}
+          </span>
+        )}
+      </div>
 
       {status === "connecting" ? (
         // The free game server sleeps when idle and takes a while to wake up.
-        <p className="text-gray-500 text-sm py-6 text-center">
-          Acordando o servidor…
-        </p>
+        <p className="text-muted py-6">Acordando o servidor…</p>
       ) : rooms.length === 0 ? (
-        <p className="text-gray-500 text-sm py-6 text-center">
+        <p className="text-muted py-6">
           Nenhuma sala aberta agora. Crie uma sala pública e chame a galera.
         </p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col">
           {rooms.map((room) => (
             <li
               key={room.code}
-              className="flex items-center gap-3 bg-gray-800 rounded-xl px-3 py-2.5"
+              className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 odd:bg-soft hover:bg-amber/40"
             >
-              <Avatar url={room.hostAvatarUrl} name={room.hostName} size={32} />
-              <span className="flex-1 min-w-0 font-medium truncate">
+              <Avatar url={room.hostAvatarUrl} name={room.hostName} size={44} />
+              <span className="flex-1 basis-40 min-w-0 font-display font-bold text-xl truncate">
                 Sala de {room.hostName}
               </span>
-              <span
-                className={`text-xs px-2.5 py-0.5 rounded-full whitespace-nowrap ${MODE[room.gameMode].className}`}
-              >
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <img
+                  src={art(MODE[room.gameMode].toy)}
+                  alt=""
+                  className="w-8 h-8 object-contain"
+                />
                 {MODE[room.gameMode].label}
               </span>
-              <span className="text-sm text-gray-400 tabular-nums">
-                {room.playerCount}/{room.capacity}
+              <span className="text-muted tabular-nums">
+                {room.playerCount} de {room.capacity}
               </span>
               <button
                 onClick={() => router.push(roomPath(room.code))}
-                className="px-3.5 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-bold transition-colors"
+                aria-label={`Entrar na sala de ${room.hostName}`}
+                className="press min-h-11 px-5 bg-brand text-white hover:bg-brand-dark font-display font-bold text-lg"
               >
                 Entrar
               </button>
