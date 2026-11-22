@@ -70,8 +70,11 @@ export function DrawingFooter({
   onSubmit: () => void;
 }) {
   return (
-    <footer className="w-full max-w-[66rem] flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-      <ul className="flex flex-wrap items-center gap-3">
+    // On a phone the toolbar rails push the footer below the fold: there the
+    // send button sticks to the bottom of the screen, and the chips (the
+    // canvas already marks "SUA ÁREA") make way for it.
+    <footer className="w-full max-w-[66rem] flex flex-wrap items-center justify-between gap-x-6 gap-y-4 max-sm:sticky max-sm:bottom-3 max-sm:z-10">
+      <ul className="hidden sm:flex flex-wrap items-center gap-3">
         {parts.map((p) => (
           <li
             key={p.name}
@@ -85,7 +88,7 @@ export function DrawingFooter({
       {!submitted ? (
         <button
           onClick={onSubmit}
-          className="press flex-[0_1_22.5rem] min-h-17 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl sm:text-[1.75rem]"
+          className="press max-sm:w-full flex-[0_1_22.5rem] min-h-15 sm:min-h-17 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl sm:text-[1.75rem]"
         >
           Enviar desenho
           <Check aria-hidden="true" weight="bold" size={30} />

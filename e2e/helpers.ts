@@ -155,7 +155,8 @@ export async function finishOnboarding(page: Page, username: string) {
 
 /** The logged-in home, with this player's name in the account menu. */
 export async function expectHome(page: Page, username: string) {
-  await expect(page).toHaveURL("/");
+  // The first visit of a run waits for next dev to compile the home.
+  await expect(page).toHaveURL("/", { timeout: 30_000 });
   await expect(page.getByRole("link", { name: username })).toBeVisible();
   await expect(page.getByText("Salas abertas")).toBeVisible();
 }

@@ -37,7 +37,7 @@ test("a public room shows on another player's home and can be joined from there"
   const row = rowOf(b.page, a.name);
   await expect(row).toBeVisible();
   await expect(row).toContainText("Racha-tema");
-  await expect(row).toContainText("1/10");
+  await expect(row).toContainText("1 de 10");
   await expect(row.getByAltText(`Avatar de ${a.name}`)).toBeVisible();
 
   await row.getByRole("button", { name: "Entrar" }).click();
