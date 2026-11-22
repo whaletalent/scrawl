@@ -1,6 +1,7 @@
 "use client";
 import type { FaceTemplateOption, GameMode } from "@/types/game";
 import { FACE_TEMPLATE_LABELS, SKIN_TONES } from "@/components/face-templates";
+import { art, type ArtName } from "@/components/brand/art";
 
 interface ModeSelectorProps {
   gameMode: GameMode;
@@ -17,6 +18,43 @@ interface ModeSelectorProps {
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 180];
 
+const MODES: {
+  id: GameMode;
+  name: string;
+  players: string;
+  count: string;
+  text: string;
+  toy: ArtName;
+}[] = [
+  {
+    id: "party",
+    name: "Racha-tema",
+    players: "De 4 a 10 jogadores",
+    count: "4-10",
+    text: "Cada um escreve um tema e as duplas desenham meio a meio.",
+    toy: "mode-party",
+  },
+  {
+    id: "split-body",
+    name: "Monstrinho",
+    players: "2 jogadores",
+    count: "2",
+    text: "Um faz a cabeça e o tronco, o outro faz as pernas.",
+    toy: "mode-split-body",
+  },
+  {
+    id: "face-builder",
+    name: "Caricatura a dois",
+    players: "2 jogadores",
+    count: "2",
+    text: "As seis partes de um rosto, três para cada um.",
+    toy: "mode-face-builder",
+  },
+];
+
+const LABEL = "font-display font-bold text-lg";
+const CHIP = "min-h-11 px-3.5 border-[3px] border-ink font-display font-bold";
+
 export function ModeSelector({
   gameMode,
   totalRounds,
@@ -30,121 +68,124 @@ export function ModeSelector({
   onSkinToneChange,
 }: ModeSelectorProps) {
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="flex gap-2">
-        <button
-          onClick={() => onModeChange("party")}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-            gameMode === "party"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-          }`}
-        >
-          Party (4-10)
-        </button>
-        <button
-          onClick={() => onModeChange("split-body")}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-            gameMode === "split-body"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-          }`}
-        >
-          Split Body (2)
-        </button>
-        <button
-          onClick={() => onModeChange("face-builder")}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-            gameMode === "face-builder"
-              ? "bg-green-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-          }`}
-        >
-          Face Builder (2)
-        </button>
+    <div className="flex flex-col gap-6 w-full">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-5">
+        {MODES.map((m) => {
+          const on = gameMode === m.id;
+          return (
+            <button
+              key={m.id}
+              onClick={() => onModeChange(m.id)}
+              aria-pressed={on}
+              aria-label={`${m.name} (${m.count}): ${m.text}`}
+              className={`press text-left flex sm:flex-col items-start gap-x-4 gap-y-2 p-4 sm:p-5 ${
+                on ? "bg-brand text-white" : "bg-paper text-ink"
+              }`}
+            >
+              <img
+                src={art(m.toy)}
+                alt=""
+                className="flex-none w-16 h-16 sm:w-24 sm:h-24 object-contain"
+              />
+              <span className="flex flex-col gap-1.5 sm:gap-2">
+                <span className="font-display font-extrabold text-2xl sm:text-3xl leading-none">
+                  {m.name}
+                </span>
+                <span className="font-semibold">{m.players}</span>
+                <span className="leading-snug">{m.text}</span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {(gameMode === "split-body" || gameMode === "face-builder") && (
-        <div className="flex items-center justify-between px-2">
-          <span className="text-sm text-gray-400">Rodadas</span>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                onClick={() => onRoundsChange(n)}
-                className={`w-8 h-8 rounded-md text-sm font-medium transition-colors ${
-                  totalRounds === n
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-x-8 gap-y-6">
+        {(gameMode === "split-body" || gameMode === "face-builder") && (
+          <div className="flex flex-col gap-2.5">
+            <span className={LABEL}>Rodadas</span>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => onRoundsChange(n)}
+                  aria-pressed={totalRounds === n}
+                  className={`w-12 h-12 border-[3px] border-ink font-display font-extrabold text-xl ${
+                    totalRounds === n ? "bg-amber" : "bg-paper hover:bg-soft"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {gameMode === "face-builder" && (
-        <div className="flex items-center justify-between px-2">
-          <span className="text-sm text-gray-400">Moldura</span>
-          <div className="flex gap-1">
-            {(
-              Object.entries(FACE_TEMPLATE_LABELS) as [
-                FaceTemplateOption,
-                string,
-              ][]
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => onFaceTemplateChange(id)}
-                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                  faceTemplate === id
-                    ? "bg-green-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                {label}
-              </button>
+        <label className={`flex flex-col gap-2.5 ${LABEL}`}>
+          Tempo por turno
+          <select
+            value={turnDuration}
+            onChange={(e) => onDurationChange(Number(e.target.value))}
+            className="h-12 px-3.5 bg-paper border-b-4 border-ink font-sans font-semibold text-lg text-ink focus:outline-none focus:border-brand"
+          >
+            {DURATION_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s < 60
+                  ? `${s} s`
+                  : s % 60
+                    ? `${Math.floor(s / 60)} min ${s % 60} s`
+                    : `${s / 60} min`}
+              </option>
             ))}
-          </div>
-        </div>
-      )}
+          </select>
+        </label>
 
-      {gameMode === "face-builder" && faceTemplate !== "random" && (
-        <div className="flex items-center justify-between px-2">
-          <span className="text-sm text-gray-400">Tom de pele</span>
-          <div className="flex gap-1.5">
-            {SKIN_TONES.map((tone) => (
-              <button
-                key={tone.id}
-                onClick={() => onSkinToneChange(tone.color)}
-                title={tone.label}
-                className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                  skinTone === tone.color
-                    ? "border-white scale-110"
-                    : "border-gray-600"
-                }`}
-                style={{ backgroundColor: tone.color }}
-              />
-            ))}
+        {gameMode === "face-builder" && (
+          <div className="flex flex-col gap-2.5">
+            <span className={LABEL}>Moldura</span>
+            <div className="flex flex-wrap gap-2">
+              {(
+                Object.entries(FACE_TEMPLATE_LABELS) as [
+                  FaceTemplateOption,
+                  string,
+                ][]
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => onFaceTemplateChange(id)}
+                  aria-pressed={faceTemplate === id}
+                  className={`${CHIP} ${
+                    faceTemplate === id ? "bg-amber" : "bg-paper hover:bg-soft"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex items-center justify-between px-2">
-        <span className="text-sm text-gray-400">Tempo por turno</span>
-        <select
-          value={turnDuration}
-          onChange={(e) => onDurationChange(Number(e.target.value))}
-          className="bg-gray-800 text-white text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:border-purple-500"
-        >
-          {DURATION_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s >= 60 ? `${s / 60}min` : `${s}s`}
-            </option>
-          ))}
-        </select>
+        {gameMode === "face-builder" && faceTemplate !== "random" && (
+          <div className="flex flex-col gap-2.5">
+            <span className={LABEL}>Tom de pele</span>
+            <div className="flex flex-wrap gap-2">
+              {SKIN_TONES.map((tone) => (
+                <button
+                  key={tone.id}
+                  onClick={() => onSkinToneChange(tone.color)}
+                  title={tone.label}
+                  aria-label={tone.label}
+                  aria-pressed={skinTone === tone.color}
+                  className={`w-11 h-11 rounded-full border-[3px] border-paper ${
+                    skinTone === tone.color
+                      ? "ring-4 ring-brand"
+                      : "ring-2 ring-ink/25"
+                  }`}
+                  style={{ backgroundColor: tone.color }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -32,6 +32,9 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
           # Where the WebSocket server lives (repository variable), e.g. wss://scrawl.example.com
           NEXT_PUBLIC_WS_URL: ${{ vars.WS_URL }}
+          # Accounts (Supabase). Both public by design; leave unset to ship with accounts off.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/out

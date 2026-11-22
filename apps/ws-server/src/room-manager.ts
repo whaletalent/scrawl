@@ -1,5 +1,6 @@
 import type { Room, Player, GameMode, FaceTemplateOption } from "./types.js";
 import { FACE_TEMPLATE_IDS } from "./types.js";
+import type { Profile } from "./accounts.js";
 import type { WebSocket } from "ws";
 
 const rooms = new Map<string, Room>();
@@ -34,10 +35,18 @@ export function sanitizeNickname(nickname: unknown): string {
   return trimmed || "Player";
 }
 
-function newPlayer(id: string, nickname: string, ws: WebSocket): Player {
+/** With a `profile` the player is the account: its username replaces whatever nickname was sent. */
+function newPlayer(
+  id: string,
+  nickname: string,
+  ws: WebSocket,
+  profile?: Profile | null,
+): Player {
   return {
     id,
-    nickname: sanitizeNickname(nickname),
+    nickname: profile ? profile.username : sanitizeNickname(nickname),
+    userId: profile?.userId ?? null,
+    avatarUrl: profile?.avatarUrl ?? null,
     score: 0,
     isHost: false,
     ws,
@@ -55,10 +64,15 @@ export function createRoom(
   turnDuration?: number,
   faceTemplate?: FaceTemplateOption,
   skinTone?: string,
+  profile?: Profile | null,
+  visibility?: unknown,
 ): Room {
   const code = generateCode();
   const playerId = crypto.randomUUID();
-  const host: Player = { ...newPlayer(playerId, nickname, ws), isHost: true };
+  const host: Player = {
+    ...newPlayer(playerId, nickname, ws, profile),
+    isHost: true,
+  };
 
   // Everything below comes straight from the client — never trust it.
   const gameMode = GAME_MODES.includes(requestedMode) ? requestedMode : "party";
@@ -95,6 +109,15 @@ export function createRoom(
     sitOutCounts: new Map(),
     phaseTimer: null,
     phaseEndsAt: 0,
+    // The list shows the host's username and avatar, so a guest can't host a public room.
+    isPublic: Boolean(profile) && visibility === "public",
+    roster: new Map([
+      [playerId, { nickname: host.nickname, userId: host.userId }],
+    ]),
+    resultAuthors: new Map(),
+    savedDrawings: new Set(),
+    savingDrawings: new Set(),
+    game: 0,
   };
 
   rooms.set(code, room);
@@ -105,18 +128,32 @@ export function joinRoom(
   code: string,
   nickname: string,
   ws: WebSocket,
+  profile?: Profile | null,
 ): { room: Room; playerId: string } | null {
   const room = rooms.get(String(code).trim().toUpperCase());
   if (!room) return null;
   if (room.phase !== "lobby") return null;
-  const maxPlayers = room.gameMode === "party" ? 10 : 2;
-  if (room.players.size >= maxPlayers) return null;
+  if (room.players.size >= roomCapacity(room)) return null;
 
   const playerId = crypto.randomUUID();
-  const player = newPlayer(playerId, nickname, ws);
+  const player = newPlayer(playerId, nickname, ws, profile);
   room.players.set(playerId, player);
+  room.roster.set(playerId, {
+    nickname: player.nickname,
+    userId: player.userId,
+  });
 
   return { room, playerId };
+}
+
+/** How many players fit: party takes up to 10, the other modes exactly 2. */
+export function roomCapacity(room: Room): number {
+  return room.gameMode === "party" ? 10 : 2;
+}
+
+/** Every live room, oldest first. */
+export function allRooms(): Iterable<Room> {
+  return rooms.values();
 }
 
 export function removePlayer(roomCode: string, playerId: string): Room | null {
@@ -146,15 +183,24 @@ export function getRoom(code: string): Room | undefined {
   return rooms.get(String(code).trim().toUpperCase());
 }
 
-/** What clients are allowed to know about a player (no socket, no token). */
+/** What clients are allowed to know about a player (no socket, no token, no userId). */
 export function publicPlayer({
   id,
   nickname,
   score,
   isHost,
   connected,
+  avatarUrl,
 }: Player) {
-  return { id, nickname, score, isHost, connected };
+  return {
+    id,
+    nickname,
+    score,
+    isHost,
+    connected,
+    // Guests have no avatar key at all.
+    ...(avatarUrl ? { avatarUrl } : {}),
+  };
 }
 
 export function publicPlayers(room: Room) {

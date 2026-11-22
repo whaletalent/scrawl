@@ -18,8 +18,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck --workspace=@scrawl/ws-server && tsc --noEmit -p apps/web && tsc --noEmit -p e2e",
-    "test": "npm test --workspace=@scrawl/ws-server",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p e2e",
+    "test": "npm test --workspaces --if-present",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

@@ -10,7 +10,7 @@ interface Rect {
 }
 
 export interface FaceRegionDef {
-  id: FaceRegionId;
+  id: FaceRegionId | "whole";
   label: string;
   color: string;
   rects: Rect[];
@@ -84,6 +84,14 @@ export function isPointInRegion(
   }
   return region.rects.some((r) => isInsideRect(px, py, r));
 }
+
+/** The entire canvas as one region — the avatar editor's free mode. */
+export const WHOLE_CANVAS: FaceRegionDef = {
+  id: "whole",
+  label: "",
+  color: "",
+  rects: [{ x: 0, y: 0, width: 800, height: 600 }],
+};
 
 export function getRegionDef(id: FaceRegionId): FaceRegionDef {
   return FACE_REGIONS.find((r) => r.id === id)!;

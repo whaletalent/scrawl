@@ -9,3 +9,7 @@ test-results
 playwright-report
 docs
 .superpowers
+.taste-skill
+apps/web/public/assets
+.next-*
+shots

@@ -6,8 +6,18 @@ dist/
 *.tgz
 *.tsbuildinfo
 .next-e2e/
+.next-*/
 test-results/
 playwright-report/
 next-env.d.ts
 out/
 .superpowers/**/state/
+.superpowers/brainstorm/.last-*
+
+# Supabase CLI link state
+supabase/.temp/
+
+# Design checks of the landing page (design-taste skill): history, shots
+.taste-skill/
+shots/
+.reanimate/

@@ -1,16 +1,43 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGameState, readSession } from "@/hooks/use-game-state";
 import { GameController } from "@/components/game/game-controller";
 import { validateNickname } from "@/lib/room-utils";
 import { BASE_PATH, NEW_ROOM, roomPath } from "@/lib/routes";
+import { useAccount } from "@/hooks/use-account";
+import { getAccessToken } from "@/lib/account";
+import { isOpen, onClose, onOpen } from "@/lib/ws-client";
 
 export function RoomClient() {
   const router = useRouter();
   // "new" to create a room, otherwise the code of the room to join.
   const code = useSearchParams().get("code")?.trim() ?? "";
   const gameState = useGameState();
+  const account = useAccount();
+  // Entering a room involves an async token read; never start it twice.
+  const entering = useRef(false);
+  // Whether the creator asked for a public room. Read once from the handoff
+  // (and removed, so it can't leak into a later room), kept for retries.
+  const wantsPublic = useRef<boolean | null>(null);
+
+  // Enter only through a socket that is really open: the game server may be
+  // waking up, and a request sent into a connection attempt that then fails
+  // would be lost for good. Every time the socket (re)opens without us being
+  // in a room, the effect below runs again.
+  const [socketOpen, setSocketOpen] = useState(false);
+  useEffect(() => {
+    setSocketOpen(isOpen());
+    const offOpen = onOpen(() => setSocketOpen(true));
+    const offClose = onClose(() => {
+      entering.current = false;
+      setSocketOpen(false);
+    });
+    return () => {
+      offOpen();
+      offClose();
+    };
+  }, []);
   // Someone who opened an invite link directly never went through the landing
   // page, so they have no nickname yet — ask before joining.
   const [askNickname, setAskNickname] = useState(false);
@@ -22,8 +49,7 @@ export function RoomClient() {
       router.replace("/");
       return;
     }
-    if (!gameState.connected || gameState.roomState || gameState.sessionLost)
-      return;
+    if (!socketOpen || gameState.roomState || gameState.sessionLost) return;
 
     // Reloaded (or came back to) a room this tab already has a slot in:
     // reclaim it instead of joining as a new player. If the server refuses,
@@ -38,13 +64,45 @@ export function RoomClient() {
       return;
     }
 
-    const nickname = sessionStorage.getItem("scrawl-nickname");
+    // Who is entering: an account (username, no prompt) or a guest (nickname).
+    if (account.status === "loading") return;
+    if (account.status === "needs-profile") {
+      router.replace("/welcome/");
+      return;
+    }
+    const nickname =
+      account.profile?.username ?? sessionStorage.getItem("scrawl-nickname");
     if (!nickname) {
       setAskNickname(true);
       return;
     }
+    if (entering.current) return;
+    entering.current = true;
+    void enter(nickname, account.profile !== null);
+  }, [
+    socketOpen,
+    gameState.roomState,
+    gameState.rejoinFailed,
+    gameState.sessionLost,
+    askNickname,
+    account.status,
+    account.profile,
+    code,
+    router,
+  ]);
+
+  async function enter(nickname: string, loggedIn: boolean) {
+    // The token is what makes the server show the account instead of a guest.
+    const accessToken = loggedIn
+      ? ((await getAccessToken()) ?? undefined)
+      : undefined;
 
     if (code === NEW_ROOM) {
+      if (wantsPublic.current === null) {
+        wantsPublic.current =
+          sessionStorage.getItem("scrawl-visibility") === "public";
+        sessionStorage.removeItem("scrawl-visibility");
+      }
       const gameMode =
         (sessionStorage.getItem("scrawl-gameMode") as
           "party" | "split-body" | "face-builder") || "party";
@@ -66,19 +124,26 @@ export function RoomClient() {
         turnDuration,
         faceTemplate,
         skinTone,
+        accessToken,
+        wantsPublic.current ? "public" : "private",
       );
     } else {
-      gameState.joinRoom(code, nickname);
+      gameState.joinRoom(code, nickname, accessToken);
     }
-  }, [
-    gameState.connected,
-    gameState.roomState,
-    gameState.rejoinFailed,
-    gameState.sessionLost,
-    askNickname,
-    code,
-    router,
-  ]);
+  }
+
+  // Once in a room the entry is over (a later drop is handled by rejoin).
+  useEffect(() => {
+    if (gameState.roomState) entering.current = false;
+  }, [gameState.roomState]);
+
+  // The server only lists rooms of players whose account it could confirm. If
+  // it couldn't, the room exists but is private — say so instead of letting
+  // the host wait for strangers who will never see it.
+  const lobbyNotice =
+    wantsPublic.current && gameState.roomState?.isPublic === false
+      ? "Não deu para confirmar sua conta agora, então a sala ficou privada. Convide pelo link."
+      : undefined;
 
   // The host lands on ?code=new; once the server assigns the real code,
   // put it in the URL so the address bar is a working invite link.
@@ -109,14 +174,14 @@ export function RoomClient() {
   if (askNickname && !gameState.roomState) {
     return (
       <main className="flex items-center justify-center min-h-screen px-4">
-        <div className="w-full max-w-sm flex flex-col gap-4 text-center">
-          <h1 className="text-2xl font-bold">
+        <div className="sheet w-full max-w-lg flex flex-col gap-5 p-7 sm:p-12">
+          <h1 className="text-4xl sm:text-5xl leading-none pr-10">
             {code === NEW_ROOM ? (
               "Criar sala"
             ) : (
               <>
                 Entrar na sala{" "}
-                <span className="text-purple-400">{code.toUpperCase()}</span>
+                <span className="text-brand">{code.toUpperCase()}</span>
               </>
             )}
           </h1>
@@ -131,21 +196,22 @@ export function RoomClient() {
             }}
             onKeyDown={(e) => e.key === "Enter" && submitNickname()}
             maxLength={16}
-            className="w-full px-4 py-3 bg-gray-800 rounded-xl border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 text-center text-lg"
+            aria-label="Seu apelido"
+            className="w-full h-14 px-4 bg-soft border-b-4 border-ink font-semibold text-xl text-ink placeholder-faint focus:outline-none focus:border-brand"
           />
           <button
             onClick={submitNickname}
-            className="w-full py-3 bg-pink-600 hover:bg-pink-500 rounded-xl font-bold text-lg transition-colors"
+            className="press min-h-15 px-7 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl"
           >
             Entrar
           </button>
           {nicknameError && (
-            <p className="text-red-400 text-sm">{nicknameError}</p>
+            <p className="text-red-600 font-semibold">{nicknameError}</p>
           )}
         </div>
       </main>
     );
   }
 
-  return <GameController {...gameState} />;
+  return <GameController {...gameState} lobbyNotice={lobbyNotice} />;
 }

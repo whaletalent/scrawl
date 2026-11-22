@@ -508,6 +508,11 @@ function assignPairs(room: Room, themes: typeof room.themes) {
 
 function processDrawings(room: Room) {
   room.results = room.pairs.map((pair) => {
+    // Who drew it, kept server-side for the gallery (see gallery.ts).
+    room.resultAuthors.set(`${room.round}:${pair.id}`, [
+      pair.playerA,
+      pair.playerB,
+    ]);
     const theme = room.themes.find((t) => t.id === pair.themeId);
     const leftDrawing = room.drawings.find(
       (d) => d.pairId === pair.id && d.side === "left",
@@ -526,6 +531,10 @@ function processDrawings(room: Room) {
         room.players.get(pair.playerA)?.nickname ?? "?",
         room.players.get(pair.playerB)?.nickname ?? "?",
       ] as [string, string],
+      playerAvatars: [
+        room.players.get(pair.playerA)?.avatarUrl ?? null,
+        room.players.get(pair.playerB)?.avatarUrl ?? null,
+      ] as [string | null, string | null],
       votes: {},
     };
   });
@@ -579,6 +588,37 @@ function endPartyGame(room: Room) {
     drawings: serializeResults(room.allResults),
   });
   transitionTo(room, "final-results");
+}
+
+/** The final screens: a game is over and the room may play again. */
+export const FINAL_PHASES: Phase[] = [
+  "final-results",
+  "split-final",
+  "face-final",
+];
+
+/**
+ * "Jogar de novo": the same players, mode and options, back in the lobby with
+ * the scores at zero and nothing of the last game left behind.
+ */
+export function resetForNewGame(room: Room) {
+  if (room.phaseTimer) clearTimeout(room.phaseTimer);
+  room.phaseTimer = null;
+  room.game++;
+  room.round = 0;
+  room.themes = [];
+  room.pairs = [];
+  room.drawings = [];
+  room.results = [];
+  room.allResults = [];
+  room.sitOutCounts = new Map();
+  room.splitDrawings = [];
+  room.faceDrawings = [];
+  room.resultAuthors = new Map();
+  room.savedDrawings = new Set();
+  room.savingDrawings = new Set();
+  for (const p of room.players.values()) p.score = 0;
+  transitionTo(room, "lobby");
 }
 
 const IDLE_PHASES: Phase[] = [

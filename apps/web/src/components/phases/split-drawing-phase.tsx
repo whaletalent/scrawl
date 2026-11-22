@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useEffect, useCallback } from "react";
+import { DrawingFooter, DrawingHeader } from "@/components/game/drawing-frame";
 import {
   DrawingCanvas,
   type DrawingCanvasHandle,
@@ -16,6 +17,9 @@ interface SplitDrawingPhaseProps {
   onSubmit: (imageDataUrl: string) => void;
   /** True when rejoining a round the server already has our drawing for. */
   initialSubmitted?: boolean;
+  /** The two people drawing this picture, for the chips under the canvas. */
+  me: { name: string; avatarUrl?: string | null };
+  partner: { name: string; avatarUrl?: string | null };
 }
 
 export function SplitDrawingPhase({
@@ -26,6 +30,8 @@ export function SplitDrawingPhase({
   endsAt,
   onSubmit,
   initialSubmitted,
+  me,
+  partner,
 }: SplitDrawingPhaseProps) {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
@@ -55,20 +61,17 @@ export function SplitDrawingPhase({
   }
 
   const Silhouette = getSilhouette(silhouetteId);
-  const sideLabel = side === "top" ? "cabeça e tronco" : "pernas e pés";
+  const mine = side === "top" ? "cabeça e tronco" : "pernas e pés";
+  const theirs = side === "top" ? "pernas e pés" : "cabeça e tronco";
 
   return (
-    <div className="flex flex-col items-center gap-4 px-4 w-full">
-      <div className="text-center">
-        <p className="text-sm text-gray-500">
-          Rodada {round}/{totalRounds}
-        </p>
-        <h2 className="text-xl font-bold">Complete o personagem!</h2>
-        <p className="text-gray-400 text-sm">
-          Você desenha:{" "}
-          <span className="text-blue-400 font-medium">{sideLabel}</span>
-        </p>
-      </div>
+    <div className="flex flex-col items-center gap-5 w-full">
+      <DrawingHeader
+        round={round}
+        totalRounds={totalRounds}
+        title="Complete o personagem!"
+        endsAt={endsAt}
+      />
 
       <DrawingCanvas
         ref={canvasRef}
@@ -76,18 +79,22 @@ export function SplitDrawingPhase({
         silhouetteOverlay={<Silhouette className="w-full h-full" />}
       />
 
-      {!submitted ? (
-        <button
-          onClick={handleSubmit}
-          className="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-lg transition-colors"
-        >
-          Enviar Desenho
-        </button>
-      ) : (
-        <p className="text-green-400 font-medium">
-          Desenho enviado! Esperando parceiro...
-        </p>
-      )}
+      <DrawingFooter
+        parts={[
+          {
+            ...me,
+            part: (
+              <>
+                Você desenha: <strong className="text-brand">{mine}</strong>
+              </>
+            ),
+          },
+          { ...partner, part: `${partner.name}: ${theirs}` },
+        ]}
+        submitted={submitted}
+        waiting="Desenho enviado! Esperando parceiro..."
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

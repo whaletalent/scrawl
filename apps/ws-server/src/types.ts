@@ -37,6 +37,9 @@ export interface Player {
   connected: boolean;
   /** Armed while disconnected; the player is removed for good when it fires. */
   graceTimer: ReturnType<typeof setTimeout> | null;
+  /** Account behind this player, or null for a guest. Never sent to clients. */
+  userId: string | null;
+  avatarUrl: string | null;
 }
 
 export interface Theme {
@@ -67,6 +70,8 @@ export interface DrawingResult {
   imageRightDataUrl: string;
   round: number;
   playerNames: [string, string];
+  /** Avatars of the two authors, in `playerNames` order; null for guests. */
+  playerAvatars: [string | null, string | null];
   votes: Record<string, { first: string; second: string; third: string }>;
 }
 
@@ -132,10 +137,45 @@ export interface Room {
   sitOutCounts: Map<string, number>;
   phaseTimer: ReturnType<typeof setTimeout> | null;
   phaseEndsAt: number;
+  /** Listed on the home page for strangers to join. Only an account can host one. */
+  isPublic: boolean;
+  /** Everyone who was ever in the room. Unlike `players` it never shrinks, so a drawing keeps its authors after they leave. */
+  roster: Map<string, { nickname: string; userId: string | null }>;
+  /** Party mode: the two player ids behind each result, by drawing key. */
+  resultAuthors: Map<string, [string, string]>;
+  /** Keys of the drawings that are in the gallery. */
+  savedDrawings: Set<string>;
+  /** Keys being written right now: not saved yet, but nobody else may start. */
+  savingDrawings: Set<string>;
+  /** Counts the games played in this room ("Jogar de novo"); a save still in flight from an older game is not announced. */
+  game: number;
+}
+
+/** Points at one finished drawing of a room. `pairId` in party mode only. */
+export interface DrawingRef {
+  round: number;
+  pairId?: string;
+}
+
+/** One row of the home page's list of open rooms. Sent to anyone who asks. */
+export interface PublicRoom {
+  code: string;
+  hostName: string;
+  /** Absent when the host is a guest. */
+  hostAvatarUrl?: string;
+  gameMode: GameMode;
+  playerCount: number;
+  capacity: number;
 }
 
 export type ClientMessage =
-  | { type: "join-room"; roomCode: string; nickname: string }
+  | {
+      type: "join-room";
+      roomCode: string;
+      nickname: string;
+      /** Supabase access token of a logged-in player. */
+      accessToken?: string;
+    }
   | { type: "rejoin"; roomCode: string; token: string }
   | {
       type: "create-room";
@@ -145,10 +185,17 @@ export type ClientMessage =
       turnDuration?: number;
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
+      accessToken?: string;
+      /** Defaults to private. "public" is honoured only for a logged-in host. */
+      visibility?: "public" | "private";
     }
+  | { type: "save-drawing"; drawing: DrawingRef; imageDataUrl: string }
+  | { type: "watch-rooms" }
+  | { type: "unwatch-rooms" }
   | { type: "submit-split-drawing"; imageDataUrl: string }
   | { type: "submit-face-drawing"; imageDataUrl: string }
   | { type: "start-game" }
+  | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }

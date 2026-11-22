@@ -32,8 +32,8 @@ npm run dev   --workspace=@scrawl/ws-server   # tsx watch
 Node 24 (`.nvmrc`). CI (`.github/workflows/ci.yml`) runs lint, format:check, typecheck, server tests, both builds and the Playwright suite — run those before pushing.
 
 ```bash
-npm test                 # server suite, ~10s (node:test via tsx)
-npm run test:e2e         # Playwright browser suite, ~1.5min
+npm test                 # server suite + web unit tests, ~10s (node:test via tsx)
+npm run test:e2e         # Playwright browser suite, ~3min
 npm run typecheck        # ws-server (src + test), web, e2e
 
 # A single server test file / a single test by name
@@ -78,6 +78,8 @@ All realtime is JSON over a single WebSocket. The message contract is duplicated
 
 Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied by `config.timeScale`); per-turn drawing phases use `room.turnDuration` (clamped 15–300s). `transitionTo` is the only allowed phase mutator — it broadcasts `phase-change` and arms the timeout.
 
+**Jogar de novo**: on a final screen the host sends `play-again`; `resetForNewGame` (game-engine) clears everything of the last game (scores, rounds, drawings, saved keys) and goes back to `lobby`, then handlers.ts sends every player a fresh `room-state` and calls `publishRooms()`. `room.game` counts the games, so a gallery save still in flight from the old game is not announced in the new one. The client clears its per-game state (`PER_GAME` in `use-game-state.ts`) on any `room-state` in the lobby.
+
 **Players leaving mid-game**: the socket `close` handler calls `handlePlayerLeft` (game-engine). 2-player modes end immediately in their final phase with only the completed rounds; party ends in `final-results` once fewer than 4 players remain, otherwise it carries on. Clients get a `notice` message explaining why. `player-left` carries `hostId` because `removePlayer` may promote a new host.
 
 ### Module imports in ws-server
@@ -95,7 +97,7 @@ Canvases are a fixed **800×600 logical coordinate space**; pointer events are r
 
 ### Landing → room handoff
 
-`apps/web/src/app/page.tsx` renders `Hero`, which stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to the room page.
+`apps/web/src/app/page.tsx` renders `Entry` (`components/landing/entry.tsx`), which shows the guest landing (`Landing`) or the logged-in `Home`. The landing's `PlayForm` stuffs nickname and room-creation options into `sessionStorage` (`scrawl-nickname`, `scrawl-gameMode`, `scrawl-totalRounds`, `scrawl-turnDuration`, `scrawl-faceTemplate`, `scrawl-skinTone`) and navigates to the room page.
 
 Because the site is a static export there is no dynamic `/room/[code]` segment: the room page is `/room/?code=ABCDE` (`app/room/page.tsx` wraps `room-client.tsx` in `<Suspense>` for `useSearchParams`). Build room links with `roomPath` / `roomUrl` from `lib/routes.ts` — never by hand — because the deployed site lives under a base path (`NEXT_PUBLIC_BASE_PATH`, `/scrawl` on GitHub Pages) that `router.push` and `<Link>` add automatically but `window.location` / `history.replaceState` / `<a href>` do not.
 
@@ -114,6 +116,49 @@ A fresh socket is anonymous to the server, so slots are reclaimed with a per-pla
 - The client sends `rejoin { roomCode, token }` on every socket re-open (network blip) and on page load when the stored session matches the URL's room code (reload). The server swaps the socket in, sends `room-state`, then `resyncPlayer` (game-engine) replays whatever the current phase needs (`pair-assigned`, `split-round-start`, `face-round-start`, drawings/results). Those per-player messages carry `submitted` so the UI knows the round's drawing is already in. A canvas in progress survives a socket blip but not a reload.
 - `rejoin-failed` → the page falls back to a normal join (or shows an error if it was mid-session). `session-replaced` is sent to the old socket when the same token rejoins from another tab; that tab stops reconnecting so two tabs don't steal the slot back and forth.
 - Never put `token` in anything broadcast — use `publicPlayer` / `publicPlayers` from room-manager.ts to serialize players.
+
+### Accounts (optional, Supabase)
+
+Design: `docs/superpowers/specs/2026-11-21-accounts-profile-home-design.md`. Owner's setup steps: `docs/supabase-setup.md`. Schema: `supabase/migrations/`.
+
+- Sign-in (e-mail + password, Google) is Supabase Auth, called straight from the browser. The **username is not the login**: it is the public name, chosen with a self-drawn avatar in onboarding and stored in the public `profiles` table (`id`, `username`, `avatar_url`). E-mail addresses never leave Supabase Auth.
+- **Accounts are off when Supabase isn't configured** — web: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; server: `SUPABASE_URL` + `SUPABASE_SECRET_KEY`. Off means no login UI and everyone is a guest. An account is never required to play.
+- Web: `lib/supabase.ts` (client or `null`), `lib/account.ts` and `lib/gallery.ts` are the only files that use the Supabase client; components use `hooks/use-account.ts` (`status`: `off` / `loading` / `signed-out` / `needs-profile` / `ready`). Pages guard themselves on the client (static export): `needs-profile` always goes to `/welcome/`.
+- "Entrar com Google" only shows when the project has Google on: `googleSignInEnabled` (`lib/supabase.ts`) reads the public `/auth/v1/settings`. The fake Supabase reports it on; a test can `page.route` that URL to turn it off.
+- Server: `create-room` / `join-room` take an optional `accessToken`. `withIdentity` (handlers.ts) resolves it through the `Accounts` interface (`src/accounts.ts`) before the player enters the room; a profile replaces the nickname with the username and sets `avatarUrl`. Anything wrong, slow (3s) or unreachable means "guest", never an error. `src/supabase-accounts.ts` is the real implementation (JWKS verification with `jose`, then one REST read).
+- **The profile row is written by the browser, so the server trusts nothing in it**: username must match `USERNAME_PATTERN`, and the avatar must be a file inside this project's `avatars/<userId>/` (`isOwnAvatarUrl`). Access tokens and e-mails are never broadcast, and neither is a `userId` field — though the account id is not a secret: it is the folder name inside every avatar URL and the public `profiles.id`. A lookup that fails is logged once a minute per reason (`[accounts] player treated as a guest: …`), which is where to look when everyone shows up as a guest. In the browser every wait on Supabase is capped at `ACCOUNT_TIMEOUT_MS` (3s); past it the player carries on as a guest.
+- Tests never touch a real project. Server tests pass a fake `Accounts` to `startServer({ accounts })`, or use `test/fake-supabase.ts` — an in-process fake of the Supabase HTTP API that the browser suite also runs (port 8090), so accounts are **on** during e2e.
+
+### Home and public rooms
+
+- `app/page.tsx` is two pages at one address: `Home` (`components/home/`) when `useAccount().status === "ready"`, the guest landing (`Landing`) otherwise.
+- A room has `isPublic` (default false). `createRoom` honours `visibility: "public"` **only for a host who joined with an account**. The web hands the choice to the room page through `sessionStorage` (`lib/room-options.ts`, key `scrawl-visibility`).
+- `src/public-rooms.ts` owns the list: a room is listed while public, in `lobby`, not full, and its host's socket is connected. `watch-rooms` / `unwatch-rooms` subscribe a socket (it also stops watching when it closes or enters a room); the server answers with `public-rooms { rooms }` and pushes again whenever a watcher's list would differ. **Anything that changes joinability must call `publishRooms()`** (handlers.ts does after create, join, start, disconnect, rejoin and drop).
+- A `PublicRoom` entry is exactly `code`, `hostName`, `hostAvatarUrl?`, `gameMode`, `playerCount`, `capacity` — it goes to anyone who asks.
+- Web: `hooks/use-public-rooms.ts` re-subscribes on every socket open and reports `connecting` until the server answers (the list shows "Acordando o servidor…", since the free host sleeps).
+- In the browser suite every test shares one game server, so other tests' public rooms are on the list: find a row by its host's unique name, never by position or count.
+
+### Gallery
+
+- Table `drawings` + public bucket `gallery` (`supabase/migrations/0002_gallery.sql`). **Only the game server writes them** (secret key); browsers read, and an author or whoever saved a drawing may delete it — file first, then row, because the storage policy proves the right through the row.
+- Saving: on a final screen (`final-results`, `split-final`, `face-final`) the browser composes the 800×600 PNG (`lib/compose-drawing.ts`) and sends `save-drawing { drawing: { round, pairId? }, imageDataUrl }`. `src/gallery.ts` checks the sender has an account, the phase, that the drawing exists and isn't saved, and the PNG (signature, ≤ 1.5 MB), then calls `Accounts.saveDrawing` with **mode, theme and authors from the room's own state** — `room.roster` (never shrinks, so a player who left is still named) and `room.resultAuthors` (party). `author_names` / `author_ids` are parallel arrays, `null` id for a guest.
+- The drawing's key (`"round:pairId"` in party, `"round"` otherwise) is claimed in `room.savingDrawings` for the duration of the write and moves to `room.savedDrawings` only when it succeeds. The image must be an 800×600 PNG (checked from its header). Clients get `drawing-saved { key }` (broadcast) or `drawing-save-failed { key, reason }` (sender); `room-state.savedDrawings` covers rejoin.
+- 10 saves per player per 24h, counted in `supabase-accounts.ts`, where a player's saves run one at a time (`inTurn`) so the count can't be raced. A save that doesn't clearly succeed is undone (`undo`: row, then image). Nothing is pruned.
+- Never render a `profiles.avatar_url` without `projectAvatarUrl` (web) / `isOwnAvatarUrl` (server): the row is written by its owner's browser.
+- `fake-supabase.ts` has `/__control/*` routes so a browser test can make saves or image deletions fail for one account.
+- Web: `lib/gallery.ts` is the third (and last) file that may import the Supabase client. `components/gallery/` has the save button, the home column, the profile list; `/gallery/` is public.
+
+### Landing page and look
+
+- The guest landing (`components/landing/`) is built on a vendored design kit in `apps/web/public/assets/` (plain CSS and ES modules, never bundled). `kit.tsx` loads it **only while the landing is mounted**, because it styles bare elements; that is why every exit from the landing is a full page load (`window.location`, plain `<a href>` with `BASE_PATH`) and why `globals.css` tells Tailwind not to scan `components/landing` or `public/`.
+- The landing wears the same drawing desk as the rest (its page CSS in `landing.tsx` lays it over the kit): the orange desk on `<body>`, every section a sheet of paper **as tall as its content** (the kit's one-screen section heights are switched off), square corners, Shantell Sans. Game screenshots are shown whole; `compose.mjs` cuts the two that end mid-card (`CUTS`).
+- The landing is in the static HTML and readable without JavaScript. A browser that holds a Supabase session hides it (`html.ld-wait`, set by an inline script in `kit.tsx`) until `Entry` knows the account.
+- Every other screen is a **drawing desk**: an orange desk (`.desk` on `<body>`), sheets of paper with a folded corner (`.sheet`), plain paper tags (`.tag`), tape (`.taped`) and block buttons with a hard shadow (`.press`) — all in `globals.css`, with the semantic colours (`bg-paper`, `bg-paper-deep`, `bg-card`, `bg-soft`, `text-ink`, `text-muted`, `bg-brand` = the indigo action colour, `bg-amber`, `border-line`…). Use those, not raw `gray-*` / `purple-*`. Corners are square (the radius tokens are 0; only `rounded-full` is round). Headings and buttons are Shantell Sans (`font-display`), text Figtree. Text never sits straight on the desk: `game-controller.tsx` puts every phase on a sheet unless the phase lays out its own papers (`ownPapers`). Design source: the canvas at https://claude.ai/artifact/Gt8Qgi7bNLxkrzxRPayDrN.
+- The final screens of the two-player modes (`split-reveal.tsx`, `face-reveal.tsx`) share `components/phases/pair-results.tsx`: every round is a taped card on one sheet, with who drew which part.
+- Icons are Phosphor (`@phosphor-icons/react`, `weight="bold"`); `components/brand/` has the logo (`wordmark.tsx`) and the mascot images (`art.ts`).
+- The modes have Portuguese names in the UI — **Racha-tema** (`party`), **Monstrinho** (`split-body`), **Caricatura a dois** (`face-builder`); code, protocol and file names keep the English ids.
+- The canvas toolbar (`components/canvas/toolbar.tsx`) wraps the canvas: tools on one rail, colours and brush sizes on the other.
+- The landing's pictures are made by `scripts/landing-art/`: `capture.ts` plays real games in browser tabs (it needs its own servers, see its header) and `compose.mjs` turns `captures/` and `mascots/` into `apps/web/public/landing/` and the site icons. The game screens appear in those captures, so re-run both after restyling them. The capture script finds a few controls by class name (`lib/pen.ts`).
 
 ## Conventions worth knowing
 

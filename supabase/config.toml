@@ -1,0 +1,27 @@
+project_id = "scrawl"
+
+[auth]
+enabled = true
+site_url = "https://whaletalent.github.io/scrawl/"
+additional_redirect_urls = ["https://whaletalent.github.io/scrawl/**", "http://localhost:3000/**"]
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+secure_password_change = false
+# Kept at the hosted defaults so a push changes nothing else.
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# Google sign-in. The id and secret come from the environment, never from this
+# file: set both before `supabase config push` (see docs/supabase-setup.md).
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false

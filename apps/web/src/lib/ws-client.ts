@@ -5,6 +5,7 @@ type MessageHandler = (data: ServerMessage) => void;
 let ws: WebSocket | null = null;
 let handlers: MessageHandler[] = [];
 let openHandlers: (() => void)[] = [];
+let closeHandlers: (() => void)[] = [];
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
 
@@ -35,6 +36,7 @@ export function connect(url: string) {
 
   ws.onclose = () => {
     console.log("[ws] closed");
+    closeHandlers.forEach((handler) => handler());
     if (!intentionalClose) {
       reconnectTimeout = setTimeout(() => connect(url), 2000);
     }
@@ -81,6 +83,18 @@ export function onOpen(handler: () => void): () => void {
   return () => {
     openHandlers = openHandlers.filter((h) => h !== handler);
   };
+}
+
+/** Fires when the socket drops (not when we close it ourselves). */
+export function onClose(handler: () => void): () => void {
+  closeHandlers.push(handler);
+  return () => {
+    closeHandlers = closeHandlers.filter((h) => h !== handler);
+  };
+}
+
+export function isOpen(): boolean {
+  return ws?.readyState === WebSocket.OPEN;
 }
 
 export function onMessage(handler: MessageHandler): () => void {

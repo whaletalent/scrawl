@@ -11,6 +11,9 @@ import {
 } from "./room-manager.js";
 import type { Room } from "./types.js";
 import { config } from "./config.js";
+import { getAccounts, type Profile } from "./accounts.js";
+import { publishRooms, unwatchRooms, watchRooms } from "./public-rooms.js";
+import { handleSaveDrawing } from "./gallery.js";
 import {
   startGame,
   startSplitGame,
@@ -19,6 +22,8 @@ import {
   handleFaceDrawingSubmit,
   handlePlayerLeft,
   resyncPlayer,
+  resetForNewGame,
+  FINAL_PHASES,
 } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
@@ -44,11 +49,14 @@ function handleDisconnect(ws: WebSocket) {
     () => dropPlayer(info.roomCode, info.playerId),
     config.reconnectGraceMs,
   );
+  // A room whose host is away is hidden from the list until they're back.
+  publishRooms();
 }
 
 /** Grace period over: the player is gone for good. */
 function dropPlayer(roomCode: string, playerId: string) {
   const room = removePlayer(roomCode, playerId);
+  publishRooms();
   if (!room) return;
   // removePlayer may have promoted a new host — tell the clients who.
   const hostId = Array.from(room.players.values()).find((p) => p.isHost)?.id;
@@ -100,6 +108,8 @@ function handleRejoin(ws: WebSocket, roomCode: string, token: string) {
     { type: "player-connection", playerId: player.id, connected: true },
     player.id,
   );
+  unwatchRooms(ws);
+  publishRooms();
 }
 
 export function handleConnection(ws: WebSocket) {
@@ -117,7 +127,10 @@ export function handleConnection(ws: WebSocket) {
   // the socket right after, so the close handler does the cleanup.
   ws.on("error", (err) => console.warn(`[ws] client error: ${err.message}`));
 
-  ws.on("close", () => handleDisconnect(ws));
+  ws.on("close", () => {
+    unwatchRooms(ws);
+    handleDisconnect(ws);
+  });
 }
 
 /** Drawings are relayed to other players' <img> tags, so accept nothing but an inline PNG. */
@@ -130,16 +143,46 @@ function isPngDataUrl(value: unknown): value is string {
 function handleMessage(ws: WebSocket, msg: ClientMessage) {
   switch (msg.type) {
     case "create-room":
-      handleCreateRoom(ws, msg);
+      withIdentity(ws, msg.accessToken, (profile) =>
+        handleCreateRoom(ws, msg, profile),
+      );
       break;
     case "join-room":
-      handleJoinRoom(ws, msg.roomCode, msg.nickname);
+      withIdentity(ws, msg.accessToken, (profile) =>
+        handleJoinRoom(ws, msg.roomCode, msg.nickname, profile),
+      );
       break;
     case "rejoin":
       handleRejoin(ws, msg.roomCode, msg.token);
       break;
+    case "save-drawing": {
+      const info = wsToPlayer.get(ws);
+      const room = info && getRoom(info.roomCode);
+      const player = room?.players.get(info!.playerId);
+      if (room && player)
+        handleSaveDrawing(room, player, msg.drawing, msg.imageDataUrl);
+      else
+        ws.send(
+          JSON.stringify({
+            type: "drawing-save-failed",
+            key: "",
+            reason: "not-allowed",
+          }),
+        );
+      break;
+    }
+    case "watch-rooms":
+      // The list is for people choosing a room, not for those already in one.
+      if (!wsToPlayer.has(ws)) watchRooms(ws);
+      break;
+    case "unwatch-rooms":
+      unwatchRooms(ws);
+      break;
     case "start-game":
       handleStartGame(ws);
+      break;
+    case "play-again":
+      handlePlayAgain(ws);
       break;
     case "submit-theme":
       handleSubmitTheme(ws, msg.text);
@@ -165,9 +208,42 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
   }
 }
 
+/** Sockets whose access token is being verified; they can't enter a room twice meanwhile. */
+const identifying = new WeakSet<WebSocket>();
+
+/**
+ * Works out who is behind a `create-room` / `join-room` before running it.
+ * No token, accounts off, or a token that doesn't check out all mean "guest".
+ */
+function withIdentity(
+  ws: WebSocket,
+  accessToken: unknown,
+  enter: (profile: Profile | null) => void,
+) {
+  // One socket is one player: ignore it while it is being identified or once it is in a room.
+  if (identifying.has(ws) || wsToPlayer.has(ws)) return;
+  const accounts = getAccounts();
+  if (!accounts || typeof accessToken !== "string" || !accessToken) {
+    enter(null);
+    return;
+  }
+
+  identifying.add(ws);
+  accounts
+    .profileFromToken(accessToken)
+    .catch(() => null)
+    .then((profile) => {
+      identifying.delete(ws);
+      // The socket may have closed, or entered a room, while we were waiting.
+      if (ws.readyState !== ws.OPEN || wsToPlayer.has(ws)) return;
+      enter(profile);
+    });
+}
+
 function handleCreateRoom(
   ws: WebSocket,
   msg: Extract<ClientMessage, { type: "create-room" }>,
+  profile: Profile | null,
 ) {
   const room = createRoom(
     msg.nickname,
@@ -177,14 +253,23 @@ function handleCreateRoom(
     msg.turnDuration,
     msg.faceTemplate,
     msg.skinTone,
+    profile,
+    msg.visibility,
   );
   const hostId = Array.from(room.players.keys())[0];
   wsToPlayer.set(ws, { playerId: hostId, roomCode: room.code });
+  unwatchRooms(ws);
   sendRoomState(ws, room, hostId);
+  publishRooms();
 }
 
-function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
-  const result = joinRoom(roomCode, nickname, ws);
+function handleJoinRoom(
+  ws: WebSocket,
+  roomCode: string,
+  nickname: string,
+  profile: Profile | null,
+) {
+  const result = joinRoom(roomCode, nickname, ws, profile);
   if (!result) {
     ws.send(
       JSON.stringify({
@@ -197,7 +282,9 @@ function handleJoinRoom(ws: WebSocket, roomCode: string, nickname: string) {
 
   const { room, playerId } = result;
   wsToPlayer.set(ws, { playerId, roomCode: room.code });
+  unwatchRooms(ws);
   sendRoomState(ws, room, playerId);
+  publishRooms();
 
   broadcast(
     room,
@@ -232,7 +319,7 @@ function handleStartGame(ws: WebSocket) {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: "O modo Split Body precisa de exatamente 2 jogadores",
+          message: "O modo Monstrinho precisa de exatamente 2 jogadores",
         }),
       );
       return;
@@ -243,7 +330,7 @@ function handleStartGame(ws: WebSocket) {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: "O modo Face Builder precisa de exatamente 2 jogadores",
+          message: "O modo Caricatura a dois precisa de exatamente 2 jogadores",
         }),
       );
       return;
@@ -261,6 +348,29 @@ function handleStartGame(ws: WebSocket) {
     }
     startGame(room);
   }
+  // The game is on: the room is no longer joinable, so it leaves the list.
+  publishRooms();
+}
+
+/** The host takes everyone from a final screen back to the lobby of the same room. */
+function handlePlayAgain(ws: WebSocket) {
+  const info = wsToPlayer.get(ws);
+  const room = info && getRoom(info.roomCode);
+  if (!info || !room) return;
+  const refuse = (message: string) =>
+    ws.send(JSON.stringify({ type: "error", message }));
+
+  if (!room.players.get(info.playerId)?.isHost)
+    return refuse("Só o host pode começar outra partida");
+  if (!FINAL_PHASES.includes(room.phase))
+    return refuse("A partida ainda não terminou");
+
+  resetForNewGame(room);
+  // Scores, round and saved drawings changed: everyone gets the whole state.
+  for (const p of room.players.values())
+    if (p.connected) sendRoomState(p.ws, room, p.id);
+  // Back in the lobby a public room can take players again.
+  publishRooms();
 }
 
 function handleSubmitTheme(ws: WebSocket, text: string) {
@@ -412,6 +522,8 @@ function serializeRoomState(room: ReturnType<typeof getRoom>) {
     faceTemplate: room.faceTemplate,
     skinTone: room.skinTone,
     turnDuration: room.turnDuration,
+    isPublic: room.isPublic,
+    savedDrawings: Array.from(room.savedDrawings),
     phase: room.phase,
     round: room.round,
     totalRounds: room.totalRounds,

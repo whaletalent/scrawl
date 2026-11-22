@@ -3,9 +3,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build"
+    "build": "next build",
+    "test": "tsx --test --test-reporter=spec test/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@supabase/supabase-js": "^2.119.2",
     "@tailwindcss/postcss": "^4.1.4",
     "next": "^15.3.1",
     "react": "^19.1.0",
@@ -16,6 +20,7 @@
     "@types/node": "^22.14.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   }
 }

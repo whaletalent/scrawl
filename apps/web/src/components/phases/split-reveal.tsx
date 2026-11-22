@@ -1,126 +1,110 @@
 "use client";
-import { useState } from "react";
 import { getSilhouette } from "@/components/silhouettes";
-import type { SplitDrawing } from "@/types/game";
+import type { SplitDrawing, Player } from "@/types/game";
+import {
+  SaveButton,
+  type GallerySaving,
+} from "@/components/gallery/save-button";
+import { DownloadDrawing } from "@/components/share/download-drawing";
+import { composeSplitDrawing } from "@/lib/compose-drawing";
+import { PairCard, PairResults, PLAYER_FILL, nameOf } from "./pair-results";
 
 interface SplitRevealProps {
   drawings: SplitDrawing[];
+  /** Both players drew every round. */
+  players: Player[];
+  saving: GallerySaving;
+  isHost: boolean;
+  onPlayAgain: () => void;
 }
 
-export function SplitReveal({ drawings }: SplitRevealProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+function Half({ src, alt }: { src: string | null; alt: string }) {
+  return src ? (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-1/2"
+      style={{ objectFit: "fill" }}
+    />
+  ) : (
+    <div className="w-full h-1/2 flex items-center justify-center bg-soft">
+      <span className="text-muted">Não enviado</span>
+    </div>
+  );
+}
 
+export function SplitReveal({
+  drawings,
+  players,
+  saving,
+  isHost,
+  onPlayAgain,
+}: SplitRevealProps) {
   if (drawings.length === 0) {
-    return <p className="text-gray-400">Nenhum desenho para mostrar.</p>;
+    return (
+      <p className="sheet px-8 py-6 text-muted">Nenhum desenho para mostrar.</p>
+    );
   }
-
-  const drawing = drawings[currentIndex];
-  const Silhouette = getSilhouette(drawing.silhouetteId);
+  const fill = (id: string) =>
+    PLAYER_FILL[players.findIndex((p) => p.id === id) === 1 ? 1 : 0];
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 w-full max-w-lg">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold">Resultado!</h2>
-        <p className="text-gray-400 text-sm">
-          Rodada {currentIndex + 1} de {drawings.length}
-        </p>
-      </div>
-
-      <div
-        className="relative w-full bg-white rounded-xl overflow-hidden"
-        style={{ aspectRatio: "800 / 600" }}
-      >
-        {/* Silhouette ghost behind */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ opacity: 0.04 }}
-        >
-          <Silhouette className="w-full h-full" />
-        </div>
-
-        {/* Top half */}
-        {drawing.topImageDataUrl ? (
-          <img
-            src={drawing.topImageDataUrl}
-            alt="Metade de cima"
-            className="absolute top-0 left-0 w-full"
-            style={{ height: "50%", objectFit: "fill" }}
-          />
-        ) : (
-          <div
-            className="absolute top-0 left-0 w-full flex items-center justify-center bg-gray-100"
-            style={{ height: "50%" }}
-          >
-            <span className="text-gray-400 text-sm">Não enviado</span>
-          </div>
-        )}
-
-        {/* Merge line */}
-        <div
-          className="absolute left-0 right-0 border-t border-dashed border-gray-300 pointer-events-none"
-          style={{ top: "50%" }}
-        />
-
-        {/* Bottom half */}
-        {drawing.bottomImageDataUrl ? (
-          <img
-            src={drawing.bottomImageDataUrl}
-            alt="Metade de baixo"
-            className="absolute bottom-0 left-0 w-full"
-            style={{ height: "50%", objectFit: "fill" }}
-          />
-        ) : (
-          <div
-            className="absolute bottom-0 left-0 w-full flex items-center justify-center bg-gray-100"
-            style={{ height: "50%" }}
-          >
-            <span className="text-gray-400 text-sm">Não enviado</span>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation */}
-      {drawings.length > 1 && (
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentIndex === 0
-                ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                : "bg-gray-700 hover:bg-gray-600 text-white"
-            }`}
-          >
-            ← Anterior
-          </button>
-
-          <div className="flex gap-2">
-            {drawings.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentIndex(i)}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  i === currentIndex ? "bg-purple-500" : "bg-gray-600"
-                }`}
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={() =>
-              setCurrentIndex((i) => Math.min(drawings.length - 1, i + 1))
+    <PairResults
+      mode="Monstrinho"
+      players={players}
+      rounds={drawings.length}
+      isHost={isHost}
+      onPlayAgain={onPlayAgain}
+      title={`Vocês montaram ${drawings.length} ${drawings.length === 1 ? "monstrinho" : "monstrinhos"}`}
+      summary="Um fez a cabeça e o tronco, o outro as pernas, sem ver a outra metade."
+    >
+      {drawings.map((drawing) => {
+        const Silhouette = getSilhouette(drawing.silhouetteId);
+        return (
+          <PairCard
+            key={drawing.round}
+            round={drawing.round}
+            total={drawings.length}
+            picture={
+              <div
+                className="relative w-full flex flex-col bg-white border-2 border-soft-strong overflow-hidden"
+                style={{ aspectRatio: "800 / 600" }}
+              >
+                <div className="absolute inset-0 pointer-events-none opacity-[0.04]">
+                  <Silhouette className="w-full h-full" />
+                </div>
+                <Half src={drawing.topImageDataUrl} alt="Metade de cima" />
+                <div className="absolute left-0 right-0 top-1/2 border-t-2 border-dashed border-brand/50 pointer-events-none" />
+                <Half src={drawing.bottomImageDataUrl} alt="Metade de baixo" />
+              </div>
             }
-            disabled={currentIndex === drawings.length - 1}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              currentIndex === drawings.length - 1
-                ? "bg-gray-800 text-gray-600 cursor-not-allowed"
-                : "bg-purple-600 hover:bg-purple-500 text-white"
-            }`}
-          >
-            Próximo →
-          </button>
-        </div>
-      )}
-    </div>
+            parts={[
+              {
+                name: nameOf(players, drawing.topPlayerId),
+                fill: fill(drawing.topPlayerId),
+                what: "cabeça e tronco",
+              },
+              {
+                name: nameOf(players, drawing.bottomPlayerId),
+                fill: fill(drawing.bottomPlayerId),
+                what: "pernas",
+              },
+            ]}
+            footer={
+              <>
+                <div className="flex-1 min-w-0">
+                  <SaveButton
+                    drawing={{ round: drawing.round }}
+                    compose={() => composeSplitDrawing(drawing)}
+                    saving={saving}
+                  />
+                </div>
+                <DownloadDrawing compose={() => composeSplitDrawing(drawing)} />
+              </>
+            }
+          />
+        );
+      })}
+    </PairResults>
   );
 }

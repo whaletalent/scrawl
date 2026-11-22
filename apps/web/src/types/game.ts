@@ -24,6 +24,8 @@ export interface Player {
   isHost: boolean;
   /** False while the player's socket is down and the server is holding their slot. */
   connected?: boolean;
+  /** Only players who joined with an account have one. */
+  avatarUrl?: string;
 }
 
 export interface Theme {
@@ -47,6 +49,8 @@ export interface DrawingResult {
   imageRightDataUrl: string;
   round: number;
   playerNames: [string, string];
+  /** Avatars of the two authors, in `playerNames` order; null for guests. */
+  playerAvatars?: [string | null, string | null];
   votes: { first: number; second: number; third: number };
 }
 
@@ -90,10 +94,37 @@ export interface RoomState {
   phaseEndsAt: number;
   faceTemplate: FaceTemplateOption;
   skinTone: string;
+  /** Listed on the home page for strangers to join. */
+  isPublic?: boolean;
+  /** Keys of this room's drawings that are already in the gallery. */
+  savedDrawings?: string[];
+}
+
+/** Points at one finished drawing of a room. `pairId` in party mode only. */
+export interface DrawingRef {
+  round: number;
+  pairId?: string;
+}
+
+/** One row of the home page's list of open rooms. */
+export interface PublicRoom {
+  code: string;
+  hostName: string;
+  /** Absent when the host is a guest. */
+  hostAvatarUrl?: string;
+  gameMode: GameMode;
+  playerCount: number;
+  capacity: number;
 }
 
 export type ClientMessage =
-  | { type: "join-room"; roomCode: string; nickname: string }
+  | {
+      type: "join-room";
+      roomCode: string;
+      nickname: string;
+      /** Supabase access token of a logged-in player. */
+      accessToken?: string;
+    }
   | { type: "rejoin"; roomCode: string; token: string }
   | {
       type: "create-room";
@@ -103,8 +134,15 @@ export type ClientMessage =
       turnDuration?: number;
       faceTemplate?: FaceTemplateOption;
       skinTone?: string;
+      accessToken?: string;
+      /** Defaults to private. "public" is honoured only for a logged-in host. */
+      visibility?: "public" | "private";
     }
+  | { type: "save-drawing"; drawing: DrawingRef; imageDataUrl: string }
+  | { type: "watch-rooms" }
+  | { type: "unwatch-rooms" }
   | { type: "start-game" }
+  | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
   | { type: "submit-drawing"; imageDataUrl: string }
@@ -118,6 +156,13 @@ export type ServerMessage =
       state: RoomState;
       playerId: string;
       sessionToken?: string;
+    }
+  | { type: "public-rooms"; rooms: PublicRoom[] }
+  | { type: "drawing-saved"; key: string }
+  | {
+      type: "drawing-save-failed";
+      key: string;
+      reason: "limit" | "failed" | "not-allowed";
     }
   | { type: "rejoin-failed" }
   | { type: "session-replaced" }

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connect, disconnect, send, onMessage, onOpen } from "@/lib/ws-client";
 import type {
+  DrawingRef,
   RoomState,
   Phase,
   Player,
@@ -62,6 +63,10 @@ interface GameState {
   faceDrawings: FaceDrawing[];
   error: string | null;
   notice: string | null;
+  /** Keys of this room's drawings that are in the gallery. */
+  savedDrawings: string[];
+  /** Why the last attempt to save a drawing failed, by key. */
+  saveFailures: Record<string, { reason: "limit" | "failed" | "not-allowed" }>;
 }
 
 const initialState: GameState = {
@@ -69,6 +74,8 @@ const initialState: GameState = {
   playerId: null,
   roomState: null,
   pairAssignment: null,
+  savedDrawings: [],
+  saveFailures: {},
   roundSubmitted: false,
   rejoinFailed: false,
   sessionLost: false,
@@ -84,6 +91,24 @@ const initialState: GameState = {
   faceDrawings: [],
   error: null,
   notice: null,
+};
+
+/** Everything that belongs to one game, cleared when the room plays again. */
+const PER_GAME: Partial<GameState> = {
+  pairAssignment: null,
+  roundSubmitted: false,
+  drawings: [],
+  splitRound: 0,
+  splitSide: null,
+  silhouetteId: null,
+  splitDrawings: [],
+  faceRegions: [],
+  faceTemplate: null,
+  faceSkinTone: null,
+  faceRound: 0,
+  faceDrawings: [],
+  notice: null,
+  saveFailures: {},
 };
 
 export function useGameState() {
@@ -124,7 +149,10 @@ export function useGameState() {
           }
           setState((s) => ({
             ...s,
+            // Back in the lobby ("Jogar de novo"): nothing of the last game stays.
+            ...(data.state.phase === "lobby" ? PER_GAME : {}),
             roomState: data.state,
+            savedDrawings: data.state.savedDrawings ?? [],
             playerId: data.playerId ?? s.playerId,
             error: null,
             rejoinFailed: false,
@@ -200,6 +228,9 @@ export function useGameState() {
                   ...s.roomState,
                   phase: data.phase,
                   phaseEndsAt: data.phaseEndsAt,
+                  // The server starts every round's theme list empty.
+                  themes:
+                    data.phase === "theme-creation" ? [] : s.roomState.themes,
                   round: data.round ?? s.roomState.round,
                 }
               : null,
@@ -298,6 +329,24 @@ export function useGameState() {
           setState((s) => ({ ...s, error: data.message }));
           break;
 
+        case "drawing-saved":
+          setState((s) => ({
+            ...s,
+            savedDrawings: [...s.savedDrawings, data.key],
+          }));
+          break;
+
+        case "drawing-save-failed":
+          // A new object each time, so a repeated failure is still noticed.
+          setState((s) => ({
+            ...s,
+            saveFailures: {
+              ...s.saveFailures,
+              [data.key]: { reason: data.reason },
+            },
+          }));
+          break;
+
         case "notice":
           setState((s) => ({ ...s, notice: data.message }));
           break;
@@ -370,6 +419,8 @@ export function useGameState() {
       turnDuration?: number,
       faceTemplate?: FaceTemplateOption,
       skinTone?: string,
+      accessToken?: string,
+      visibility?: "public" | "private",
     ) => {
       send({
         type: "create-room",
@@ -379,21 +430,37 @@ export function useGameState() {
         turnDuration,
         faceTemplate,
         skinTone,
+        accessToken,
+        visibility,
       });
     },
     [],
   );
 
-  const joinRoom = useCallback((roomCode: string, nickname: string) => {
-    send({ type: "join-room", roomCode, nickname });
-  }, []);
+  const joinRoom = useCallback(
+    (roomCode: string, nickname: string, accessToken?: string) => {
+      send({ type: "join-room", roomCode, nickname, accessToken });
+    },
+    [],
+  );
 
   const rejoinRoom = useCallback((session: Session) => {
     send({ type: "rejoin", roomCode: session.code, token: session.token });
   }, []);
 
+  const saveDrawing = useCallback(
+    (drawing: DrawingRef, imageDataUrl: string) => {
+      send({ type: "save-drawing", drawing, imageDataUrl });
+    },
+    [],
+  );
+
   const startGame = useCallback(() => {
     send({ type: "start-game" });
+  }, []);
+
+  const playAgain = useCallback(() => {
+    send({ type: "play-again" });
   }, []);
 
   const submitTheme = useCallback((text: string) => {
@@ -425,7 +492,9 @@ export function useGameState() {
     createRoom,
     joinRoom,
     rejoinRoom,
+    saveDrawing,
     startGame,
+    playAgain,
     submitTheme,
     voteTheme,
     submitDrawing,

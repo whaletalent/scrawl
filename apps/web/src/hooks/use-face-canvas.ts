@@ -4,6 +4,7 @@ import {
   FACE_ELLIPSE,
   isPointInRegion,
   getRegionDef,
+  WHOLE_CANVAS,
   type FaceRegionDef,
 } from "@/lib/face-regions";
 import type { FaceRegionId } from "@/types/game";
@@ -17,7 +18,14 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
+/**
+ * `free` ignores `assignedRegionIds`: the whole canvas is one region, so
+ * nothing is off-limits and strokes aren't cut at region borders.
+ */
+export function useFaceCanvas(
+  assignedRegionIds: FaceRegionId[],
+  { free = false }: { free?: boolean } = {},
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
@@ -80,7 +88,9 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
     updateUndoRedoState();
   }, [updateUndoRedoState]);
 
-  const assignedRegions = assignedRegionIds.map(getRegionDef);
+  const assignedRegions = free
+    ? [WHOLE_CANVAS]
+    : assignedRegionIds.map(getRegionDef);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -99,7 +109,7 @@ export function useFaceCanvas(assignedRegionIds: FaceRegionId[]) {
       }
       return null;
     },
-    [assignedRegionIds],
+    [assignedRegionIds, free],
   );
 
   const getPoint = useCallback((e: React.MouseEvent | React.TouchEvent) => {

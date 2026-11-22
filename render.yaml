@@ -10,6 +10,13 @@ services:
     dockerfilePath: ./apps/ws-server/Dockerfile
     dockerContext: .
     healthCheckPath: /
+    # Accounts (Supabase). Set both in the Render dashboard; without them
+    # everybody plays as a guest. The secret key must never be committed.
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
     # deploy a commit on main only after its CI checks pass
     autoDeployTrigger: checksPass
     buildFilter:

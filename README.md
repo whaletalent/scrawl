@@ -27,7 +27,8 @@ Scrawl is a browser party game for friends on a call or in the same room. One pl
 2. Rooms live in the server's memory: a room has a five-character code, a list of players and a phase. Restarting the server ends every game.
 3. The server drives the game as a state machine (`lobby → theme-creation → drawing → voting → reveal → …`), broadcasting a `phase-change` with a deadline; clients only render the current phase and send their input.
 4. Drawings are made on an 800×600 canvas clipped to the player's own area and sent as PNG data URLs when the player submits (or automatically just before the deadline).
-5. A player whose connection drops, or who reloads the page, keeps their slot for 20 seconds and is put back into the running game when they return.
+5. Accounts are optional. A player can sign up (e-mail and password, or Google), pick a username and draw their own avatar, which then shows next to their name in every room. Accounts live in a [Supabase](https://supabase.com) project; guests keep playing with just a nickname, and without a Supabase project the game simply has no login. A logged-in player lands on a home that lists the open **public rooms** (the creator chooses private or public), so they can join a stranger's game. At the end of a game a logged-in player can save a drawing to the public **gallery**; the home shows the latest ones and `/gallery/` shows them all.
+6. A player whose connection drops, or who reloads the page, keeps their slot for 20 seconds and is put back into the running game when they return.
 
 ## Tech stack
 
@@ -37,6 +38,7 @@ Scrawl is a browser party game for friends on a call or in the same room. One pl
 | [Tailwind CSS 4](https://tailwindcss.com)   | Styling                                                     |
 | HTML5 Canvas                                | Drawing tools: brush, eraser, fill, line, rectangle, circle |
 | [ws](https://github.com/websockets/ws)      | The WebSocket game server (Node.js)                         |
+| [Supabase](https://supabase.com)            | Optional accounts: sign-in, profiles and avatar storage     |
 | TypeScript                                  | Both apps, strict mode                                      |
 | `node:test` + [tsx](https://tsx.is)         | Server test suite, against the real server in-process       |
 | [Playwright](https://playwright.dev)        | Browser test suite, with scripted bots as the other players |
@@ -63,8 +65,8 @@ The web app finds the server through `NEXT_PUBLIC_WS_URL` (default `ws://localho
 | `npm run dev`          | Start the web app and the WebSocket server               |
 | `npm run build`        | Static build of the web app into `apps/web/out/`         |
 | `npm run build:server` | Compile the WebSocket server into `apps/ws-server/dist/` |
-| `npm test`             | Server test suite (~10s)                                 |
-| `npm run test:e2e`     | Browser test suite (~1.5min)                             |
+| `npm test`             | Server and web unit suites (~10s)                        |
+| `npm run test:e2e`     | Browser test suite (~3min)                               |
 | `npm run typecheck`    | Type-check both apps and the tests                       |
 | `npm run lint`         | Lint with ESLint                                         |
 | `npm run lint:fix`     | Lint and apply automatic fixes                           |
@@ -73,8 +75,8 @@ The web app finds the server through `NEXT_PUBLIC_WS_URL` (default `ws://localho
 
 ## Tests
 
-- **Server suite** (`apps/ws-server/test`): each file starts the real server in-process on a free port and plays against it with WebSocket clients, with game phases sped up. Covers room rules, voting, the odd-player rotation, the two-player modes, leaving, reconnection and input hardening.
-- **Browser suite** (`e2e/`): Playwright drives the real app in Chromium while scripted bots play the other players over the WebSocket protocol. It starts its own servers (web on port 3100, WebSocket on port 8089), so it can run next to `npm run dev`. First time only: `npx playwright install chromium`.
+- **Server suite** (`apps/ws-server/test`): each file starts the real server in-process on a free port and plays against it with WebSocket clients, with game phases sped up. Covers room rules, voting, the odd-player rotation, the two-player modes, leaving, reconnection, input hardening and player identity (accounts).
+- **Browser suite** (`e2e/`): Playwright drives the real app in Chromium while scripted bots play the other players over the WebSocket protocol. It starts its own servers (web on port 3100, WebSocket on port 8089, and a fake Supabase on port 8090 so the account flows run without a real project), so it can run next to `npm run dev`. First time only: `npx playwright install chromium`.
 
 To play a sped-up game by hand, start the WebSocket server with `PHASE_TIME_SCALE=0.2` (every phase five times shorter).
 
@@ -116,6 +118,7 @@ docs/                     screenshot, design specs, implementation plans, mode i
 
   `render.yaml` is a [Render](https://render.com) Blueprint for it: in Render choose New > Blueprint and pick this repository, then put the service's address in the `WS_URL` repository variable (`wss://<name>.onrender.com`) and re-run the deploy workflow. Rooms live in memory, so run a single instance.
 
+- **Accounts** are off until a Supabase project is connected: [`docs/supabase-setup.md`](docs/supabase-setup.md) has the steps. A scheduled workflow (`supabase-keepalive.yml`) reads one row a day so the free project isn't paused for inactivity.
 - Dependabot keeps npm packages, GitHub Actions and the Docker base image up to date.
 
 ## License

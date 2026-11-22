@@ -9,12 +9,13 @@
     "typecheck": "tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
+    "jose": "^6.2.18",
     "ws": "^8.18.1"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "tsx": "^4.19.3",
+    "@types/node": "^22.14.1",
     "@types/ws": "^8.18.1",
-    "@types/node": "^22.14.1"
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
   }
 }
