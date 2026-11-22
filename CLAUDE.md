@@ -47,7 +47,7 @@ npx playwright test -g "invite link"
 ### Testing
 
 - **Server suite** — `apps/ws-server/test/*.test.ts`. `test/server.ts` starts the real server in-process on port 0 (`createScrawlServer` from `src/app.ts`; `src/server.ts` is just the listen entrypoint). `test/client.ts` is a small WebSocket client: register `c.wait(pred)` **before** triggering the action that causes the message (it only sees future messages), or use `c.on(handler)` for bots that react to everything.
-- **Time** — `src/config.ts` holds `timeScale` and `reconnectGraceMs`, read at use-time. Tests set them through `startServer({ timeScale, graceMs })` (or mutate `config` mid-test) so a whole game takes a second or two. Files that poke at a single phase keep `timeScale: 1` so nothing advances underneath them.
+- **Time** — `src/config.ts` holds `timeScale` and `reconnectGraceMs`, read at use-time. Tests set them through `startServer({ timeScale, graceMs, submitGraceMs })` (or mutate `config` mid-test) so a whole game takes a second or two. Files that poke at a single phase keep `timeScale: 1` so nothing advances underneath them.
 - **Browser suite** — `e2e/*.spec.ts`, config in `playwright.config.ts`. It launches its own ws-server (:8089, `PHASE_TIME_SCALE=0.15`, `RECONNECT_GRACE_MS=3000`) and `next dev` (:3100, `NEXT_DIST_DIR=.next-e2e` so it doesn't fight `npm run dev` over `.next`). Other players are bots from `e2e/helpers.ts` (`bot`, `autoplayParty`) built on the server suite's `test/client.ts`. `@playwright/test` is pinned to an exact version because each version needs a specific Chromium build (`npx playwright install chromium`).
 - When a behaviour changes, change the server test first if the rule lives on the server; add an e2e test only for what needs a real page (routing, storage, canvas, layout).
 
@@ -77,6 +77,8 @@ All realtime is JSON over a single WebSocket. The message contract is duplicated
 - **face-builder** (exactly 2 players): 6 face regions (`hair`, `ears`, `eyes`, `nose`, `mouth`, `shoulders`) are shuffled and split 3-and-3; each player draws only their assigned regions. Ends in `face-final`. Supports `faceTemplate: "random" | FaceTemplateId` and a `skinTone` hex.
 
 Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied by `config.timeScale`); per-turn drawing phases use `room.turnDuration` (clamped 15–300s). `transitionTo` is the only allowed phase mutator — it broadcasts `phase-change` and arms the timeout.
+
+**End of a drawing turn**: when a drawing phase's timer runs out the server does not close it at once. It broadcasts `time-up` (`startCollecting`, game-engine), and the turn stays open for `config.submitGraceMs` (`SUBMIT_GRACE_MS`, default 3s, not scaled) or until every drawing is in. Clients send their drawing when they get `time-up`, never on their own clock: a phone whose clock is behind, or a slow link, used to miss the turn. Every `submit-*drawing` carries its `round`, and one for another round is dropped (`isCurrentRound`) instead of landing in the next round.
 
 **Jogar de novo**: on a final screen the host sends `play-again`; `resetForNewGame` (game-engine) clears everything of the last game (scores, rounds, drawings, saved keys) and goes back to `lobby`, then handlers.ts sends every player a fresh `room-state` and calls `publishRooms()`. `room.game` counts the games, so a gallery save still in flight from the old game is not announced in the new one. The client clears its per-game state (`PER_GAME` in `use-game-state.ts`) on any `room-state` in the lobby.
 

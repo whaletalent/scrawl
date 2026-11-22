@@ -118,6 +118,7 @@ export function createRoom(
     savedDrawings: new Set(),
     savingDrawings: new Set(),
     game: 0,
+    collecting: false,
   };
 
   rooms.set(code, room);

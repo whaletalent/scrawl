@@ -135,3 +135,41 @@ test("Jogar de novo takes both players back to the same room for another game", 
   await expect(page.getByText("Rodada 1 de 1")).toHaveCount(1);
   expect(errors).toEqual([]);
 });
+
+test("each drawing shows as received only when the server has it, and time-up says whose is missing", async ({
+  page,
+}) => {
+  const code = await createRoom(page, {
+    mode: "Monstrinho (2)",
+    rounds: 1,
+    turnSeconds: 15,
+  });
+  // A partner who never sends anything.
+  await bot(code, "Robô");
+  await page.getByRole("button", { name: "Começar Monstrinho" }).click();
+  await expect(page.getByText("SUA ÁREA")).toBeVisible();
+  const chips = page
+    .getByRole("listitem")
+    .filter({ hasText: /desenhando|recebido|enviando/ });
+  await expect(chips.filter({ hasText: "Você desenha" })).toContainText(
+    "desenhando",
+  );
+
+  await page.getByRole("button", { name: "Enviar Desenho" }).click();
+  await expect(chips.filter({ hasText: "Você desenha" })).toContainText(
+    "recebido",
+  );
+  await expect(chips.filter({ hasText: "Robô" })).toContainText("desenhando");
+  await expect(
+    page.getByText("Desenho enviado! Esperando parceiro..."),
+  ).toBeVisible();
+
+  // The turn runs out: the page says it is waiting for Robô, then moves on.
+  await expect(
+    page.getByText("Tempo esgotado! Esperando o desenho de Robô…"),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(chips.filter({ hasText: "Robô" })).toContainText("enviando…");
+  await expect(
+    page.getByRole("heading", { name: "Vocês montaram 1 monstrinho" }),
+  ).toBeVisible({ timeout: 15_000 });
+});

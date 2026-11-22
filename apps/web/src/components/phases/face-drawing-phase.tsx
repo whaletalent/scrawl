@@ -15,7 +15,12 @@ interface FaceDrawingPhaseProps {
   faceTemplate: FaceTemplateId;
   skinTone: string;
   endsAt: number;
-  onSubmit: (imageDataUrl: string) => void;
+  onSubmit: (imageDataUrl: string, round: number) => void;
+  /** The server ended the turn: send whatever is on the canvas. */
+  timeUp: boolean;
+  /** The server confirmed it has this round's drawing from me / my partner. */
+  mineReceived: boolean;
+  partnerReceived: boolean;
   /** True when rejoining a round the server already has our drawing for. */
   initialSubmitted?: boolean;
   /** The two people drawing this picture, for the chips under the canvas. */
@@ -30,6 +35,9 @@ export function FaceDrawingPhase({
   faceTemplate,
   skinTone,
   endsAt,
+  timeUp,
+  mineReceived,
+  partnerReceived,
   onSubmit,
   initialSubmitted,
   me,
@@ -42,21 +50,17 @@ export function FaceDrawingPhase({
     if (submitted) return;
     const image = canvasRef.current?.exportImage();
     if (image) {
-      onSubmit(image);
+      onSubmit(image, round);
       setSubmitted(true);
     }
-  }, [submitted, onSubmit]);
+  }, [submitted, onSubmit, round]);
 
+  // The server says when time is up (and waits a moment for the drawing),
+  // so neither this device's clock nor the network delay decides whether
+  // the drawing makes it into its round.
   useEffect(() => {
-    if (!endsAt || submitted) return;
-    const ms = endsAt - Date.now() - 500;
-    if (ms <= 0) {
-      doSubmit();
-      return;
-    }
-    const timer = setTimeout(doSubmit, ms);
-    return () => clearTimeout(timer);
-  }, [endsAt, submitted, doSubmit]);
+    if (timeUp && !submitted) doSubmit();
+  }, [timeUp, submitted, doSubmit]);
 
   const theirs = FACE_REGIONS.filter(
     (r) => r.id !== "whole" && !regions.includes(r.id as FaceRegionId),
@@ -79,31 +83,32 @@ export function FaceDrawingPhase({
       />
 
       <DrawingFooter
-        parts={[
-          {
-            ...me,
-            part: (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                Você desenha:
-                <ul aria-label="Suas partes do rosto" className="contents">
-                  {regions.map((id) => (
-                    <li
-                      key={id}
-                      className="px-2 font-display font-bold"
-                      style={{
-                        backgroundColor: getRegionDef(id).color + "33",
-                      }}
-                    >
-                      {getRegionDef(id).label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ),
-          },
-          { ...partner, part: `${partner.name}: ${theirs.join(", ")}` },
-        ]}
+        me={{
+          ...me,
+          part: (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              Você desenha:
+              <ul aria-label="Suas partes do rosto" className="contents">
+                {regions.map((id) => (
+                  <li
+                    key={id}
+                    className="px-2 font-display font-bold"
+                    style={{
+                      backgroundColor: getRegionDef(id).color + "33",
+                    }}
+                  >
+                    {getRegionDef(id).label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        }}
+        partner={{ ...partner, part: `${partner.name}: ${theirs.join(", ")}` }}
         submitted={submitted}
+        timeUp={timeUp}
+        mineReceived={mineReceived}
+        partnerReceived={partnerReceived}
         waiting="Desenho enviado! Esperando parceiro..."
         onSubmit={doSubmit}
       />

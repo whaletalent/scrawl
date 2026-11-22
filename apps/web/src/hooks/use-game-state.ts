@@ -47,6 +47,11 @@ interface GameState {
   pairAssignment: PairAssignment | null;
   /** Whether the server already has this player's drawing for the current round. */
   roundSubmitted: boolean;
+  /** The server said the drawing turn is over: the drawing on screen goes now. */
+  timeUp: boolean;
+  /** The server confirmed it has this round's drawing from me / from my partner. */
+  mineReceived: boolean;
+  partnerReceived: boolean;
   /** A `rejoin` was refused — the old slot is gone. */
   rejoinFailed: boolean;
   /** This page was playing and lost its slot for good; don't auto-join anything. */
@@ -77,6 +82,9 @@ const initialState: GameState = {
   savedDrawings: [],
   saveFailures: {},
   roundSubmitted: false,
+  timeUp: false,
+  mineReceived: false,
+  partnerReceived: false,
   rejoinFailed: false,
   sessionLost: false,
   drawings: [],
@@ -97,6 +105,9 @@ const initialState: GameState = {
 const PER_GAME: Partial<GameState> = {
   pairAssignment: null,
   roundSubmitted: false,
+  timeUp: false,
+  mineReceived: false,
+  partnerReceived: false,
   drawings: [],
   splitRound: 0,
   splitSide: null,
@@ -219,6 +230,10 @@ export function useGameState() {
         case "phase-change":
           setState((s) => ({
             ...s,
+            timeUp: false,
+            // Each drawing turn starts with nothing received.
+            mineReceived: false,
+            partnerReceived: false,
             // A new party round starts: forget last round's pair so a player
             // who sits this one out doesn't keep the stale assignment.
             pairAssignment:
@@ -293,6 +308,8 @@ export function useGameState() {
               theme: data.theme,
             },
             roundSubmitted: !!data.submitted,
+            mineReceived: !!data.submitted,
+            partnerReceived: !!data.partnerSubmitted,
           }));
           break;
         }
@@ -354,10 +371,13 @@ export function useGameState() {
         case "split-round-start":
           setState((s) => ({
             ...s,
+            timeUp: false,
             splitRound: data.round,
             splitSide: data.side,
             silhouetteId: data.silhouetteId,
             roundSubmitted: !!data.submitted,
+            mineReceived: !!data.submitted,
+            partnerReceived: !!data.partnerSubmitted,
             error: null,
           }));
           break;
@@ -379,13 +399,30 @@ export function useGameState() {
         case "face-round-start":
           setState((s) => ({
             ...s,
+            timeUp: false,
             faceRound: data.round,
             faceRegions: data.regions,
             faceTemplate: data.faceTemplate,
             faceSkinTone: data.skinTone,
             roundSubmitted: !!data.submitted,
+            mineReceived: !!data.submitted,
+            partnerReceived: !!data.partnerSubmitted,
             error: null,
           }));
+          break;
+
+        case "drawing-received":
+          setState((s) => {
+            // A confirmation for a round that's over changes nothing.
+            if (s.roomState && data.round !== s.roomState.round) return s;
+            return data.playerId === s.playerId
+              ? { ...s, mineReceived: true }
+              : { ...s, partnerReceived: true };
+          });
+          break;
+
+        case "time-up":
+          setState((s) => ({ ...s, timeUp: true }));
           break;
 
         case "face-round-end":
@@ -471,21 +508,27 @@ export function useGameState() {
     send({ type: "vote-theme", themeId });
   }, []);
 
-  const submitDrawing = useCallback((imageDataUrl: string) => {
-    send({ type: "submit-drawing", imageDataUrl });
+  const submitDrawing = useCallback((imageDataUrl: string, round: number) => {
+    send({ type: "submit-drawing", imageDataUrl, round });
   }, []);
 
   const voteDrawing = useCallback((pairId: string, rank: 1 | 2 | 3) => {
     send({ type: "vote-drawing", pairId, rank });
   }, []);
 
-  const submitSplitDrawing = useCallback((imageDataUrl: string) => {
-    send({ type: "submit-split-drawing", imageDataUrl });
-  }, []);
+  const submitSplitDrawing = useCallback(
+    (imageDataUrl: string, round: number) => {
+      send({ type: "submit-split-drawing", imageDataUrl, round });
+    },
+    [],
+  );
 
-  const submitFaceDrawing = useCallback((imageDataUrl: string) => {
-    send({ type: "submit-face-drawing", imageDataUrl });
-  }, []);
+  const submitFaceDrawing = useCallback(
+    (imageDataUrl: string, round: number) => {
+      send({ type: "submit-face-drawing", imageDataUrl, round });
+    },
+    [],
+  );
 
   return {
     ...state,

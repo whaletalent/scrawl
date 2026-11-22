@@ -1,6 +1,11 @@
 "use client";
 import Link from "next/link";
-import { ArrowLeft, Check, PencilSimple } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  Check,
+  CircleNotch,
+  PencilSimple,
+} from "@phosphor-icons/react";
 import { TimerBar } from "./timer-bar";
 import { Avatar } from "@/components/account/avatar";
 
@@ -56,36 +61,134 @@ export interface DrawingPart {
   part: React.ReactNode;
 }
 
-/** The bottom of every drawing screen: who draws which part, and the send button. */
+type Status = "drawing" | "sending" | "received";
+
+const STATUS_LABEL: Record<Status, string> = {
+  drawing: "desenhando",
+  sending: "enviando…",
+  received: "recebido",
+};
+
+function Spinner({ size = 18 }: { size?: number }) {
+  return (
+    <CircleNotch
+      aria-hidden="true"
+      weight="bold"
+      size={size}
+      className="motion-safe:animate-spin"
+    />
+  );
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-1.5 text-sm font-semibold ${
+        status === "received"
+          ? "bg-mint text-ink"
+          : status === "sending"
+            ? "bg-amber/60 text-ink"
+            : "text-muted"
+      }`}
+    >
+      {status === "received" && (
+        <Check aria-hidden="true" weight="bold" size={16} />
+      )}
+      {status === "sending" && <Spinner size={16} />}
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+/**
+ * The bottom of every drawing screen: who draws which part and whether the
+ * server has each drawing yet, and the send button. "Recebido" only shows
+ * once the server has confirmed it (`drawing-received`), never on sending.
+ */
 export function DrawingFooter({
-  parts,
+  me,
+  partner,
   submitted,
+  timeUp,
+  mineReceived,
+  partnerReceived,
   waiting,
   onSubmit,
 }: {
-  parts: DrawingPart[];
+  me: DrawingPart;
+  partner: DrawingPart;
+  /** This page sent its drawing (it may not have arrived yet). */
   submitted: boolean;
-  /** Shown in place of the button once the drawing is in. */
+  /** The server ended the turn and is collecting the drawings. */
+  timeUp: boolean;
+  mineReceived: boolean;
+  partnerReceived: boolean;
+  /** What to say once both drawings of this picture are in but the turn goes on (party). */
   waiting: string;
   onSubmit: () => void;
 }) {
+  const myStatus: Status = mineReceived
+    ? "received"
+    : submitted || timeUp
+      ? "sending"
+      : "drawing";
+  const partnerStatus: Status = partnerReceived
+    ? "received"
+    : timeUp
+      ? "sending"
+      : "drawing";
+
+  // What the box beside the chips says once there is no button to press.
+  const status = !mineReceived ? (
+    <>
+      <Spinner size={22} />
+      {timeUp
+        ? "Tempo esgotado! Enviando seu desenho…"
+        : "Enviando seu desenho…"}
+    </>
+  ) : !partnerReceived ? (
+    <>
+      {timeUp ? (
+        <Spinner size={22} />
+      ) : (
+        <Check aria-hidden="true" weight="bold" size={22} />
+      )}
+      {timeUp
+        ? `Tempo esgotado! Esperando o desenho de ${partner.name}…`
+        : "Desenho enviado! Esperando parceiro..."}
+    </>
+  ) : (
+    <>
+      <Check aria-hidden="true" weight="bold" size={22} />
+      {waiting}
+    </>
+  );
+
   return (
     // On a phone the toolbar rails push the footer below the fold: there the
-    // send button sticks to the bottom of the screen, and the chips (the
-    // canvas already marks "SUA ÁREA") make way for it.
+    // send button sticks to the bottom of the screen, and the chips make way
+    // for it (the status box below says what they would).
     <footer className="w-full max-w-[66rem] flex flex-wrap items-center justify-between gap-x-6 gap-y-4 max-sm:sticky max-sm:bottom-3 max-sm:z-10">
       <ul className="hidden sm:flex flex-wrap items-center gap-3">
-        {parts.map((p) => (
+        {(
+          [
+            [me, myStatus],
+            [partner, partnerStatus],
+          ] as const
+        ).map(([p, st]) => (
           <li
             key={p.name}
             className="tag min-h-13 flex items-center gap-2.5 py-2 pl-2 pr-4"
           >
             <Avatar url={p.avatarUrl} name={p.name} size={36} />
-            <div>{p.part}</div>
+            <div className="flex flex-col items-start gap-0.5">
+              {p.part}
+              <StatusBadge status={st} />
+            </div>
           </li>
         ))}
       </ul>
-      {!submitted ? (
+      {!submitted && !timeUp ? (
         <button
           onClick={onSubmit}
           className="press max-sm:w-full flex-[0_1_22.5rem] min-h-15 sm:min-h-17 px-7 flex items-center justify-between gap-4 bg-brand text-white hover:bg-brand-dark font-display font-extrabold text-2xl sm:text-[1.75rem]"
@@ -94,8 +197,13 @@ export function DrawingFooter({
           <Check aria-hidden="true" weight="bold" size={30} />
         </button>
       ) : (
-        <p className="tag px-5 py-4 font-display font-bold text-lg text-go">
-          {waiting}
+        <p
+          role="status"
+          className={`tag max-sm:w-full flex items-center gap-2.5 px-5 py-4 font-display font-bold text-lg ${
+            mineReceived && partnerReceived ? "text-go" : "text-ink"
+          }`}
+        >
+          {status}
         </p>
       )}
     </footer>

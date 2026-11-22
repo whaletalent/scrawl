@@ -24,6 +24,9 @@ import {
   resyncPlayer,
   resetForNewGame,
   FINAL_PHASES,
+  isCurrentRound,
+  finishPartyDrawingIfComplete,
+  announceReceived,
 } from "./game-engine.js";
 
 const wsToPlayer = new Map<WebSocket, { playerId: string; roomCode: string }>();
@@ -192,18 +195,18 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       break;
     case "submit-drawing":
       if (isPngDataUrl(msg.imageDataUrl))
-        handleSubmitDrawing(ws, msg.imageDataUrl);
+        handleSubmitDrawing(ws, msg.imageDataUrl, msg.round);
       break;
     case "vote-drawing":
       handleVoteDrawing(ws, msg.pairId, msg.rank);
       break;
     case "submit-split-drawing":
       if (isPngDataUrl(msg.imageDataUrl))
-        handleSubmitSplitDrawing(ws, msg.imageDataUrl);
+        handleSubmitSplitDrawing(ws, msg.imageDataUrl, msg.round);
       break;
     case "submit-face-drawing":
       if (isPngDataUrl(msg.imageDataUrl))
-        handleSubmitFaceDrawing(ws, msg.imageDataUrl);
+        handleSubmitFaceDrawing(ws, msg.imageDataUrl, msg.round);
       break;
   }
 }
@@ -438,12 +441,21 @@ function handleVoteTheme(ws: WebSocket, themeId: string) {
   });
 }
 
-function handleSubmitDrawing(ws: WebSocket, imageDataUrl: string) {
+function handleSubmitDrawing(
+  ws: WebSocket,
+  imageDataUrl: string,
+  round: unknown,
+) {
   const info = wsToPlayer.get(ws);
   if (!info) return;
 
   const room = getRoom(info.roomCode);
-  if (!room || room.phase !== "drawing") return;
+  if (
+    !room ||
+    room.phase !== "drawing" ||
+    !isCurrentRound(room, roundOf(round))
+  )
+    return;
 
   const pair = room.pairs.find(
     (p) => p.playerA === info.playerId || p.playerB === info.playerId,
@@ -464,25 +476,40 @@ function handleSubmitDrawing(ws: WebSocket, imageDataUrl: string) {
     imageDataUrl,
   });
 
-  broadcast(room, { type: "drawing-submitted", pairId: pair.id, side });
+  announceReceived(room, info.playerId, [pair.playerA, pair.playerB]);
+  finishPartyDrawingIfComplete(room);
 }
 
-function handleSubmitFaceDrawing(ws: WebSocket, imageDataUrl: string) {
+function handleSubmitFaceDrawing(
+  ws: WebSocket,
+  imageDataUrl: string,
+  round: unknown,
+) {
   const info = wsToPlayer.get(ws);
   if (!info) return;
   const room = getRoom(info.roomCode);
   if (!room || room.phase !== "face-drawing") return;
-  handleFaceDrawingSubmit(room, info.playerId, imageDataUrl);
+  handleFaceDrawingSubmit(room, info.playerId, imageDataUrl, roundOf(round));
 }
 
-function handleSubmitSplitDrawing(ws: WebSocket, imageDataUrl: string) {
+/** A round number from a client message; anything else counts as "not this round". */
+function roundOf(round: unknown): number | undefined {
+  if (round === undefined) return undefined;
+  return Number.isInteger(round) ? (round as number) : -1;
+}
+
+function handleSubmitSplitDrawing(
+  ws: WebSocket,
+  imageDataUrl: string,
+  round: unknown,
+) {
   const info = wsToPlayer.get(ws);
   if (!info) return;
 
   const room = getRoom(info.roomCode);
   if (!room || room.phase !== "split-drawing") return;
 
-  handleSplitDrawingSubmit(room, info.playerId, imageDataUrl);
+  handleSplitDrawingSubmit(room, info.playerId, imageDataUrl, roundOf(round));
 }
 
 function handleVoteDrawing(ws: WebSocket, pairId: string, rank: 1 | 2 | 3) {
