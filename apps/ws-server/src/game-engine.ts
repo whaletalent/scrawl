@@ -86,6 +86,12 @@ function startSplitRound(room: Room) {
   transitionTo(room, "split-drawing");
 }
 
+/** Tells the players drawing one picture that one of their drawings reached the server. */
+export function announceReceived(room: Room, playerId: string, to: string[]) {
+  for (const id of to)
+    sendTo(room, id, { type: "drawing-received", round: room.round, playerId });
+}
+
 function sendSplitRoundStart(
   room: Room,
   drawing: SplitDrawing,
@@ -99,6 +105,9 @@ function sendSplitRoundStart(
     silhouetteId: drawing.silhouetteId,
     totalRounds: room.totalRounds,
     submitted: !!(isTop ? drawing.topImageDataUrl : drawing.bottomImageDataUrl),
+    partnerSubmitted: !!(isTop
+      ? drawing.bottomImageDataUrl
+      : drawing.topImageDataUrl),
   });
 }
 
@@ -120,6 +129,9 @@ function sendFaceRoundStart(
     submitted: !!(isP1
       ? drawing.player1ImageDataUrl
       : drawing.player2ImageDataUrl),
+    partnerSubmitted: !!(isP1
+      ? drawing.player2ImageDataUrl
+      : drawing.player1ImageDataUrl),
   });
 }
 
@@ -135,6 +147,9 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
     submitted: room.drawings.some(
       (d) => d.pairId === pair.id && d.playerId === playerId,
     ),
+    partnerSubmitted: room.drawings.some(
+      (d) => d.pairId === pair.id && d.playerId !== playerId,
+    ),
   });
 }
 
@@ -146,8 +161,11 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
 export function resyncPlayer(room: Room, playerId: string) {
   if (room.gameMode === "split-body") {
     const current = room.splitDrawings.find((d) => d.round === room.round);
-    if (room.phase === "split-drawing" && current)
+    if (room.phase === "split-drawing" && current) {
       sendSplitRoundStart(room, current, playerId);
+      if (room.collecting)
+        sendTo(room, playerId, { type: "time-up", round: room.round });
+    }
     if (room.phase === "split-final")
       sendTo(room, playerId, {
         type: "split-final-results",
@@ -157,8 +175,11 @@ export function resyncPlayer(room: Room, playerId: string) {
   }
   if (room.gameMode === "face-builder") {
     const current = room.faceDrawings.find((d) => d.round === room.round);
-    if (room.phase === "face-drawing" && current)
+    if (room.phase === "face-drawing" && current) {
       sendFaceRoundStart(room, current, playerId);
+      if (room.collecting)
+        sendTo(room, playerId, { type: "time-up", round: room.round });
+    }
     if (room.phase === "face-final")
       sendTo(room, playerId, {
         type: "face-final-results",
@@ -171,6 +192,8 @@ export function resyncPlayer(room: Room, playerId: string) {
     (p) => p.playerA === playerId || p.playerB === playerId,
   );
   if (pair) sendPairAssigned(room, pair, playerId);
+  if (room.collecting)
+    sendTo(room, playerId, { type: "time-up", round: room.round });
 
   if (room.phase === "drawing-voting") {
     sendTo(room, playerId, {
@@ -242,9 +265,16 @@ export function handleFaceDrawingSubmit(
   room: Room,
   playerId: string,
   imageDataUrl: string,
+  round?: number,
 ) {
   if (room.phase !== "face-drawing") {
     console.log(`[face] submit rejected: phase is ${room.phase}`);
+    return;
+  }
+  if (!isCurrentRound(room, round)) {
+    console.log(
+      `[face] submit rejected: round ${round}, playing ${room.round}`,
+    );
     return;
   }
 
@@ -266,6 +296,11 @@ export function handleFaceDrawingSubmit(
   } else {
     return;
   }
+
+  announceReceived(room, playerId, [
+    currentDrawing.player1Id,
+    currentDrawing.player2Id,
+  ]);
 
   if (
     currentDrawing.player1ImageDataUrl &&
@@ -304,10 +339,17 @@ export function handleSplitDrawingSubmit(
   room: Room,
   playerId: string,
   imageDataUrl: string,
+  round?: number,
 ) {
   if (room.phase !== "split-drawing") {
     console.log(
       `[split] submit rejected: phase is ${room.phase}, not split-drawing`,
+    );
+    return;
+  }
+  if (!isCurrentRound(room, round)) {
+    console.log(
+      `[split] submit rejected: round ${round}, playing ${room.round}`,
     );
     return;
   }
@@ -336,6 +378,11 @@ export function handleSplitDrawingSubmit(
     );
     return;
   }
+
+  announceReceived(room, playerId, [
+    currentDrawing.topPlayerId,
+    currentDrawing.bottomPlayerId,
+  ]);
 
   if (currentDrawing.topImageDataUrl && currentDrawing.bottomImageDataUrl) {
     console.log(`[split] round ${room.round}: BOTH submitted, advancing`);
@@ -371,6 +418,7 @@ function startSplitFinal(room: Room) {
 
 export function transitionTo(room: Room, phase: Phase) {
   if (room.phaseTimer) clearTimeout(room.phaseTimer);
+  room.collecting = false;
 
   room.phase = phase;
   const duration = getPhaseDuration(phase, room);
@@ -388,7 +436,40 @@ export function transitionTo(room: Room, phase: Phase) {
   }
 }
 
+const DRAWING_PHASES: Phase[] = ["drawing", "split-drawing", "face-drawing"];
+
+/**
+ * A drawing turn ran out: tell everyone to send what they have, and close the
+ * turn a moment later (or as soon as every drawing is in).
+ */
+function startCollecting(room: Room) {
+  room.collecting = true;
+  broadcast(room, { type: "time-up", round: room.round });
+  room.phaseTimer = setTimeout(() => onPhaseEnd(room), config.submitGraceMs);
+}
+
+/** Whether a submitted drawing is for the round being played (untagged ones are). */
+export function isCurrentRound(room: Room, round: unknown): boolean {
+  return round === undefined || round === room.round;
+}
+
+/** Party: closes the drawing turn early once every pair's two halves are in, after time-up. */
+export function finishPartyDrawingIfComplete(room: Room) {
+  if (room.phase !== "drawing" || !room.collecting) return;
+  const complete = room.pairs.every(
+    (pair) => room.drawings.filter((d) => d.pairId === pair.id).length === 2,
+  );
+  if (complete) {
+    if (room.phaseTimer) clearTimeout(room.phaseTimer);
+    processDrawings(room);
+  }
+}
+
 function onPhaseEnd(room: Room) {
+  if (DRAWING_PHASES.includes(room.phase) && !room.collecting) {
+    startCollecting(room);
+    return;
+  }
   switch (room.phase) {
     case "theme-creation":
       processThemes(room);

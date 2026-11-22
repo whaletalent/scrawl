@@ -163,6 +163,9 @@ export function GameController(props: GameControllerProps) {
               theme={pairAssignment.theme}
               side={pairAssignment.side}
               onSubmit={props.submitDrawing}
+              timeUp={props.timeUp}
+              mineReceived={props.mineReceived}
+              partnerReceived={props.partnerReceived}
               endsAt={roomState.phaseEndsAt}
               round={roomState.round}
               totalRounds={roomState.totalRounds}
@@ -218,6 +221,9 @@ export function GameController(props: GameControllerProps) {
                 silhouetteId={props.silhouetteId}
                 endsAt={roomState.phaseEndsAt}
                 onSubmit={props.submitSplitDrawing}
+                timeUp={props.timeUp}
+                mineReceived={props.mineReceived}
+                partnerReceived={props.partnerReceived}
                 me={me}
                 partner={partnerOf(undefined)}
               />
@@ -246,6 +252,9 @@ export function GameController(props: GameControllerProps) {
                 skinTone={props.faceSkinTone ?? roomState.skinTone}
                 endsAt={roomState.phaseEndsAt}
                 onSubmit={props.submitFaceDrawing}
+                timeUp={props.timeUp}
+                mineReceived={props.mineReceived}
+                partnerReceived={props.partnerReceived}
                 me={me}
                 partner={partnerOf(undefined)}
               />

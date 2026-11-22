@@ -7,4 +7,10 @@ export const config = {
   timeScale: Number(process.env.PHASE_TIME_SCALE) || 1,
   /** How long a disconnected player keeps their slot before being removed. */
   reconnectGraceMs: Number(process.env.RECONNECT_GRACE_MS) || 20_000,
+  /**
+   * How long a drawing turn stays open after `time-up` for the drawings to
+   * arrive. Players send theirs when told, so their clocks and the network
+   * delay don't decide whether a drawing makes it. Not scaled by `timeScale`.
+   */
+  submitGraceMs: Number(process.env.SUBMIT_GRACE_MS) || 3000,
 };

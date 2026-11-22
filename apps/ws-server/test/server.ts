@@ -13,10 +13,12 @@ import { closeAll, sleep } from "./client.js";
 export async function startServer({
   timeScale = 1,
   graceMs = 200,
+  submitGraceMs = 50,
   accounts = null as Accounts | null,
 } = {}) {
   config.timeScale = timeScale;
   config.reconnectGraceMs = graceMs;
+  config.submitGraceMs = submitGraceMs;
   setAccounts(accounts);
 
   const { server, wss } = createScrawlServer();

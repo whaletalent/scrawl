@@ -147,6 +147,8 @@ export interface Room {
   savedDrawings: Set<string>;
   /** Keys being written right now: not saved yet, but nobody else may start. */
   savingDrawings: Set<string>;
+  /** The drawing turn's time ran out and `time-up` went out: waiting for the last drawings. */
+  collecting: boolean;
   /** Counts the games played in this room ("Jogar de novo"); a save still in flight from an older game is not announced. */
   game: number;
 }
@@ -192,11 +194,12 @@ export type ClientMessage =
   | { type: "save-drawing"; drawing: DrawingRef; imageDataUrl: string }
   | { type: "watch-rooms" }
   | { type: "unwatch-rooms" }
-  | { type: "submit-split-drawing"; imageDataUrl: string }
-  | { type: "submit-face-drawing"; imageDataUrl: string }
+  /** `round` is the round the drawing belongs to; one for another round is dropped. */
+  | { type: "submit-split-drawing"; imageDataUrl: string; round?: number }
+  | { type: "submit-face-drawing"; imageDataUrl: string; round?: number }
   | { type: "start-game" }
   | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
-  | { type: "submit-drawing"; imageDataUrl: string }
+  | { type: "submit-drawing"; imageDataUrl: string; round?: number }
   | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 };

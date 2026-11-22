@@ -145,10 +145,10 @@ export type ClientMessage =
   | { type: "play-again" }
   | { type: "submit-theme"; text: string }
   | { type: "vote-theme"; themeId: string }
-  | { type: "submit-drawing"; imageDataUrl: string }
+  | { type: "submit-drawing"; imageDataUrl: string; round: number }
   | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 }
-  | { type: "submit-split-drawing"; imageDataUrl: string }
-  | { type: "submit-face-drawing"; imageDataUrl: string };
+  | { type: "submit-split-drawing"; imageDataUrl: string; round: number }
+  | { type: "submit-face-drawing"; imageDataUrl: string; round: number };
 
 export type ServerMessage =
   | {
@@ -174,6 +174,8 @@ export type ServerMessage =
       side: "left" | "right";
       theme: string;
       submitted: boolean;
+      /** Whether the partner's drawing for this round is already in. */
+      partnerSubmitted?: boolean;
     }
   | { type: "error"; message: string }
   | { type: "phase-change"; phase: Phase; phaseEndsAt: number; round: number }
@@ -182,7 +184,8 @@ export type ServerMessage =
   | { type: "notice"; message: string }
   | { type: "theme-submitted"; theme: Theme }
   | { type: "theme-votes-update"; themes: Theme[] }
-  | { type: "drawing-submitted"; pairId: string; side: "left" | "right" }
+  /** One of the two drawings of this player's picture reached the server. */
+  | { type: "drawing-received"; round: number; playerId: string }
   | { type: "drawings-ready"; drawings: DrawingResult[] }
   | { type: "vote-update"; drawings: DrawingResult[] }
   | { type: "reveal-data"; drawings: DrawingResult[]; players: Player[] }
@@ -194,6 +197,8 @@ export type ServerMessage =
       silhouetteId: SilhouetteId;
       totalRounds: number;
       submitted: boolean;
+      /** Whether the partner's drawing for this round is already in. */
+      partnerSubmitted?: boolean;
     }
   | { type: "split-round-end"; round: number }
   | { type: "split-final-results"; drawings: SplitDrawing[] }
@@ -205,6 +210,10 @@ export type ServerMessage =
       skinTone: string;
       totalRounds: number;
       submitted: boolean;
+      /** Whether the partner's drawing for this round is already in. */
+      partnerSubmitted?: boolean;
     }
   | { type: "face-round-end"; round: number }
+  /** A drawing turn ran out: send the drawing now, the server waits a moment for it. */
+  | { type: "time-up"; round: number }
   | { type: "face-final-results"; drawings: FaceDrawing[] };

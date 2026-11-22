@@ -74,3 +74,59 @@ test("two browsers play Face Builder; a reload rejoins; a partner leaving ends t
   await expect(host.getByText("Nenhum desenho para mostrar.")).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("when time runs out every round keeps both parts, even with a guest whose clock is behind", async ({
+  page: host,
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const code = await createRoom(host, {
+    mode: "Caricatura a dois (2)",
+    rounds: 3,
+    turnSeconds: 15,
+  });
+
+  const guestContext = await browser.newContext();
+  // The guest's device runs 3 seconds behind the server.
+  await guestContext.addInitScript(() => {
+    const realNow = Date.now.bind(Date);
+    Date.now = () => realNow() - 3000;
+  });
+  const guest = await guestContext.newPage();
+  await guest.goto(`/room/?code=${code}`);
+  await guest.getByPlaceholder("Seu apelido").fill("Bia");
+  await guest.getByPlaceholder("Seu apelido").press("Enter");
+  await expect(host.getByText("Jogadores (2/2)")).toBeVisible();
+
+  // What the server finally hands out, read off the host's socket.
+  const finalDrawings = new Promise<
+    {
+      round: number;
+      player1ImageDataUrl: string;
+      player2ImageDataUrl: string;
+    }[]
+  >((resolve) =>
+    host.on("websocket", (ws) =>
+      ws.on("framereceived", ({ payload }) => {
+        const m = JSON.parse(String(payload));
+        if (m.type === "face-final-results") resolve(m.drawings);
+      }),
+    ),
+  );
+  await host.reload();
+  await expect(host.getByText("Jogadores (2/2)")).toBeVisible();
+
+  await host.getByRole("button", { name: "Começar Caricatura a dois" }).click();
+  // Nobody presses "Enviar desenho": every turn ends on the timer.
+  for (const p of [host, guest])
+    await expect(
+      p.getByRole("heading", { name: "Vocês montaram 3 caricaturas" }),
+    ).toBeVisible({ timeout: 60_000 });
+
+  const drawings = await finalDrawings;
+  expect(drawings.map((d) => d.round)).toEqual([1, 2, 3]);
+  for (const d of drawings) {
+    expect(d.player1ImageDataUrl, `round ${d.round}`).toBeTruthy();
+    expect(d.player2ImageDataUrl, `round ${d.round}`).toBeTruthy();
+  }
+});

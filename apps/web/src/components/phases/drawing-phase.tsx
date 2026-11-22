@@ -9,7 +9,12 @@ import {
 interface DrawingPhaseProps {
   theme: string;
   side: "left" | "right";
-  onSubmit: (imageDataUrl: string) => void;
+  onSubmit: (imageDataUrl: string, round: number) => void;
+  /** The server ended the turn: send whatever is on the canvas. */
+  timeUp: boolean;
+  /** The server confirmed it has this round's drawing from me / my partner. */
+  mineReceived: boolean;
+  partnerReceived: boolean;
   /** True when rejoining a round the server already has our drawing for. */
   initialSubmitted?: boolean;
   endsAt: number;
@@ -25,6 +30,9 @@ export function DrawingPhase({
   side,
   onSubmit,
   endsAt,
+  timeUp,
+  mineReceived,
+  partnerReceived,
   initialSubmitted,
   round,
   totalRounds,
@@ -38,21 +46,17 @@ export function DrawingPhase({
     if (submitted) return;
     const image = canvasRef.current?.exportImage();
     if (image) {
-      onSubmit(image);
+      onSubmit(image, round);
       setSubmitted(true);
     }
-  }, [submitted, onSubmit]);
+  }, [submitted, onSubmit, round]);
 
+  // The server says when time is up (and waits a moment for the drawing),
+  // so neither this device's clock nor the network delay decides whether
+  // the drawing makes it into its round.
   useEffect(() => {
-    if (!endsAt || submitted) return;
-    const ms = endsAt - Date.now() - 500;
-    if (ms <= 0) {
-      doSubmit();
-      return;
-    }
-    const timer = setTimeout(doSubmit, ms);
-    return () => clearTimeout(timer);
-  }, [endsAt, submitted, doSubmit]);
+    if (timeUp && !submitted) doSubmit();
+  }, [timeUp, submitted, doSubmit]);
 
   function handleSubmit() {
     doSubmit();
@@ -74,11 +78,12 @@ export function DrawingPhase({
       <DrawingCanvas ref={canvasRef} side={side} />
 
       <DrawingFooter
-        parts={[
-          { ...me, part: `Você desenha a metade ${mine}` },
-          { ...partner, part: `${partner.name}, metade ${theirs}` },
-        ]}
+        me={{ ...me, part: `Você desenha a metade ${mine}` }}
+        partner={{ ...partner, part: `${partner.name}, metade ${theirs}` }}
         submitted={submitted}
+        timeUp={timeUp}
+        mineReceived={mineReceived}
+        partnerReceived={partnerReceived}
         waiting="Desenho enviado! Esperando os outros..."
         onSubmit={handleSubmit}
       />
