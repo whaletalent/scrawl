@@ -6,6 +6,8 @@ import type {
   SplitDrawing,
   FaceDrawing,
   FaceTemplateId,
+  SeamDrawing,
+  SeamGroup,
 } from "./types.js";
 import { SILHOUETTE_IDS, FACE_REGION_IDS, FACE_TEMPLATE_IDS } from "./types.js";
 
@@ -27,13 +29,15 @@ const PHASE_DURATIONS: Record<string, number> = {
   "drawing-voting": 20_000,
   reveal: 10_000,
   scoreboard: 8_000,
+  "seam-reveal": 10_000,
 };
 
 function getPhaseDuration(phase: string, room: Room): number {
   const isDrawing =
     phase === "drawing" ||
     phase === "split-drawing" ||
-    phase === "face-drawing";
+    phase === "face-drawing" ||
+    phase === "seam-drawing";
   const base = isDrawing
     ? room.turnDuration * 1000
     : (PHASE_DURATIONS[phase] ?? 0);
@@ -159,6 +163,10 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
  * the current phase. Call right after sending them `room-state`.
  */
 export function resyncPlayer(room: Room, playerId: string) {
+  if (room.gameMode === "seam") {
+    resyncSeamPlayer(room, playerId);
+    return;
+  }
   if (room.gameMode === "split-body") {
     const current = room.splitDrawings.find((d) => d.round === room.round);
     if (room.phase === "split-drawing" && current) {
@@ -436,7 +444,12 @@ export function transitionTo(room: Room, phase: Phase) {
   }
 }
 
-const DRAWING_PHASES: Phase[] = ["drawing", "split-drawing", "face-drawing"];
+const DRAWING_PHASES: Phase[] = [
+  "drawing",
+  "split-drawing",
+  "face-drawing",
+  "seam-drawing",
+];
 
 /**
  * A drawing turn ran out: tell everyone to send what they have, and close the
@@ -513,6 +526,12 @@ function onPhaseEnd(room: Room) {
       }
       break;
     }
+    case "seam-drawing":
+      endSeamRound(room);
+      break;
+    case "seam-reveal":
+      nextSeamRoundOrEnd(room);
+      break;
   }
 }
 
@@ -676,6 +695,7 @@ export const FINAL_PHASES: Phase[] = [
   "final-results",
   "split-final",
   "face-final",
+  "seam-final",
 ];
 
 /**
@@ -695,6 +715,8 @@ export function resetForNewGame(room: Room) {
   room.sitOutCounts = new Map();
   room.splitDrawings = [];
   room.faceDrawings = [];
+  room.seamGroups = [];
+  room.seamDrawings = [];
   room.resultAuthors = new Map();
   room.savedDrawings = new Set();
   room.savingDrawings = new Set();
@@ -707,6 +729,7 @@ const IDLE_PHASES: Phase[] = [
   "final-results",
   "split-final",
   "face-final",
+  "seam-final",
 ];
 
 /**
@@ -737,6 +760,8 @@ export function handlePlayerLeft(room: Room) {
         (d.player1ImageDataUrl && d.player2ImageDataUrl),
     );
     startFaceFinal(room);
+  } else if (room.gameMode === "seam") {
+    seamPlayerLeft(room);
   } else if (room.players.size < MIN_PARTY_PLAYERS) {
     broadcast(room, {
       type: "notice",
@@ -778,4 +803,198 @@ function shuffleArray<T>(arr: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+// --- Emenda (seam) -----------------------------------------------------------
+
+const MIN_SEAM_PLAYERS = 2;
+
+/**
+ * Cuts an already shuffled list into groups, keeping the order: pairs, and
+ * with an odd count the last group is a trio (so 3 players are one trio).
+ * Never a group of one, unless there is only one id to begin with.
+ */
+export function groupPlayers(ids: string[]): string[][] {
+  if (ids.length <= 3) return ids.length ? [[...ids]] : [];
+  const groups: string[][] = [];
+  for (let i = 0; i + 1 < ids.length; i += 2) groups.push(ids.slice(i, i + 2));
+  if (ids.length % 2 === 1) groups[groups.length - 1].push(ids[ids.length - 1]);
+  return groups;
+}
+
+export function startSeamGame(room: Room) {
+  if (room.players.size < MIN_SEAM_PLAYERS) return;
+  room.round = 1;
+  room.seamGroups = [];
+  room.seamDrawings = [];
+  startSeamRound(room);
+}
+
+/** Regroups everyone and opens a drawing turn. */
+function startSeamRound(room: Room) {
+  const ids = shuffleArray(Array.from(room.players.keys()));
+  room.seamGroups = groupPlayers(ids).map((members) => ({
+    id: crypto.randomUUID(),
+    members,
+  }));
+
+  for (const group of room.seamGroups) {
+    room.seamDrawings.push({
+      groupId: group.id,
+      round: room.round,
+      memberIds: [...group.members],
+      memberNames: group.members.map(
+        (id) => room.roster.get(id)?.nickname ?? "?",
+      ),
+      memberAvatars: group.members.map(
+        (id) => room.players.get(id)?.avatarUrl ?? null,
+      ),
+      layers: group.members.map(() => null),
+      stripFrames: [],
+    });
+  }
+
+  for (const group of room.seamGroups)
+    for (const id of group.members) sendSeamRoundStart(room, group, id);
+
+  transitionTo(room, "seam-drawing");
+}
+
+function seamDrawingOf(
+  room: Room,
+  groupId: string,
+  round = room.round,
+): SeamDrawing | undefined {
+  return room.seamDrawings.find(
+    (d) => d.groupId === groupId && d.round === round,
+  );
+}
+
+function sendSeamRoundStart(room: Room, group: SeamGroup, playerId: string) {
+  const drawing = seamDrawingOf(room, group.id);
+  const index = group.members.indexOf(playerId);
+  sendTo(room, playerId, {
+    type: "seam-round-start",
+    round: room.round,
+    totalRounds: room.totalRounds,
+    groupId: group.id,
+    members: group.members.map((id) => ({
+      id,
+      nickname: room.roster.get(id)?.nickname ?? "?",
+    })),
+    index,
+    submitted: !!drawing?.layers[index],
+    // The other members whose layer is already in.
+    partnerSubmitted: group.members.filter(
+      (id, i) => i !== index && drawing?.layers[i],
+    ),
+    // Live strip frames come with Task 3; nothing is kept yet.
+    frames: [],
+  });
+}
+
+function resyncSeamPlayer(room: Room, playerId: string) {
+  if (room.phase === "seam-drawing") {
+    const group = room.seamGroups.find((g) => g.members.includes(playerId));
+    if (group) sendSeamRoundStart(room, group, playerId);
+    if (room.collecting)
+      sendTo(room, playerId, { type: "time-up", round: room.round });
+  } else if (room.phase === "seam-reveal") {
+    sendTo(room, playerId, seamRoundResults(room));
+  } else if (room.phase === "seam-final") {
+    sendTo(room, playerId, {
+      type: "seam-final-results",
+      drawings: room.seamDrawings,
+    });
+  }
+}
+
+export function handleSeamDrawingSubmit(
+  room: Room,
+  playerId: string,
+  imageDataUrl: string,
+  round?: number,
+) {
+  if (room.phase !== "seam-drawing") return;
+  if (!isCurrentRound(room, round)) {
+    console.log(
+      `[seam] submit rejected: round ${round}, playing ${room.round}`,
+    );
+    return;
+  }
+  const group = room.seamGroups.find((g) => g.members.includes(playerId));
+  const drawing = group && seamDrawingOf(room, group.id);
+  if (!group || !drawing) return;
+
+  const index = group.members.indexOf(playerId);
+  if (drawing.layers[index]) return;
+  drawing.layers[index] = imageDataUrl;
+
+  announceReceived(room, playerId, group.members);
+  finishSeamRoundIfComplete(room);
+}
+
+/** Closes the turn early once every member still in the room has sent their layer. */
+function finishSeamRoundIfComplete(room: Room) {
+  if (room.phase !== "seam-drawing") return;
+  const complete = room.seamDrawings
+    .filter((d) => d.round === room.round)
+    .every((d) =>
+      d.memberIds.every((id, i) => d.layers[i] || !room.players.has(id)),
+    );
+  if (complete) endSeamRound(room);
+}
+
+function seamRoundResults(room: Room) {
+  return {
+    type: "seam-round-results",
+    round: room.round,
+    drawings: room.seamDrawings.filter((d) => d.round === room.round),
+  };
+}
+
+function endSeamRound(room: Room) {
+  if (room.phaseTimer) clearTimeout(room.phaseTimer);
+  room.phaseTimer = null;
+  broadcast(room, seamRoundResults(room));
+  transitionTo(room, "seam-reveal");
+}
+
+function nextSeamRoundOrEnd(room: Room) {
+  if (room.round >= room.totalRounds) {
+    startSeamFinal(room);
+  } else {
+    room.round++;
+    startSeamRound(room);
+  }
+}
+
+function startSeamFinal(room: Room) {
+  room.seamGroups = [];
+  broadcast(room, {
+    type: "seam-final-results",
+    drawings: room.seamDrawings,
+  });
+  transitionTo(room, "seam-final");
+}
+
+/**
+ * A player is gone for good. With fewer than 2 left the game ends on the
+ * finished rounds; otherwise their layer stays blank and the round goes on.
+ */
+function seamPlayerLeft(room: Room) {
+  if (room.players.size < MIN_SEAM_PLAYERS) {
+    broadcast(room, {
+      type: "notice",
+      message: "Os outros jogadores saíram. O jogo foi encerrado.",
+    });
+    // The round being drawn never finished; one in its reveal did.
+    if (room.phase === "seam-drawing")
+      room.seamDrawings = room.seamDrawings.filter(
+        (d) => d.round !== room.round,
+      );
+    startSeamFinal(room);
+    return;
+  }
+  finishSeamRoundIfComplete(room);
 }
