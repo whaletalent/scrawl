@@ -83,7 +83,7 @@ Phase timing lives in `PHASE_DURATIONS` inside `game-engine.ts` (all multiplied 
 
 **Jogar de novo**: on a final screen the host sends `play-again`; `resetForNewGame` (game-engine) clears everything of the last game (scores, rounds, drawings, saved keys) and goes back to `lobby`, then handlers.ts sends every player a fresh `room-state` and calls `publishRooms()`. `room.game` counts the games, so a gallery save still in flight from the old game is not announced in the new one. The client clears its per-game state (`PER_GAME` in `use-game-state.ts`) on any `room-state` in the lobby.
 
-**Players leaving mid-game**: the socket `close` handler calls `handlePlayerLeft` (game-engine). 2-player modes end immediately in their final phase with only the completed rounds; party ends in `final-results` once fewer than 4 players remain, otherwise it carries on. Clients get a `notice` message explaining why. `player-left` carries `hostId` because `removePlayer` may promote a new host.
+**Players leaving mid-game**: the socket `close` handler calls `handlePlayerLeft` (game-engine). 2-player modes end immediately in their final phase with only the completed rounds; party ends in `final-results` once fewer than 4 players remain, otherwise it carries on; seam (Emenda) ends in `seam-final` once fewer than 2 remain (a round still being drawn is dropped, one in its reveal is kept), otherwise the leaver's layer stays blank and a round that was only waiting for them ends early. Clients get a `notice` message explaining why. `player-left` carries `hostId` because `removePlayer` may promote a new host.
 
 ### Live strips
 
@@ -180,7 +180,7 @@ Design: `docs/superpowers/specs/2026-11-21-accounts-profile-home-design.md`. Own
 - Anything a client sends is untrusted: `createRoom` sanitizes options, drawings must be `data:image/png;base64,` URLs (`isPngDataUrl` in handlers.ts), messages are capped at `MAX_MESSAGE_BYTES` (app.ts), and every socket has an `error` listener — without it a protocol error from one client crashes the whole server.
 - Strict TypeScript via `tsconfig.base.json` (`strict: true`, `target: ES2022`).
 - Room codes are 5 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no 0/O/1/I/L confusion).
-- `createRoom` sanitizes everything the client sends: rounds clamp 1–5 (all modes), turn duration 15–300s, unknown `gameMode` → `party`, unknown `faceTemplate` → `random`, non-hex `skinTone` → default. 2-player modes cap the room at 2 players.
+- `createRoom` sanitizes everything the client sends: rounds clamp 1–5 (all modes), turn duration 15–300s, unknown `gameMode` → `party`, unknown `faceTemplate` → `random`, non-hex `skinTone` → default. 2-player modes cap the room at 2 players; party and seam at 10.
 - `docs/game-mode-ideas.md` is a Portuguese brainstorm list of 40 proposed modes — useful context for mode-related work; not a spec.
 
 ## Deploy

@@ -13,6 +13,7 @@ import {
   type TestClient,
 } from "./client.js";
 import { groupPlayers } from "../src/game-engine.js";
+import { config } from "../src/config.js";
 
 /**
  * Emenda (`seam`): 2–10 players are regrouped every round into pairs (plus a
@@ -304,6 +305,58 @@ test("leaving: in a 2-player room, a partner leaving ends the game", async () =>
   // Round 1 never finished, so there is nothing to show.
   assert.equal((await final).drawings.length, 0);
   await finalPhase;
+});
+
+test("leaving: a leave during the reveal that leaves fewer than 2 ends in seam-final, keeping the revealed round", async (t) => {
+  // Real-time phases, so the reveal is still on when the guest leaves.
+  const scale = config.timeScale;
+  config.timeScale = 1;
+  t.after(() => (config.timeScale = scale));
+  const { clients } = await seamRoom(2, 2, 300);
+  const [host, guest] = clients;
+  sendsAtOnce(host);
+  sendsAtOnce(guest);
+  const reveal = host.wait(phase("seam-reveal"), 3_000);
+  host.send({ type: "start-game" });
+  await reveal;
+
+  const notice = host.wait(type("notice"));
+  const final = host.wait(type("seam-final-results"));
+  const finalPhase = host.wait(phase("seam-final"));
+  guest.close();
+  assert.ok((await notice).message);
+  const { drawings } = await final;
+  assert.equal(drawings.length, 1, "round 1 was revealed, so it stays");
+  assert.equal(drawings[0].round, 1);
+  assert.ok(drawings[0].layers.every((l: string | null) => l));
+  await finalPhase;
+  assert.ok(
+    !host.seen((m) => m.type === "seam-round-start" && m.round === 2),
+    "round 2 never started",
+  );
+});
+
+test("leaving: the last member a round waits for leaves, and the round ends early", async () => {
+  // A 6 s turn (300 s × 0.02): the results come long before it.
+  const { clients } = await seamRoom(4, 2, 300);
+  const [host, a, b, leaver] = clients;
+  for (const c of [host, a, b]) sendsAtOnce(c);
+  const started = leaver.wait(type("seam-round-start"));
+  const results = host.wait(type("seam-round-results"), 1_500);
+  host.send({ type: "start-game" });
+  await started;
+  await sleep(50); // the others' layers are in
+  leaver.close();
+
+  const { drawings } = await results;
+  assert.equal(drawings.length, 2, "two pairs");
+  const theirs = drawings.find((d: Msg) =>
+    d.memberIds.includes(leaver.playerId),
+  );
+  const gone = theirs.memberIds.indexOf(leaver.playerId);
+  assert.equal(theirs.layers[gone], null);
+  assert.ok(theirs.layers[1 - gone], "the partner's layer is there");
+  assert.ok(!host.seen(type("notice")), "three players carry on");
 });
 
 test("a player back mid-round gets their group again, with who has submitted", async () => {

@@ -90,11 +90,14 @@ export function SeamFinal({
   // The rounds played: a game cut short by players leaving has fewer.
   const rounds = Math.max(...drawings.map((d) => d.round));
   const ordered = [...drawings].sort((a, b) => a.round - b.round);
+  // Everyone who drew, including whoever left before the end (by id: two
+  // guests may share a nickname).
+  const played = new Set(drawings.flatMap((d) => d.memberIds)).size;
 
   return (
     <PairResults
       mode="Fim de jogo"
-      detail={`Emenda, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}, ${players.length} ${players.length === 1 ? "jogador" : "jogadores"}`}
+      detail={`Emenda, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}, ${played} ${played === 1 ? "jogador" : "jogadores"}`}
       players={players}
       rounds={rounds}
       isHost={isHost}

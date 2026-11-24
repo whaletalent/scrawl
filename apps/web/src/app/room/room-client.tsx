@@ -8,6 +8,7 @@ import { BASE_PATH, NEW_ROOM, roomPath } from "@/lib/routes";
 import { useAccount } from "@/hooks/use-account";
 import { getAccessToken } from "@/lib/account";
 import { isOpen, onClose, onOpen } from "@/lib/ws-client";
+import type { GameMode } from "@/types/game";
 
 export function RoomClient() {
   const router = useRouter();
@@ -104,8 +105,7 @@ export function RoomClient() {
         sessionStorage.removeItem("scrawl-visibility");
       }
       const gameMode =
-        (sessionStorage.getItem("scrawl-gameMode") as
-          "party" | "split-body" | "face-builder") || "party";
+        (sessionStorage.getItem("scrawl-gameMode") as GameMode) || "party";
       const totalRounds = parseInt(
         sessionStorage.getItem("scrawl-totalRounds") || "3",
         10,

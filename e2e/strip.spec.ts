@@ -7,6 +7,8 @@ const CANVAS = "canvas:not([data-desk-trail])";
 interface Table {
   bots: TestClient[];
   pages: Page[];
+  /** Each page's errors, collected from before it joined. */
+  errors: string[][];
   close(): Promise<void>;
 }
 
@@ -33,29 +35,34 @@ async function sitDown(browser: Browser): Promise<Table> {
     browser.newContext(),
     browser.newContext(),
   ]);
-  const pages = await Promise.all(contexts.map((c) => c.newPage()));
-  await Promise.all(
-    pages.map(async (page, i) => {
-      const name = ["Ana", "Bia"][i];
-      await page.goto(`/room/?code=${code}`);
-      await page.getByPlaceholder("Seu apelido").fill(name);
-      await page.getByPlaceholder("Seu apelido").press("Enter");
-      await expect(page.getByText(`${name} (você)`)).toBeVisible();
-    }),
-  );
-  host.send({ type: "start-game" });
-  // Nobody here sends a theme: the (shortened) theme timer runs out.
-  for (const page of pages)
-    await expect(page.getByText(/^Área de /)).toBeVisible({ timeout: 30_000 });
-
-  return {
-    bots: [host, duda],
-    pages,
-    close: async () => {
-      for (const b of [host, duda]) b.close();
-      await Promise.all(contexts.map((c) => c.close()));
-    },
+  const close = async () => {
+    for (const b of [host, duda]) b.close();
+    await Promise.all(contexts.map((c) => c.close()));
   };
+  try {
+    const pages = await Promise.all(contexts.map((c) => c.newPage()));
+    const errors = pages.map(failOnPageErrors);
+    await Promise.all(
+      pages.map(async (page, i) => {
+        const name = ["Ana", "Bia"][i];
+        await page.goto(`/room/?code=${code}`);
+        await page.getByPlaceholder("Seu apelido").fill(name);
+        await page.getByPlaceholder("Seu apelido").press("Enter");
+        await expect(page.getByText(`${name} (você)`)).toBeVisible();
+      }),
+    );
+    host.send({ type: "start-game" });
+    // Only the bots send a theme, not the pages: the (shortened) theme timer
+    // runs out.
+    for (const page of pages)
+      await expect(page.getByText(/^Área de /)).toBeVisible({
+        timeout: 30_000,
+      });
+    return { bots: [host, duda], pages, errors, close };
+  } catch (e) {
+    await close();
+    throw e;
+  }
 }
 
 /** Opaque pixels in the images laid over this page's canvas (the partner's strip frames). */
@@ -106,8 +113,17 @@ test("Racha-tema: the partner sees my strip live, not my side", async ({
     else await t.close();
   }
   if (!table) throw new Error("Ana and Bia were never paired");
+  try {
+    await playStrip(table);
+  } finally {
+    await table.close();
+  }
+  expect(table.errors.flat()).toEqual([]);
+});
+
+/** Ana draws in the strip, then in her zone; Bia sees only the strip. */
+async function playStrip(table: Table) {
   const [ana, bia] = table.pages;
-  const errors = [failOnPageErrors(ana), failOnPageErrors(bia)];
   await expect(bia.getByText("Área de Ana")).toBeVisible();
 
   // Ana is on the left when Bia's area is on her right.
@@ -144,7 +160,4 @@ test("Racha-tema: the partner sees my strip live, not my side", async ({
   }
   expect(await overlayInk(bia)).toBe(inStrip);
   await expect(bia.getByText("Área de Ana")).toBeVisible();
-
-  await table.close();
-  expect(errors.flat()).toEqual([]);
-});
+}
