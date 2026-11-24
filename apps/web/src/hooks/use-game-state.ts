@@ -82,6 +82,8 @@ interface GameState {
   seamRound: SeamRoundStart | null;
   seamResults: SeamRoundResults | null;
   seamFinal: SeamFinalResults | null;
+  /** Emenda: the other group members whose layer for this round is in. */
+  seamReceived: string[];
   /** Live frames of the current round, keyed "strip:playerId". */
   stripFrames: Record<string, string>;
   error: string | null;
@@ -118,6 +120,7 @@ const initialState: GameState = {
   seamRound: null,
   seamResults: null,
   seamFinal: null,
+  seamReceived: [],
   stripFrames: {},
   error: null,
   notice: null,
@@ -143,6 +146,7 @@ const PER_GAME: Partial<GameState> = {
   seamRound: null,
   seamResults: null,
   seamFinal: null,
+  seamReceived: [],
   stripFrames: {},
   notice: null,
   saveFailures: {},
@@ -444,7 +448,13 @@ export function useGameState() {
             if (s.roomState && data.round !== s.roomState.round) return s;
             return data.playerId === s.playerId
               ? { ...s, mineReceived: true }
-              : { ...s, partnerReceived: true };
+              : {
+                  ...s,
+                  partnerReceived: true,
+                  seamReceived: s.seamReceived.includes(data.playerId)
+                    ? s.seamReceived
+                    : [...s.seamReceived, data.playerId],
+                };
           });
           break;
 
@@ -457,6 +467,7 @@ export function useGameState() {
             roundSubmitted: !!data.submitted,
             mineReceived: !!data.submitted,
             partnerReceived: data.partnerSubmitted.length > 0,
+            seamReceived: data.partnerSubmitted,
             stripFrames: frameMap(data.frames),
             error: null,
           }));

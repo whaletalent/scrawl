@@ -93,14 +93,16 @@ export function DrawingPhase({
 
       <DrawingFooter
         me={{ ...me, part: "Você desenha sua parte e a emenda no meio" }}
-        partner={{
-          ...partner,
-          part: `${partner.name}: a outra parte e a emenda no meio`,
-        }}
+        partners={[
+          {
+            ...partner,
+            part: `${partner.name}: a outra parte e a emenda no meio`,
+            received: partnerReceived,
+          },
+        ]}
         submitted={submitted}
         timeUp={timeUp}
         mineReceived={mineReceived}
-        partnerReceived={partnerReceived}
         waiting="Desenho enviado! Esperando os outros..."
         onSubmit={handleSubmit}
       />

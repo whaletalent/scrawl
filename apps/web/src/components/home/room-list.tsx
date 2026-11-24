@@ -10,7 +10,7 @@ const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
   party: { label: "Racha-tema", toy: "mode-party" },
   "split-body": { label: "Monstrinho", toy: "mode-split-body" },
   "face-builder": { label: "Caricatura a dois", toy: "mode-face-builder" },
-  // TODO(task 8): its own art
+  // Racha-tema's toy until Emenda has its own art.
   seam: { label: "Emenda", toy: "mode-party" },
 };
 

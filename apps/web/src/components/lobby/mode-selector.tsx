@@ -50,6 +50,15 @@ const MODES: {
     text: "As seis partes de um rosto, três para cada um.",
     toy: "mode-face-builder",
   },
+  {
+    id: "seam",
+    name: "Emenda",
+    players: "De 2 a 10 jogadores",
+    count: "2-10",
+    text: "Cada um desenha escondido na sua faixa. Na emenda com o vizinho, vocês se veem ao vivo. No fim, o desenho aparece inteiro.",
+    // Racha-tema's toy until Emenda has its own art.
+    toy: "mode-party",
+  },
 ];
 
 const LABEL = "font-display font-bold text-lg";
@@ -100,7 +109,7 @@ export function ModeSelector({
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-x-8 gap-y-6">
-        {(gameMode === "split-body" || gameMode === "face-builder") && (
+        {gameMode !== "party" && (
           <div className="flex flex-col gap-2.5">
             <span className={LABEL}>Rodadas</span>
             <div className="flex flex-wrap gap-2">

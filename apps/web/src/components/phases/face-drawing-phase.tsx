@@ -104,11 +104,16 @@ export function FaceDrawingPhase({
             </div>
           ),
         }}
-        partner={{ ...partner, part: `${partner.name}: ${theirs.join(", ")}` }}
+        partners={[
+          {
+            ...partner,
+            part: `${partner.name}: ${theirs.join(", ")}`,
+            received: partnerReceived,
+          },
+        ]}
         submitted={submitted}
         timeUp={timeUp}
         mineReceived={mineReceived}
-        partnerReceived={partnerReceived}
         waiting="Desenho enviado! Esperando parceiro..."
         onSubmit={doSubmit}
       />

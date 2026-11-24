@@ -107,23 +107,22 @@ function StatusBadge({ status }: { status: Status }) {
  */
 export function DrawingFooter({
   me,
-  partner,
+  partners,
   submitted,
   timeUp,
   mineReceived,
-  partnerReceived,
   waiting,
   onSubmit,
 }: {
   me: DrawingPart;
-  partner: DrawingPart;
+  /** Everyone else drawing this picture, and whether the server has their drawing. */
+  partners: (DrawingPart & { received: boolean })[];
   /** This page sent its drawing (it may not have arrived yet). */
   submitted: boolean;
   /** The server ended the turn and is collecting the drawings. */
   timeUp: boolean;
   mineReceived: boolean;
-  partnerReceived: boolean;
-  /** What to say once both drawings of this picture are in but the turn goes on (party). */
+  /** What to say once every drawing of this picture is in but the turn goes on (party). */
   waiting: string;
   onSubmit: () => void;
 }) {
@@ -132,11 +131,9 @@ export function DrawingFooter({
     : submitted || timeUp
       ? "sending"
       : "drawing";
-  const partnerStatus: Status = partnerReceived
-    ? "received"
-    : timeUp
-      ? "sending"
-      : "drawing";
+  const statusOf = (received: boolean): Status =>
+    received ? "received" : timeUp ? "sending" : "drawing";
+  const missing = partners.filter((p) => !p.received).map((p) => p.name);
 
   // What the box beside the chips says once there is no button to press.
   const status = !mineReceived ? (
@@ -146,7 +143,7 @@ export function DrawingFooter({
         ? "Tempo esgotado! Enviando seu desenho…"
         : "Enviando seu desenho…"}
     </>
-  ) : !partnerReceived ? (
+  ) : missing.length > 0 ? (
     <>
       {timeUp ? (
         <Spinner size={22} />
@@ -154,8 +151,10 @@ export function DrawingFooter({
         <Check aria-hidden="true" weight="bold" size={22} />
       )}
       {timeUp
-        ? `Tempo esgotado! Esperando o desenho de ${partner.name}…`
-        : "Desenho enviado! Esperando parceiro..."}
+        ? `Tempo esgotado! Esperando o desenho de ${missing.join(" e ")}…`
+        : partners.length === 1
+          ? "Desenho enviado! Esperando parceiro..."
+          : "Desenho enviado! Esperando os outros..."}
     </>
   ) : (
     <>
@@ -170,20 +169,18 @@ export function DrawingFooter({
     // for it (the status box below says what they would).
     <footer className="w-full max-w-[66rem] flex flex-wrap items-center justify-between gap-x-6 gap-y-4 max-sm:sticky max-sm:bottom-3 max-sm:z-10">
       <ul className="hidden sm:flex flex-wrap items-center gap-3">
-        {(
-          [
-            [me, myStatus],
-            [partner, partnerStatus],
-          ] as const
-        ).map(([p, st]) => (
+        {[
+          { ...me, status: myStatus },
+          ...partners.map((p) => ({ ...p, status: statusOf(p.received) })),
+        ].map((p, i) => (
           <li
-            key={p.name}
+            key={i}
             className="tag min-h-13 flex items-center gap-2.5 py-2 pl-2 pr-4"
           >
             <Avatar url={p.avatarUrl} name={p.name} size={36} />
             <div className="flex flex-col items-start gap-0.5">
               {p.part}
-              <StatusBadge status={st} />
+              <StatusBadge status={p.status} />
             </div>
           </li>
         ))}
@@ -200,7 +197,7 @@ export function DrawingFooter({
         <p
           role="status"
           className={`tag max-sm:w-full flex items-center gap-2.5 px-5 py-4 font-display font-bold text-lg ${
-            mineReceived && partnerReceived ? "text-go" : "text-ink"
+            mineReceived && missing.length === 0 ? "text-go" : "text-ink"
           }`}
         >
           {status}
