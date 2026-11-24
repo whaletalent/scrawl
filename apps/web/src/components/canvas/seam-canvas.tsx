@@ -30,6 +30,15 @@ interface SeamCanvasProps {
   /** Strip frames keyed "strip:playerId" (useGameState's `stripFrames`). */
   frames: Record<string, string>;
   onStripFrame(strip: number, imageDataUrl: string): void;
+  /**
+   * The round-start message the canvas belongs to (`pair-assigned` /
+   * `seam-round-start`). A new one while mounted is a resync after a socket
+   * blip: frames sent while the socket was down were dropped, so every own
+   * strip is sent again.
+   */
+  resync?: unknown;
+  /** The layer is sent: no more drawing, no more strip frames. */
+  disabled?: boolean;
 }
 
 export interface SeamCanvasHandle {
@@ -61,7 +70,10 @@ const sameFrames = (a: Record<number, string>, b: Record<number, string>) => {
  * transparent layer on top.
  */
 export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
-  function SeamCanvas({ size, index, members, frames, onStripFrame }, ref) {
+  function SeamCanvas(
+    { size, index, members, frames, onStripFrame, resync, disabled = false },
+    ref,
+  ) {
     const { zones } = seamLayout(size);
     const rects = useMemo(() => drawableRects(size, index), [size, index]);
     const myStrips = useMemo(
@@ -121,12 +133,32 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
       return img && img.complete && img.naturalWidth > 0 ? img : null;
     }, []);
 
+    // After the layer is sent, strip strokes would count where zone strokes
+    // don't: nothing more goes out, not even a send already scheduled.
+    const disabledRef = useRef(disabled);
+    useEffect(() => {
+      disabledRef.current = disabled;
+    });
+    const sendFrame = useCallback(
+      (strip: number, image: string) => {
+        if (!disabledRef.current) onStripFrame(strip, image);
+      },
+      [onStripFrame],
+    );
+
     const sender = useStripSender(
       layer.canvasRef,
       myStrips,
-      onStripFrame,
+      sendFrame,
       keptFrame,
     );
+
+    // A resync reaching a canvas the player has drawn on: send it all again.
+    // (Own kept frames are not re-adopted: the layer already holds them.)
+    const { markDirty } = sender;
+    useEffect(() => {
+      if (touchedRef.current) markDirty(null);
+    }, [resync, markDirty]);
 
     useImperativeHandle(ref, () => ({ exportLayer: layer.exportLayer }), [
       layer.exportLayer,
@@ -151,7 +183,7 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
       <Toolbar
         tool={layer.tool}
         onToolChange={layer.setTool}
-        onClear={layer.clear}
+        onClear={disabled ? () => {} : layer.clear}
       >
         <div
           className="relative w-full bg-white border-2 border-line-strong overflow-hidden select-none"
@@ -202,15 +234,17 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
 
           <canvas
             ref={layer.canvasRef}
-            onMouseDown={layer.startDrawing}
-            onMouseMove={layer.draw}
+            onMouseDown={disabled ? undefined : layer.startDrawing}
+            onMouseMove={disabled ? undefined : layer.draw}
             onMouseUp={layer.stopDrawing}
             onMouseLeave={layer.stopDrawing}
-            onTouchStart={layer.startDrawing}
-            onTouchMove={layer.draw}
+            onTouchStart={disabled ? undefined : layer.startDrawing}
+            onTouchMove={disabled ? undefined : layer.draw}
             onTouchEnd={layer.stopDrawing}
             onTouchCancel={layer.stopDrawing}
-            className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+            className={`absolute inset-0 w-full h-full touch-none ${
+              disabled ? "cursor-not-allowed" : "cursor-crosshair"
+            }`}
           />
         </div>
       </Toolbar>

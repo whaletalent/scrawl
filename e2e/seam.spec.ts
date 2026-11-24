@@ -1,11 +1,14 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type WebSocketRoute } from "@playwright/test";
+import { type } from "../apps/ws-server/test/client";
 import {
   autoplaySeam,
   bot,
   createRoom,
+  draw,
   failOnPageErrors,
   signUp,
   uniqueName,
+  WS_URL,
 } from "./helpers";
 
 test("Emenda: a trio plays a round to the final", async ({ page }) => {
@@ -77,4 +80,67 @@ test("the mode is offered at room creation", async ({ page }) => {
     page.getByRole("button", { name: "Começar Emenda" }),
   ).toBeEnabled();
   b.close();
+});
+
+test("Emenda: the strip is sent again after a socket blip, and no more after Enviar desenho", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = failOnPageErrors(page);
+  // The page's socket goes through this proxy, so the test can cut it.
+  let current: { page: WebSocketRoute; server: WebSocketRoute } | null = null;
+  const proxy = (ws: WebSocketRoute) => {
+    current = { page: ws, server: ws.connectToServer() };
+  };
+  await page.routeWebSocket(WS_URL, proxy);
+  await page.routeWebSocket(`${WS_URL}/**`, proxy);
+
+  const code = await createRoom(page, {
+    mode: "Emenda (2-10)",
+    rounds: 1,
+    turnSeconds: 180,
+  });
+  // Bia only watches: she never submits, so the turn stays open.
+  const bia = await bot(code, "Bia");
+  await expect(page.getByText("Jogadores (2/10)")).toBeVisible();
+  await page.getByRole("button", { name: "Começar Emenda" }).click();
+  await expect(page.getByText("Área de Bia")).toBeVisible();
+
+  // A first stroke down the shared strip (350–450 of 800) reaches Bia.
+  let frame = bia.wait(type("strip-frame"));
+  await draw(page, [
+    [0.47, 0.2],
+    [0.5, 0.4],
+  ]);
+  await frame;
+
+  // The socket drops; a second stroke goes nowhere while it is down (the
+  // client reconnects after 2 s, well inside the 3 s grace).
+  const cut = current!;
+  await cut.page.close();
+  await cut.server.close();
+  await draw(page, [
+    [0.47, 0.6],
+    [0.53, 0.8],
+  ]);
+  // Once the page is back in the room it sends its strip again by itself.
+  frame = bia.wait(type("strip-frame"), 10_000);
+  await frame;
+
+  // After "Enviar desenho" the paper is done: a stroke there neither draws
+  // nor reaches Bia.
+  await page.getByRole("button", { name: "Enviar desenho" }).click();
+  await expect(page.getByText(/Desenho enviado!/)).toBeVisible();
+  const before = bia.msgs.length;
+  await draw(page, [
+    [0.45, 0.3],
+    [0.55, 0.5],
+  ]);
+  await page.waitForTimeout(1_000);
+  expect(
+    bia.msgs.slice(before).filter((m) => m.type === "strip-frame"),
+  ).toEqual([]);
+
+  bia.close();
+  expect(errors).toEqual([]);
 });

@@ -187,6 +187,7 @@ export function GameController(props: GameControllerProps) {
               onStripFrame={(strip, image) =>
                 props.sendStripFrame(roomState.round, strip, image)
               }
+              resync={pairAssignment}
               onSubmit={props.submitDrawing}
               timeUp={props.timeUp}
               mineReceived={props.mineReceived}
@@ -316,6 +317,7 @@ export function GameController(props: GameControllerProps) {
                 onStripFrame={(strip, image) =>
                   props.sendStripFrame(seamRound.round, strip, image)
                 }
+                resync={seamRound}
                 onSubmit={props.submitSeamDrawing}
                 timeUp={props.timeUp}
                 mineReceived={props.mineReceived}

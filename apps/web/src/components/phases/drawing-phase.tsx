@@ -14,6 +14,8 @@ interface DrawingPhaseProps {
   /** Live strip frames, keyed "strip:playerId". */
   frames: Record<string, string>;
   onStripFrame: (strip: number, imageDataUrl: string) => void;
+  /** The round-start message; a new one is a resync (see SeamCanvas). */
+  resync?: unknown;
   onSubmit: (imageDataUrl: string, round: number) => void;
   /** The server ended the turn: send whatever is on the canvas. */
   timeUp: boolean;
@@ -36,6 +38,7 @@ export function DrawingPhase({
   members,
   frames,
   onStripFrame,
+  resync,
   onSubmit,
   endsAt,
   timeUp,
@@ -89,6 +92,8 @@ export function DrawingPhase({
         members={members}
         frames={frames}
         onStripFrame={onStripFrame}
+        resync={resync}
+        disabled={submitted}
       />
 
       <DrawingFooter
