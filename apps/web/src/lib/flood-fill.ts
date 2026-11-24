@@ -58,3 +58,26 @@ export function floodFill(
     stack.push(cx + 1, cy, cx - 1, cy, cx, cy + 1, cx, cy - 1);
   }
 }
+
+/**
+ * The fill bucket on a player's layer: flood fills inside the one rect of
+ * `rects` (a zone or a strip) that holds the start point, never into a
+ * touching one, so a fill in the zone can't flood the shared strip and the
+ * other way round. Returns that rect, or null when the start is in none.
+ */
+export function fillLayer(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  rgba: [number, number, number, number],
+  rects: Rect[],
+): Rect | null {
+  const rect = rects.find(
+    (r) => x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height,
+  );
+  if (!rect) return null;
+  floodFill(data, width, height, x, y, rgba, [rect]);
+  return rect;
+}

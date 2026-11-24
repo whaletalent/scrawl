@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { floodFill } from "@/lib/flood-fill";
+import { fillLayer } from "@/lib/flood-fill";
 import type { Rect } from "@/lib/seam-geometry";
 import type { CanvasTool, ToolType } from "./use-canvas";
 
@@ -146,7 +146,8 @@ export function useLayerCanvas(rects: Rect[], events: LayerCanvasEvents = {}) {
     const ctx = context();
     if (!ctx) return;
     const image = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    floodFill(
+    // The fill stays inside the one rect (zone or strip) it started in.
+    const area = fillLayer(
       image.data,
       CANVAS_WIDTH,
       CANVAS_HEIGHT,
@@ -155,10 +156,9 @@ export function useLayerCanvas(rects: Rect[], events: LayerCanvasEvents = {}) {
       hexToRgba(tool.color),
       rectsRef.current,
     );
+    if (!area) return;
     ctx.putImageData(image, 0, 0);
-    // The fill stays inside the rect it started in or spreads to a touching
-    // one, so any rect may have changed.
-    eventsRef.current.onChange?.(null);
+    eventsRef.current.onChange?.(area);
     eventsRef.current.onStrokeEnd?.();
   };
 
