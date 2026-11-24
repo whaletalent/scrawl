@@ -31,9 +31,9 @@ Under **Authentication**:
 
 ## 3. Database and storage
 
-Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`](../supabase/migrations/0001_accounts.sql) and run it, then do the same with [`0002_gallery.sql`](../supabase/migrations/0002_gallery.sql). The first creates the `profiles` table, its access rules and the `avatars` bucket; the second the `drawings` table and the `gallery` bucket. Both are safe to run again.
+Open **SQL Editor**, paste the whole of [`supabase/migrations/0001_accounts.sql`](../supabase/migrations/0001_accounts.sql) and run it, then do the same with [`0002_gallery.sql`](../supabase/migrations/0002_gallery.sql) and [`0003_seam_mode.sql`](../supabase/migrations/0003_seam_mode.sql). The first creates the `profiles` table, its access rules and the `avatars` bucket; the second the `drawings` table and the `gallery` bucket; the third lets Emenda (`seam`) drawings into that table. All are safe to run again.
 
-With the Supabase CLI logged in (`supabase login`, then `supabase link --project-ref <ref>`) the same can be done from the repository: `supabase db query --linked -f supabase/migrations/0001_accounts.sql` (and `0002_gallery.sql`), and `supabase config push` applies the auth settings of step 2.1 and 2.3 from [`supabase/config.toml`](../supabase/config.toml). The CLI prints the secret key masked — copy that one from the dashboard (**Secret keys**, starts with `sb_secret_`; the one starting with `sb_publishable_` is the public key).
+With the Supabase CLI logged in (`supabase login`, then `supabase link --project-ref <ref>`) the same can be done from the repository: `supabase db query --linked -f supabase/migrations/0001_accounts.sql` (and `0002_gallery.sql`, `0003_seam_mode.sql`), and `supabase config push` applies the auth settings of step 2.1 and 2.3 from [`supabase/config.toml`](../supabase/config.toml). The CLI prints the secret key masked — copy that one from the dashboard (**Secret keys**, starts with `sb_secret_`; the one starting with `sb_publishable_` is the public key).
 
 The migrations spell out every table privilege themselves: a new project gives the API roles nothing on a table created by SQL, so without those `grant` lines every read answers "permission denied".
 

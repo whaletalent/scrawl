@@ -328,3 +328,53 @@ test("a save still being written when the host starts another game is not announ
   assert.equal(saves.length, 1);
   for (const c of clients) assert.ok(!c.seen(type("drawing-saved")));
 });
+
+test("seam: saves a group's drawing with all its authors", async () => {
+  const { accounts, saves } = fakeAccounts();
+  srv = await startServer({ accounts, timeScale: 0.02 });
+  const ana = await host(srv.url, {
+    gameMode: "seam",
+    totalRounds: 1,
+    turnDuration: 15,
+  });
+  const clients = [ana];
+  for (const name of ["Bia", "Caio"])
+    clients.push(await join(srv.url, ana.state.code, name));
+  for (const c of clients)
+    c.on((m) => {
+      if (m.type === "seam-round-start")
+        c.send({
+          type: "submit-seam-drawing",
+          imageDataUrl: IMG,
+          round: m.round,
+        });
+    });
+  const final = ana.wait(type("seam-final-results"), 20_000);
+  const finalPhase = ana.wait(
+    (m) => m.type === "phase-change" && m.phase === "seam-final",
+    20_000,
+  );
+  ana.send({ type: "start-game" });
+  const [d] = (await final).drawings;
+  await finalPhase;
+  assert.equal(d.memberIds.length, 3);
+
+  // A seam drawing is addressed by its group, so a bare round is refused.
+  assert.equal((await save(ana, { round: d.round })).reason, "not-allowed");
+  assert.equal(saves.length, 0);
+
+  const answer = await save(ana, { round: d.round, pairId: d.groupId });
+  assert.deepEqual(answer, {
+    type: "drawing-saved",
+    key: `${d.round}:${d.groupId}`,
+  });
+  assert.equal(saves.length, 1);
+  const [entry] = saves;
+  assert.equal(entry.gameMode, "seam");
+  assert.equal(entry.theme, null);
+  assert.deepEqual([...entry.authorNames].sort(), ["Ana_99", "Bia", "Caio"]);
+  assert.deepEqual(
+    entry.authorIds,
+    entry.authorNames.map((n) => (n === "Ana_99" ? "u-ana" : null)),
+  );
+});
