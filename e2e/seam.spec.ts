@@ -55,6 +55,9 @@ test("Emenda: a trio plays a round to the final", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Salvar na galeria" }),
   ).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Baixar card" })).toHaveCount(
+    1,
+  );
   await expect(
     page.getByRole("button", { name: "Jogar de novo" }),
   ).toBeVisible();

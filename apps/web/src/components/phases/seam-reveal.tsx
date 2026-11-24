@@ -6,6 +6,7 @@ import {
   type GallerySaving,
 } from "@/components/gallery/save-button";
 import { DownloadDrawing } from "@/components/share/download-drawing";
+import { ShareCard } from "@/components/share/share-card";
 import { composeSeamDrawing } from "@/lib/compose-drawing";
 import { PairCard, PairResults, PLAYER_FILL } from "./pair-results";
 
@@ -93,7 +94,7 @@ export function SeamFinal({
   return (
     <PairResults
       mode="Fim de jogo"
-      detail={`Emenda, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}, ${players.length} jogadores`}
+      detail={`Emenda, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}, ${players.length} ${players.length === 1 ? "jogador" : "jogadores"}`}
       players={players}
       rounds={rounds}
       isHost={isHost}
@@ -118,6 +119,7 @@ export function SeamFinal({
                 />
               </div>
               <DownloadDrawing compose={() => composeSeamDrawing(drawing)} />
+              <ShareCard seamDrawing={drawing} />
             </>
           }
         />

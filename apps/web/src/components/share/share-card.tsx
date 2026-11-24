@@ -1,11 +1,42 @@
 "use client";
 import { useState } from "react";
 import { DownloadSimple } from "@phosphor-icons/react";
-import type { DrawingResult } from "@/types/game";
-import { composePartyDrawing } from "@/lib/compose-drawing";
+import type { DrawingResult, SeamDrawing } from "@/types/game";
+import { composePartyDrawing, composeSeamDrawing } from "@/lib/compose-drawing";
 
-interface ShareCardProps {
-  drawing: DrawingResult;
+/** A Racha-tema drawing (with its theme and score) or an Emenda one. */
+type ShareCardProps = { drawing: DrawingResult } | { seamDrawing: SeamDrawing };
+
+/** What goes on the card, whatever the mode. */
+interface CardContent {
+  /** The line under the logo: the theme in quotes, or the mode's name. */
+  subtitle: string;
+  compose: () => Promise<string>;
+  /** The authors, left to right (two, or three in Emenda). */
+  names: string[];
+  avatars: (string | null | undefined)[];
+  /** Racha-tema only. */
+  score?: number;
+}
+
+function contentOf(props: ShareCardProps): CardContent {
+  if ("seamDrawing" in props) {
+    const d = props.seamDrawing;
+    return {
+      subtitle: "Emenda",
+      compose: () => composeSeamDrawing(d),
+      names: d.memberNames,
+      avatars: d.memberAvatars,
+    };
+  }
+  const d = props.drawing;
+  return {
+    subtitle: `"${d.themeText}"`,
+    compose: () => composePartyDrawing(d),
+    names: d.playerNames,
+    avatars: d.playerAvatars ?? [],
+    score: d.votes.first * 3 + d.votes.second * 2 + d.votes.third,
+  };
 }
 
 function loadImage(
@@ -27,7 +58,7 @@ function loadImage(
 }
 
 async function renderCard(
-  drawing: DrawingResult,
+  card: CardContent,
   withAvatars: boolean,
 ): Promise<string> {
   const canvas = document.createElement("canvas");
@@ -47,43 +78,53 @@ async function renderCard(
 
   ctx.fillStyle = "#fff8e4";
   ctx.font = "24px sans-serif";
-  ctx.fillText(`"${drawing.themeText}"`, 540, 110, 1000);
+  ctx.fillText(card.subtitle, 540, 110, 1000);
 
-  // The picture as the screens show it: paper, strip frames, both layers.
+  // The picture as the screens show it: paper, strip frames, every layer.
   // A layer that never came (player left) just leaves blank paper.
-  const picture = await loadImage(await composePartyDrawing(drawing));
+  const picture = await loadImage(await card.compose());
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(40, 140, 1000, 750);
   if (picture) ctx.drawImage(picture, 40, 140, 1000, 750);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "28px sans-serif";
-  const names = `${drawing.playerNames[0]} + ${drawing.playerNames[1]}`;
+  const names = card.names.join(" + ");
   ctx.fillText(names, 540, 945, 900);
 
-  // Each author's avatar as a circle on their side of the names.
+  const circle = (img: HTMLImageElement, cx: number, cy: number) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, cx - 22, cy - 22, 44, 44);
+    ctx.restore();
+  };
+
   if (withAvatars) {
-    const half = Math.min(ctx.measureText(names).width, 900) / 2;
     const avatars = await Promise.all(
-      (drawing.playerAvatars ?? []).map((url) => loadImage(url, true)),
+      card.avatars.map((url) => loadImage(url, true)),
     );
-    avatars.forEach((img, i) => {
-      if (!img) return;
-      const cx = i === 0 ? 540 - half - 36 : 540 + half + 36;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, 935, 22, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(img, cx - 22, 913, 44, 44);
-      ctx.restore();
-    });
+    if (avatars.length <= 2) {
+      // Each author's avatar as a circle on their side of the names.
+      const half = Math.min(ctx.measureText(names).width, 900) / 2;
+      avatars.forEach((img, i) => {
+        if (img) circle(img, i === 0 ? 540 - half - 36 : 540 + half + 36, 935);
+      });
+    } else {
+      // A trio: the avatars in a row under the names, in the same order
+      // (Emenda has no score to put there).
+      avatars.forEach((img, i) => {
+        if (img) circle(img, 540 + (i - (avatars.length - 1) / 2) * 60, 995);
+      });
+    }
   }
 
-  const score =
-    drawing.votes.first * 3 + drawing.votes.second * 2 + drawing.votes.third;
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 36px sans-serif";
-  ctx.fillText(`${score} pts`, 540, 995);
+  if (card.score !== undefined) {
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 36px sans-serif";
+    ctx.fillText(`${card.score} pts`, 540, 995);
+  }
 
   ctx.fillStyle = "#fff8e4";
   ctx.font = "20px sans-serif";
@@ -92,7 +133,7 @@ async function renderCard(
   return canvas.toDataURL("image/png");
 }
 
-export function ShareCard({ drawing }: ShareCardProps) {
+export function ShareCard(props: ShareCardProps) {
   const [busy, setBusy] = useState(false);
 
   async function download() {
@@ -100,8 +141,9 @@ export function ShareCard({ drawing }: ShareCardProps) {
     try {
       // An avatar that can't be read back (no CORS) makes toDataURL throw:
       // the card is then drawn again with names only. The download never breaks.
-      const href = await renderCard(drawing, true).catch(() =>
-        renderCard(drawing, false),
+      const card = contentOf(props);
+      const href = await renderCard(card, true).catch(() =>
+        renderCard(card, false),
       );
       if (!href) return;
       const link = document.createElement("a");
