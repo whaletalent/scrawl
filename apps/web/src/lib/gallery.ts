@@ -42,6 +42,7 @@ export const MODE_LABEL: Record<GameMode, string> = {
   party: "Racha-tema",
   "split-body": "Monstrinho",
   "face-builder": "Caricatura a dois",
+  seam: "Emenda",
 };
 
 /** "Ana + Bia" — also the image's alt text. */

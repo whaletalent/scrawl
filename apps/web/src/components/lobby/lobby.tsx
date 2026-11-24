@@ -28,6 +28,8 @@ const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
     label: "Modo Caricatura a dois",
     toy: "mode-face-builder",
   },
+  // TODO(task 8): its own art
+  seam: { label: "Modo Emenda", toy: "mode-party" },
 };
 
 /** The waiting room: the invite on a taped note, who has arrived on a sheet. */

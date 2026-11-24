@@ -14,6 +14,10 @@ import type {
   FaceRegionId,
   FaceTemplateId,
   FaceTemplateOption,
+  SeamRoundStart,
+  SeamRoundResults,
+  SeamFinalResults,
+  StripFrameOut,
 } from "@/types/game";
 
 interface PairAssignment {
@@ -21,6 +25,14 @@ interface PairAssignment {
   partnerId: string;
   side: "left" | "right";
   theme: string;
+}
+
+/** Frames keyed "strip:playerId". */
+function frameMap(frames: StripFrameOut[] | undefined) {
+  const map: Record<string, string> = {};
+  for (const f of frames ?? [])
+    map[`${f.strip}:${f.playerId}`] = f.imageDataUrl;
+  return map;
 }
 
 const SESSION_KEY = "scrawl-session";
@@ -66,6 +78,12 @@ interface GameState {
   faceSkinTone: string | null;
   faceRound: number;
   faceDrawings: FaceDrawing[];
+  /** Emenda: the last `seam-round-start`, the current round's results, the final. */
+  seamRound: SeamRoundStart | null;
+  seamResults: SeamRoundResults | null;
+  seamFinal: SeamFinalResults | null;
+  /** Live frames of the current round, keyed "strip:playerId". */
+  stripFrames: Record<string, string>;
   error: string | null;
   notice: string | null;
   /** Keys of this room's drawings that are in the gallery. */
@@ -97,6 +115,10 @@ const initialState: GameState = {
   faceSkinTone: null,
   faceRound: 0,
   faceDrawings: [],
+  seamRound: null,
+  seamResults: null,
+  seamFinal: null,
+  stripFrames: {},
   error: null,
   notice: null,
 };
@@ -118,6 +140,10 @@ const PER_GAME: Partial<GameState> = {
   faceSkinTone: null,
   faceRound: 0,
   faceDrawings: [],
+  seamRound: null,
+  seamResults: null,
+  seamFinal: null,
+  stripFrames: {},
   notice: null,
   saveFailures: {},
 };
@@ -310,6 +336,7 @@ export function useGameState() {
             roundSubmitted: !!data.submitted,
             mineReceived: !!data.submitted,
             partnerReceived: !!data.partnerSubmitted,
+            stripFrames: frameMap(data.frames),
           }));
           break;
         }
@@ -418,6 +445,42 @@ export function useGameState() {
             return data.playerId === s.playerId
               ? { ...s, mineReceived: true }
               : { ...s, partnerReceived: true };
+          });
+          break;
+
+        case "seam-round-start":
+          setState((s) => ({
+            ...s,
+            timeUp: false,
+            seamRound: data,
+            seamResults: null,
+            roundSubmitted: !!data.submitted,
+            mineReceived: !!data.submitted,
+            partnerReceived: data.partnerSubmitted.length > 0,
+            stripFrames: frameMap(data.frames),
+            error: null,
+          }));
+          break;
+
+        case "seam-round-results":
+          setState((s) => ({ ...s, seamResults: data }));
+          break;
+
+        case "seam-final-results":
+          setState((s) => ({ ...s, seamFinal: data }));
+          break;
+
+        case "strip-frame":
+          setState((s) => {
+            // A frame of a round that's over changes nothing.
+            if (!s.roomState || data.round !== s.roomState.round) return s;
+            return {
+              ...s,
+              stripFrames: {
+                ...s.stripFrames,
+                [`${data.strip}:${data.playerId}`]: data.imageDataUrl,
+              },
+            };
           });
           break;
 
@@ -530,6 +593,20 @@ export function useGameState() {
     [],
   );
 
+  const submitSeamDrawing = useCallback(
+    (imageDataUrl: string, round: number) => {
+      send({ type: "submit-seam-drawing", imageDataUrl, round });
+    },
+    [],
+  );
+
+  const sendStripFrame = useCallback(
+    (round: number, strip: number, imageDataUrl: string) => {
+      send({ type: "strip-frame", round, strip, imageDataUrl });
+    },
+    [],
+  );
+
   return {
     ...state,
     createRoom,
@@ -544,5 +621,7 @@ export function useGameState() {
     voteDrawing,
     submitSplitDrawing,
     submitFaceDrawing,
+    submitSeamDrawing,
+    sendStripFrame,
   };
 }
