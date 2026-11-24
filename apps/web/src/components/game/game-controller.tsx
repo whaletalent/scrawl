@@ -88,6 +88,13 @@ export function GameController(props: GameControllerProps) {
     return { name: p?.nickname ?? "Parceiro", avatarUrl: p?.avatarUrl };
   };
 
+  // The pair left to right: player A ("left") is member 0.
+  const pairMembers = (a: { partnerId: string; side: "left" | "right" }) => {
+    const mine = { id: playerId, nickname: me.name };
+    const theirs = { id: a.partnerId, nickname: partnerOf(a.partnerId).name };
+    return a.side === "left" ? [mine, theirs] : [theirs, mine];
+  };
+
   return (
     <div className="min-h-screen flex flex-col gap-5 px-4 sm:px-8 lg:px-14 pt-6 pb-12">
       {phase !== "lobby" &&
@@ -162,6 +169,11 @@ export function GameController(props: GameControllerProps) {
               initialSubmitted={props.roundSubmitted}
               theme={pairAssignment.theme}
               side={pairAssignment.side}
+              members={pairMembers(pairAssignment)}
+              frames={props.stripFrames}
+              onStripFrame={(strip, image) =>
+                props.sendStripFrame(roomState.round, strip, image)
+              }
               onSubmit={props.submitDrawing}
               timeUp={props.timeUp}
               mineReceived={props.mineReceived}

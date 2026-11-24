@@ -2,13 +2,18 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { DrawingFooter, DrawingHeader } from "@/components/game/drawing-frame";
 import {
-  DrawingCanvas,
-  type DrawingCanvasHandle,
-} from "@/components/canvas/drawing-canvas";
+  SeamCanvas,
+  type SeamCanvasHandle,
+} from "@/components/canvas/seam-canvas";
 
 interface DrawingPhaseProps {
   theme: string;
   side: "left" | "right";
+  /** The pair, left to right (`side` says which one is me). */
+  members: { id: string; nickname: string }[];
+  /** Live strip frames, keyed "strip:playerId". */
+  frames: Record<string, string>;
+  onStripFrame: (strip: number, imageDataUrl: string) => void;
   onSubmit: (imageDataUrl: string, round: number) => void;
   /** The server ended the turn: send whatever is on the canvas. */
   timeUp: boolean;
@@ -28,6 +33,9 @@ interface DrawingPhaseProps {
 export function DrawingPhase({
   theme,
   side,
+  members,
+  frames,
+  onStripFrame,
   onSubmit,
   endsAt,
   timeUp,
@@ -39,12 +47,12 @@ export function DrawingPhase({
   me,
   partner,
 }: DrawingPhaseProps) {
-  const canvasRef = useRef<DrawingCanvasHandle>(null);
+  const canvasRef = useRef<SeamCanvasHandle>(null);
   const [submitted, setSubmitted] = useState(initialSubmitted ?? false);
 
   const doSubmit = useCallback(() => {
     if (submitted) return;
-    const image = canvasRef.current?.exportImage();
+    const image = canvasRef.current?.exportLayer();
     if (image) {
       onSubmit(image, round);
       setSubmitted(true);
@@ -62,9 +70,6 @@ export function DrawingPhase({
     doSubmit();
   }
 
-  const mine = side === "left" ? "esquerda" : "direita";
-  const theirs = side === "left" ? "direita" : "esquerda";
-
   return (
     <div className="flex flex-col items-center gap-5 w-full">
       <DrawingHeader
@@ -75,11 +80,23 @@ export function DrawingPhase({
         endsAt={endsAt}
       />
 
-      <DrawingCanvas ref={canvasRef} side={side} />
+      {/* A new paper every round: the canvas keeps its strokes otherwise. */}
+      <SeamCanvas
+        key={round}
+        ref={canvasRef}
+        size={2}
+        index={side === "left" ? 0 : 1}
+        members={members}
+        frames={frames}
+        onStripFrame={onStripFrame}
+      />
 
       <DrawingFooter
-        me={{ ...me, part: `Você desenha a metade ${mine}` }}
-        partner={{ ...partner, part: `${partner.name}, metade ${theirs}` }}
+        me={{ ...me, part: "Você desenha sua parte e a emenda no meio" }}
+        partner={{
+          ...partner,
+          part: `${partner.name}: a outra parte e a emenda no meio`,
+        }}
         submitted={submitted}
         timeUp={timeUp}
         mineReceived={mineReceived}

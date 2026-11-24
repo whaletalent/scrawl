@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import type { DrawingResult } from "@/types/game";
+import { composePartyDrawing } from "@/lib/compose-drawing";
 
 interface ShareCardProps {
   drawing: DrawingResult;
@@ -48,23 +49,12 @@ async function renderCard(
   ctx.font = "24px sans-serif";
   ctx.fillText(`"${drawing.themeText}"`, 540, 110, 1000);
 
-  // Each half is 400x600 — a missing half (player left or never submitted)
-  // just stays as blank paper.
-  const [leftImg, rightImg] = await Promise.all([
-    loadImage(drawing.imageLeftDataUrl),
-    loadImage(drawing.imageRightDataUrl),
-  ]);
+  // The picture as the screens show it: paper, strip frames, both layers.
+  // A layer that never came (player left) just leaves blank paper.
+  const picture = await loadImage(await composePartyDrawing(drawing));
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(40, 140, 1000, 750);
-  if (leftImg) ctx.drawImage(leftImg, 40, 140, 500, 750);
-  if (rightImg) ctx.drawImage(rightImg, 540, 140, 500, 750);
-
-  ctx.strokeStyle = "#d1d5db";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(540, 140);
-  ctx.lineTo(540, 890);
-  ctx.stroke();
+  if (picture) ctx.drawImage(picture, 40, 140, 1000, 750);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "28px sans-serif";

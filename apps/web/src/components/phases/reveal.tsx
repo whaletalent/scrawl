@@ -1,6 +1,7 @@
 "use client";
 import { Authors, resultAuthors } from "@/components/account/authors";
 import type { DrawingResult } from "@/types/game";
+import { StackedDrawing } from "@/components/canvas/stacked-drawing";
 
 interface RevealProps {
   drawings: DrawingResult[];
@@ -24,26 +25,13 @@ export function Reveal({ drawings }: RevealProps) {
             key={drawing.pairId}
             className="taped shadow-hard flex flex-col gap-2.5 bg-card border-2 border-soft-strong px-3 pt-3 pb-4"
           >
-            <div className="flex aspect-[4/3] border-2 border-soft-strong bg-white">
-              <div className="w-1/2">
-                {drawing.imageLeftDataUrl && (
-                  <img
-                    src={drawing.imageLeftDataUrl}
-                    alt="Metade esquerda"
-                    className="w-full h-full object-fill"
-                  />
-                )}
-              </div>
-              <div className="w-1/2">
-                {drawing.imageRightDataUrl && (
-                  <img
-                    src={drawing.imageRightDataUrl}
-                    alt="Metade direita"
-                    className="w-full h-full object-fill"
-                  />
-                )}
-              </div>
-            </div>
+            <StackedDrawing
+              layers={[drawing.imageLeftDataUrl, drawing.imageRightDataUrl]}
+              frames={drawing.stripFrames}
+              size={2}
+              alt={`Desenho de ${drawing.playerNames.join(" + ")}`}
+              className="border-2 border-soft-strong"
+            />
             <h3 className="text-2xl leading-tight break-words">
               "{drawing.themeText}"
             </h3>
