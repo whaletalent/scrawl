@@ -6,6 +6,7 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { useLayerCanvas } from "@/hooks/use-layer-canvas";
 import { useStripSender } from "@/hooks/use-strip-sender";
@@ -44,12 +45,20 @@ const place = (r: Rect): React.CSSProperties => ({
   height: `${(r.height / CANVAS_HEIGHT) * 100}%`,
 });
 
+const sameFrames = (a: Record<number, string>, b: Record<number, string>) => {
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length && keys.every((k) => a[+k] === b[+k])
+  );
+};
+
 /**
  * The Emenda paper. From the bottom up: white paper; in each of the
  * player's strips, the neighbour's latest frame and the player's own kept
  * frame (after a reload; it can't be erased, and every frame sent for the
- * strip is drawn over it so the neighbour keeps seeing it); the dashed strip borders; the
- * other players' zones in grey; the player's own transparent layer on top.
+ * strip is drawn over it so the neighbour keeps seeing it); the dashed strip
+ * borders; the other players' zones and strips in grey; the player's own
+ * transparent layer on top.
  */
 export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
   function SeamCanvas({ size, index, members, frames, onStripFrame }, ref) {
@@ -64,29 +73,48 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
       [size, index],
     );
 
-    const layer = useLayerCanvas(rects, {
-      onChange: (area) => sender.markDirty(area),
-      onStrokeEnd: () => sender.flush(),
-    });
-    // The player's own frames the server kept (after a reload), decoded so
-    // every frame sent for a strip is drawn over them.
+    // The player's own frames the server kept, from before a reload. They
+    // count only while the layer is untouched since mount: once the player
+    // has drawn, the layer holds their strokes, and a later resync (a socket
+    // blip) sends back frames that would only duplicate them, so the eraser
+    // could no longer clear the strip.
     const ownId = members[index]?.id;
-    const keptSrcs = useRef<Record<number, string>>({});
-    const keptImages = useRef(new Map<string, HTMLImageElement>());
-    useEffect(() => {
+    const ownFrames = useMemo(() => {
       const srcs: Record<number, string> = {};
       for (const { index: strip } of myStrips) {
         const src = ownId ? frames[`${strip}:${ownId}`] : undefined;
-        if (!src) continue;
-        srcs[strip] = src;
-        if (!keptImages.current.has(src)) {
-          const img = new Image();
-          img.src = src;
-          keptImages.current.set(src, img);
-        }
+        if (src) srcs[strip] = src;
       }
-      keptSrcs.current = srcs;
+      return srcs;
     }, [frames, ownId, myStrips]);
+    const [touched, setTouched] = useState(false);
+    const touchedRef = useRef(false);
+    const [kept, setKept] = useState<Record<number, string>>({});
+    if (!touched && !sameFrames(kept, ownFrames)) setKept(ownFrames);
+
+    const layer = useLayerCanvas(rects, {
+      onChange: (area) => {
+        if (!touchedRef.current) {
+          touchedRef.current = true;
+          setTouched(true);
+        }
+        sender.markDirty(area);
+      },
+      onStrokeEnd: () => sender.flush(),
+    });
+
+    // Decoded, so every frame sent for a strip is drawn over them.
+    const keptSrcs = useRef<Record<number, string>>({});
+    const keptImages = useRef(new Map<string, HTMLImageElement>());
+    useEffect(() => {
+      for (const src of Object.values(kept)) {
+        if (keptImages.current.has(src)) continue;
+        const img = new Image();
+        img.src = src;
+        keptImages.current.set(src, img);
+      }
+      keptSrcs.current = kept;
+    }, [kept]);
     const keptFrame = useCallback((strip: number) => {
       const src = keptSrcs.current[strip];
       const img = src ? keptImages.current.get(src) : undefined;
@@ -105,16 +133,19 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
     ]);
 
     const stripImages = myStrips.flatMap(({ index: strip, rect }) => {
+      const images: { key: string; src: string; rect: Rect }[] = [];
       const neighbour = neighbourAcross(size, index, strip);
-      const ids = [
-        neighbour !== null ? members[neighbour]?.id : undefined,
-        ownId,
-      ];
-      return ids.flatMap((id) => {
-        const src = id ? frames[`${strip}:${id}`] : undefined;
-        return src ? [{ key: `${strip}:${id}`, src, rect }] : [];
-      });
+      const neighbourId = neighbour !== null ? members[neighbour]?.id : null;
+      const theirs = neighbourId ? frames[`${strip}:${neighbourId}`] : null;
+      if (theirs) images.push({ key: `n${strip}`, src: theirs, rect });
+      if (kept[strip])
+        images.push({ key: `k${strip}`, src: kept[strip], rect });
+      return images;
     });
+    // In a trio, the strip between the other two players is off-limits too.
+    const otherStrips = seamLayout(size).strips.filter(
+      (_, strip) => !myStrips.some((s) => s.index === strip),
+    );
 
     return (
       <Toolbar
@@ -142,6 +173,15 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
               key={strip}
               aria-hidden="true"
               className="absolute border-x-2 border-dashed border-line-strong pointer-events-none"
+              style={place(rect)}
+            />
+          ))}
+
+          {otherStrips.map((rect) => (
+            <div
+              key={rect.x}
+              aria-hidden="true"
+              className="partner-area absolute pointer-events-none"
               style={place(rect)}
             />
           ))}
