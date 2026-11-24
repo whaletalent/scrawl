@@ -55,8 +55,11 @@ export interface DrawingResult {
   /** Avatars of the two authors, in `playerNames` order; null for guests. */
   playerAvatars?: [string | null, string | null];
   votes: { first: number; second: number; third: number };
-  /** Latest live frame of the shared strip, per author (Racha-tema). */
-  stripFrames: { strip: 0; member: 0 | 1; imageDataUrl: string }[];
+  /**
+   * Latest live frame of the shared strip, per author (Racha-tema). Absent
+   * from a server older than the live strips (the deploy window).
+   */
+  stripFrames?: { strip: 0; member: 0 | 1; imageDataUrl: string }[];
 }
 
 /** A kept live frame of a strip, as the server relays it. */

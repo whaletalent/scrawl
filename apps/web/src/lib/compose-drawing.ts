@@ -4,7 +4,7 @@
  * rebuilds what the final screen shows.
  */
 import { loadFaceTemplateImage, loadImage } from "./face-compose";
-import { seamLayout } from "./seam-geometry";
+import { drawableRects, seamLayout, type Rect } from "./seam-geometry";
 import type {
   DrawingResult,
   FaceDrawing,
@@ -21,6 +21,8 @@ type Part = {
   y: number;
   w: number;
   h: number;
+  /** Only these rects of the part are drawn (the whole part when absent). */
+  clip?: Rect[];
 };
 
 async function compose(
@@ -39,7 +41,15 @@ async function compose(
   for (const part of parts) {
     if (!part.src) continue; // a half that was never sent stays blank paper
     const img = await loadImage(part.src).catch(() => null);
-    if (img) ctx.drawImage(img, part.x, part.y, part.w, part.h);
+    if (!img) continue;
+    ctx.save();
+    if (part.clip) {
+      ctx.beginPath();
+      for (const r of part.clip) ctx.rect(r.x, r.y, r.width, r.height);
+      ctx.clip();
+    }
+    ctx.drawImage(img, part.x, part.y, part.w, part.h);
+    ctx.restore();
   }
   return canvas.toDataURL("image/png");
 }
@@ -53,20 +63,22 @@ export interface StackedFrame {
 
 /**
  * Racha-tema and Emenda: white paper, then for each member in order their
- * kept strip frames (in place) and their whole 800×600 layer. The frames
- * keep a member's strip work after a reload or after they left; where they
- * repeat the layer's strokes, drawing them twice changes nothing.
+ * kept strip frames (in place) and their 800×600 layer, cut to their own
+ * zone and strips so a modified client can't paint over the others. The
+ * frames keep a member's strip work after a reload or after they left; where
+ * they repeat the layer's strokes, drawing them twice changes nothing.
+ * `frames` is absent from a server older than the live strips.
  */
 export function composeLayers(
   layers: (string | null)[],
-  frames: StackedFrame[],
+  frames: StackedFrame[] | undefined,
   size: 2 | 3,
 ): Promise<string> {
   const { strips } = seamLayout(size);
   const full = { x: 0, y: 0, w: WIDTH, h: HEIGHT };
   return compose(
     layers.flatMap((layer, member) => [
-      ...frames
+      ...(frames ?? [])
         .filter((f) => f.member === member && strips[f.strip])
         .map((f) => {
           const r = strips[f.strip];
@@ -78,7 +90,7 @@ export function composeLayers(
             h: r.height,
           };
         }),
-      { src: layer, ...full },
+      { src: layer, ...full, clip: drawableRects(size, member) },
     ]),
   );
 }

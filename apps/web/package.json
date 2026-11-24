@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
-    "test": "tsx --test --test-reporter=spec test/*.test.ts",
+    "test": "tsx --test --test-reporter=spec test/*.test.ts test/*.test.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
