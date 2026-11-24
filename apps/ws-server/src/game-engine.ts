@@ -643,6 +643,8 @@ function processDrawings(room: Room) {
       stripFrames: keptFrames(room, pair.id) as DrawingResult["stripFrames"],
     };
   });
+  // The results hold them now; the turn is over, so nothing reads the map again.
+  clearStripFrames(room);
 
   broadcast(room, {
     type: "drawings-ready",
@@ -966,6 +968,8 @@ function endSeamRound(room: Room) {
   // The picture keeps each member's latest strips, even of one who left.
   for (const d of room.seamDrawings)
     if (d.round === room.round) d.stripFrames = keptFrames(room, d.groupId);
+  // The results hold them now; resync in seam-reveal sends the results.
+  clearStripFrames(room);
   broadcast(room, seamRoundResults(room));
   transitionTo(room, "seam-reveal");
 }

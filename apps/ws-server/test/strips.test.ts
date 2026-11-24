@@ -12,6 +12,7 @@ import {
   type Msg,
   type TestClient,
 } from "./client.js";
+import { STRIP_FPS } from "../src/strips.js";
 
 /**
  * Live strips: neighbours share a 100-px strip. Each browser sends its own
@@ -63,9 +64,13 @@ async function partyDrawing(n: number) {
         c.send({ type: "submit-theme", text: `tema ${c.name}` });
       if (m.type === "pair-assigned") pairs.set(c.playerId, m);
     });
-  const drawing = clients[0].wait(phase("drawing"), 10_000);
+  // Every client's own phase-change, not just the host's: each socket gets its
+  // pair-assigned before its phase-change, but the sockets race each other, so
+  // the host's phase-change alone doesn't mean every pair-assigned has landed
+  // (a drawer would then look like the player sitting out).
+  const drawing = clients.map((c) => c.wait(phase("drawing"), 10_000));
   clients[0].send({ type: "start-game" });
-  await drawing;
+  await Promise.all(drawing);
   return { code, clients, pairs };
 }
 
@@ -107,8 +112,9 @@ test("pair: a frame reaches only the partner (Racha-tema, 4 players)", async () 
 
 test("pair: the player sitting out never sees a frame (Racha-tema, 5 players)", async () => {
   const { clients, pairs } = await partyDrawing(5);
-  const sitOut = clients.find((c) => !pairs.has(c.playerId))!;
-  assert.ok(sitOut, "one player sits out");
+  const sitOuts = clients.filter((c) => !pairs.has(c.playerId));
+  assert.equal(sitOuts.length, 1, "exactly one player sits out");
+  const [sitOut] = sitOuts;
   const drawers = clients.filter((c) => c !== sitOut);
   const told = drawers.map((c) => c.wait(isFrame));
   for (const c of drawers) send(c, 0, frame(3));
@@ -226,7 +232,7 @@ test("rate limit: 40 frames at once, the neighbour gets at most 15 + 1", async (
   for (let i = 0; i < 40; i++) send(left, 0, frame(i + 1));
   await sleep(300);
   const n = right.msgs.filter(isFrame).length;
-  assert.ok(n >= 1 && n <= 16, `got ${n}`);
+  assert.ok(n >= STRIP_FPS && n <= STRIP_FPS + 1, `got ${n}`);
 });
 
 test("rejoin replays frames: the neighbour's and the rejoiner's own latest", async () => {
