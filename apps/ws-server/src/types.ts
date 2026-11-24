@@ -76,6 +76,8 @@ export interface DrawingResult {
   /** Avatars of the two authors, in `playerNames` order; null for guests. */
   playerAvatars: [string | null, string | null];
   votes: Record<string, { first: string; second: string; third: string }>;
+  /** Latest live frame of the pair's middle strip, per member (0 = playerA, the left one). */
+  stripFrames: { strip: 0; member: 0 | 1; imageDataUrl: string }[];
 }
 
 export interface SplitDrawing {
@@ -176,6 +178,8 @@ export interface Room {
   savingDrawings: Set<string>;
   /** The drawing turn's time ran out and `time-up` went out: waiting for the last drawings. */
   collecting: boolean;
+  /** Live strips: the latest frame per drawing group, keyed "groupId:strip:member". Cleared every round. */
+  stripFrames: Map<string, string>;
   /** Counts the games played in this room ("Jogar de novo"); a save still in flight from an older game is not announced. */
   game: number;
 }
@@ -225,6 +229,8 @@ export type ClientMessage =
   | { type: "submit-split-drawing"; imageDataUrl: string; round?: number }
   | { type: "submit-face-drawing"; imageDataUrl: string; round?: number }
   | { type: "submit-seam-drawing"; imageDataUrl: string; round?: number }
+  /** A live snapshot of the sender's layer cropped to one strip; relayed to the neighbour across it. */
+  | { type: "strip-frame"; round: number; strip: number; imageDataUrl: string }
   | { type: "start-game" }
   | { type: "play-again" }
   | { type: "submit-theme"; text: string }

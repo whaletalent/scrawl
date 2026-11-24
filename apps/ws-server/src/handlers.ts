@@ -14,6 +14,7 @@ import { config } from "./config.js";
 import { getAccounts, type Profile } from "./accounts.js";
 import { publishRooms, unwatchRooms, watchRooms } from "./public-rooms.js";
 import { handleSaveDrawing } from "./gallery.js";
+import { handleStripFrame } from "./strips.js";
 import {
   startGame,
   startSplitGame,
@@ -214,6 +215,13 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       if (isPngDataUrl(msg.imageDataUrl))
         handleSubmitSeamDrawing(ws, msg.imageDataUrl, msg.round);
       break;
+    case "strip-frame": {
+      // Checked inside: phase, round, strip, PNG, size and rate.
+      const info = wsToPlayer.get(ws);
+      const room = info && getRoom(info.roomCode);
+      if (info && room) handleStripFrame(room, info.playerId, msg);
+      break;
+    }
   }
 }
 

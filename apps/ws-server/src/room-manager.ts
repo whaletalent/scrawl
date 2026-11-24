@@ -121,6 +121,7 @@ export function createRoom(
     savingDrawings: new Set(),
     game: 0,
     collecting: false,
+    stripFrames: new Map(),
   };
 
   rooms.set(code, room);

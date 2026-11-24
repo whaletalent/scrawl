@@ -22,6 +22,7 @@ const SKIN_TONE_COLORS = [
 ];
 import { broadcast, sendTo, publicPlayers } from "./room-manager.js";
 import { config } from "./config.js";
+import { clearStripFrames, framesFor, keptFrames } from "./strips.js";
 
 const PHASE_DURATIONS: Record<string, number> = {
   "theme-creation": 30_000,
@@ -154,6 +155,8 @@ function sendPairAssigned(room: Room, pair: Pair, playerId: string) {
     partnerSubmitted: room.drawings.some(
       (d) => d.pairId === pair.id && d.playerId !== playerId,
     ),
+    // Kept strip frames, partner's and own; none at the start of a round.
+    frames: framesFor(room, pair.id, [pair.playerA, pair.playerB], playerId),
   });
 }
 
@@ -588,6 +591,7 @@ function assignPairs(room: Room, themes: typeof room.themes) {
   const numPairs = Math.floor(playerIds.length / 2);
   room.pairs = [];
   room.drawings = [];
+  clearStripFrames(room);
 
   for (let i = 0; i < numPairs; i++) {
     const theme = themes[i % themes.length];
@@ -636,6 +640,7 @@ function processDrawings(room: Room) {
         room.players.get(pair.playerB)?.avatarUrl ?? null,
       ] as [string | null, string | null],
       votes: {},
+      stripFrames: keptFrames(room, pair.id) as DrawingResult["stripFrames"],
     };
   });
 
@@ -717,6 +722,7 @@ export function resetForNewGame(room: Room) {
   room.faceDrawings = [];
   room.seamGroups = [];
   room.seamDrawings = [];
+  clearStripFrames(room);
   room.resultAuthors = new Map();
   room.savedDrawings = new Set();
   room.savingDrawings = new Set();
@@ -832,6 +838,7 @@ export function startSeamGame(room: Room) {
 
 /** Regroups everyone and opens a drawing turn. */
 function startSeamRound(room: Room) {
+  clearStripFrames(room);
   const ids = shuffleArray(Array.from(room.players.keys()));
   room.seamGroups = groupPlayers(ids).map((members) => ({
     id: crypto.randomUUID(),
@@ -888,8 +895,8 @@ function sendSeamRoundStart(room: Room, group: SeamGroup, playerId: string) {
     partnerSubmitted: group.members.filter(
       (id, i) => i !== index && drawing?.layers[i],
     ),
-    // Live strip frames come with Task 3; nothing is kept yet.
-    frames: [],
+    // Kept strip frames, neighbours' and own; none at the start of a round.
+    frames: framesFor(room, group.id, group.members, playerId),
   });
 }
 
@@ -956,6 +963,9 @@ function seamRoundResults(room: Room) {
 function endSeamRound(room: Room) {
   if (room.phaseTimer) clearTimeout(room.phaseTimer);
   room.phaseTimer = null;
+  // The picture keeps each member's latest strips, even of one who left.
+  for (const d of room.seamDrawings)
+    if (d.round === room.round) d.stripFrames = keptFrames(room, d.groupId);
   broadcast(room, seamRoundResults(room));
   transitionTo(room, "seam-reveal");
 }
