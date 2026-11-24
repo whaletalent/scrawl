@@ -14,7 +14,7 @@ function generateCode(): string {
   return rooms.has(code) ? generateCode() : code;
 }
 
-const GAME_MODES: GameMode[] = ["party", "split-body", "face-builder"];
+const GAME_MODES: GameMode[] = ["party", "split-body", "face-builder", "seam"];
 
 function clampInt(
   value: unknown,
@@ -100,6 +100,8 @@ export function createRoom(
     faceTemplate: validatedTemplate,
     skinTone: validatedSkinTone,
     faceDrawings: [],
+    seamGroups: [],
+    seamDrawings: [],
     players: new Map([[playerId, host]]),
     themes: [],
     pairs: [],
@@ -119,6 +121,7 @@ export function createRoom(
     savingDrawings: new Set(),
     game: 0,
     collecting: false,
+    stripFrames: new Map(),
   };
 
   rooms.set(code, room);
@@ -147,9 +150,9 @@ export function joinRoom(
   return { room, playerId };
 }
 
-/** How many players fit: party takes up to 10, the other modes exactly 2. */
+/** How many players fit: party and Emenda take up to 10, the other modes exactly 2. */
 export function roomCapacity(room: Room): number {
-  return room.gameMode === "party" ? 10 : 2;
+  return room.gameMode === "party" || room.gameMode === "seam" ? 10 : 2;
 }
 
 /** Every live room, oldest first. */

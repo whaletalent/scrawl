@@ -2,25 +2,29 @@
 import type { Player } from "@/types/game";
 import { FinalHeader, PlayAgain } from "@/components/game/play-again";
 
-/** How the two players are told apart on a result card. */
-export const PLAYER_FILL = ["bg-amber", "bg-sky"] as const;
+/** How the players of one picture (two, or three in Emenda) are told apart on a result card. */
+export const PLAYER_FILL = ["bg-amber", "bg-sky", "bg-mint"] as const;
 
 /**
- * The final screen of the two-player modes: a header with the mode on a tag,
+ * The final screen of the two-player modes and Emenda: a header with a tag,
  * then one sheet with every round's drawing as a taped card.
  */
 export function PairResults({
   mode,
   players,
   rounds,
+  detail,
   title,
   summary,
   isHost,
   onPlayAgain,
   children,
 }: {
+  /** The title on the header's tag. */
   mode: string;
   players: Player[];
+  /** The header's note; by default who played and how many rounds. */
+  detail?: string;
   rounds: number;
   /** "Vocês montaram 3 monstrinhos" */
   title: string;
@@ -33,7 +37,10 @@ export function PairResults({
     <div className="w-full flex flex-col gap-7">
       <FinalHeader
         title={mode}
-        detail={`${players.map((p) => p.nickname).join(" e ")}, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}`}
+        detail={
+          detail ??
+          `${players.map((p) => p.nickname).join(" e ")}, ${rounds} ${rounds === 1 ? "rodada" : "rodadas"}`
+        }
       />
 
       <main className="sheet flex flex-col gap-8 p-6 sm:p-12">
@@ -76,8 +83,8 @@ export function PairCard({
         Rodada {round} de {total}
       </p>
       <dl className="flex flex-col gap-2">
-        {parts.map((p) => (
-          <div key={p.name} className="flex flex-wrap items-baseline gap-x-2">
+        {parts.map((p, i) => (
+          <div key={i} className="flex flex-wrap items-baseline gap-x-2">
             <dt className={`px-2 font-display font-bold ${p.fill}`}>
               {p.name}
             </dt>

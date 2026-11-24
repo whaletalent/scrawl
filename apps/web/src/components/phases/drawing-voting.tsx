@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { DrawingResult } from "@/types/game";
+import { StackedDrawing } from "@/components/canvas/stacked-drawing";
 
 interface DrawingVotingProps {
   drawings: DrawingResult[];
@@ -59,26 +60,13 @@ export function DrawingVoting({
               <h3 className="text-2xl leading-tight break-words">
                 {drawing.themeText}
               </h3>
-              <div className="flex aspect-[4/3] border-2 border-soft-strong bg-white">
-                <div className="w-1/2">
-                  {drawing.imageLeftDataUrl && (
-                    <img
-                      src={drawing.imageLeftDataUrl}
-                      alt="Metade esquerda"
-                      className="w-full h-full object-fill"
-                    />
-                  )}
-                </div>
-                <div className="w-1/2">
-                  {drawing.imageRightDataUrl && (
-                    <img
-                      src={drawing.imageRightDataUrl}
-                      alt="Metade direita"
-                      className="w-full h-full object-fill"
-                    />
-                  )}
-                </div>
-              </div>
+              <StackedDrawing
+                layers={[drawing.imageLeftDataUrl, drawing.imageRightDataUrl]}
+                frames={drawing.stripFrames}
+                size={2}
+                alt={`Desenho: ${drawing.themeText}`}
+                className="border-2 border-soft-strong"
+              />
               <div
                 role="group"
                 aria-label={`Lugar para ${drawing.themeText}`}

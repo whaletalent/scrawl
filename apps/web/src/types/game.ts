@@ -10,9 +10,12 @@ export type Phase =
   | "split-drawing"
   | "split-final"
   | "face-drawing"
-  | "face-final";
+  | "face-final"
+  | "seam-drawing"
+  | "seam-reveal"
+  | "seam-final";
 
-export type GameMode = "party" | "split-body" | "face-builder";
+export type GameMode = "party" | "split-body" | "face-builder" | "seam";
 
 export type SilhouetteId =
   "man" | "woman" | "child" | "robot" | "alien" | "superhero";
@@ -52,7 +55,57 @@ export interface DrawingResult {
   /** Avatars of the two authors, in `playerNames` order; null for guests. */
   playerAvatars?: [string | null, string | null];
   votes: { first: number; second: number; third: number };
+  /**
+   * Latest live frame of the shared strip, per author (Racha-tema). Absent
+   * from a server older than the live strips (the deploy window).
+   */
+  stripFrames?: { strip: 0; member: 0 | 1; imageDataUrl: string }[];
 }
+
+/** A kept live frame of a strip, as the server relays it. */
+export interface StripFrameOut {
+  strip: number;
+  playerId: string;
+  imageDataUrl: string;
+}
+
+/** Emenda: one group's picture of one round. Every array is in member order. */
+export interface SeamDrawing {
+  groupId: string;
+  round: number;
+  memberIds: string[];
+  memberNames: string[];
+  /** Null for guests. */
+  memberAvatars: (string | null)[];
+  /** Each member's transparent 800x600 layer; null until it arrives. */
+  layers: (string | null)[];
+  stripFrames: { strip: number; member: number; imageDataUrl: string }[];
+}
+
+export type SeamRoundStart = {
+  type: "seam-round-start";
+  round: number;
+  totalRounds: number;
+  groupId: string;
+  members: { id: string; nickname: string }[];
+  /** This player's position in `members`, left to right. */
+  index: number;
+  submitted: boolean;
+  /** Ids of the other members whose layer is already in. */
+  partnerSubmitted: string[];
+  frames: StripFrameOut[];
+};
+
+export type SeamRoundResults = {
+  type: "seam-round-results";
+  round: number;
+  drawings: SeamDrawing[];
+};
+
+export type SeamFinalResults = {
+  type: "seam-final-results";
+  drawings: SeamDrawing[];
+};
 
 export interface SplitDrawing {
   round: number;
@@ -148,7 +201,9 @@ export type ClientMessage =
   | { type: "submit-drawing"; imageDataUrl: string; round: number }
   | { type: "vote-drawing"; pairId: string; rank: 1 | 2 | 3 }
   | { type: "submit-split-drawing"; imageDataUrl: string; round: number }
-  | { type: "submit-face-drawing"; imageDataUrl: string; round: number };
+  | { type: "submit-face-drawing"; imageDataUrl: string; round: number }
+  | { type: "submit-seam-drawing"; imageDataUrl: string; round: number }
+  | { type: "strip-frame"; round: number; strip: number; imageDataUrl: string };
 
 export type ServerMessage =
   | {
@@ -176,6 +231,8 @@ export type ServerMessage =
       submitted: boolean;
       /** Whether the partner's drawing for this round is already in. */
       partnerSubmitted?: boolean;
+      /** Kept strip frames, partner's and own. */
+      frames?: StripFrameOut[];
     }
   | { type: "error"; message: string }
   | { type: "phase-change"; phase: Phase; phaseEndsAt: number; round: number }
@@ -216,4 +273,15 @@ export type ServerMessage =
   | { type: "face-round-end"; round: number }
   /** A drawing turn ran out: send the drawing now, the server waits a moment for it. */
   | { type: "time-up"; round: number }
-  | { type: "face-final-results"; drawings: FaceDrawing[] };
+  | { type: "face-final-results"; drawings: FaceDrawing[] }
+  | SeamRoundStart
+  | SeamRoundResults
+  | SeamFinalResults
+  /** The neighbour's latest layer on a strip we share. */
+  | {
+      type: "strip-frame";
+      round: number;
+      strip: number;
+      playerId: string;
+      imageDataUrl: string;
+    };

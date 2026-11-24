@@ -10,6 +10,7 @@ const MODES: { id: GameMode; label: string }[] = [
   { id: "party", label: "Racha-tema (4-10)" },
   { id: "split-body", label: "Monstrinho (2)" },
   { id: "face-builder", label: "Caricatura a dois (2)" },
+  { id: "seam", label: "Emenda (2-10)" },
 ];
 
 const DURATIONS = [15, 30, 45, 60, 90, 120, 180];
@@ -80,7 +81,8 @@ export function PlayForm({
     else if (step === "join") handleJoin();
   }
 
-  const twoPlayers = gameMode !== "party";
+  // Every mode but Racha-tema lets the host pick the number of rounds.
+  const pickRounds = gameMode !== "party";
 
   return (
     <div className="play-col">
@@ -148,7 +150,7 @@ export function PlayForm({
               </div>
             </div>
 
-            {twoPlayers && (
+            {pickRounds && (
               <div className="field">
                 <span id="play-rounds">Rodadas</span>
                 <div className="opt" role="group" aria-labelledby="play-rounds">
@@ -166,7 +168,7 @@ export function PlayForm({
               </div>
             )}
 
-            <div className={twoPlayers ? "field" : "field field--full"}>
+            <div className={pickRounds ? "field" : "field field--full"}>
               <label htmlFor="play-duration">Tempo por turno</label>
               <select
                 id="play-duration"

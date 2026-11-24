@@ -92,11 +92,16 @@ export function SplitDrawingPhase({
             </>
           ),
         }}
-        partner={{ ...partner, part: `${partner.name}: ${theirs}` }}
+        partners={[
+          {
+            ...partner,
+            part: `${partner.name}: ${theirs}`,
+            received: partnerReceived,
+          },
+        ]}
         submitted={submitted}
         timeUp={timeUp}
         mineReceived={mineReceived}
-        partnerReceived={partnerReceived}
         waiting="Desenho enviado! Esperando parceiro..."
         onSubmit={handleSubmit}
       />

@@ -15,9 +15,11 @@ export type ArtName =
   | "mascot-join"
   | "mascot-code"
   | "mascot-head"
+  | "mascot-gallery"
   | "mode-party"
   | "mode-split-body"
-  | "mode-face-builder";
+  | "mode-face-builder"
+  | "mode-seam";
 
 export function art(name: ArtName): string {
   return `${BASE_PATH}/landing/${name}.webp`;

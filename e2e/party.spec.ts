@@ -32,13 +32,14 @@ test("a full Party game: theme, drawing, voting, reveal, final results and share
   // 4 players: theme voting is skipped
   await expect(page.getByRole("heading", { name: /^Desenhe: / })).toBeVisible();
   await expect(
-    page.getByText(/Você desenha a metade (esquerda|direita)/),
+    page.getByText("Você desenha sua parte e a emenda no meio"),
   ).toBeVisible();
-  const side = (
-    await page.getByText(/Você desenha a metade/).innerText()
-  ).includes("esquerda")
-    ? 0.25
-    : 0.75;
+  // The partner's area is grey on the other side: draw in our own zone.
+  const canvas = (await page
+    .locator("canvas:not([data-desk-trail])")
+    .boundingBox())!;
+  const partnerArea = (await page.getByText(/^Área de /).boundingBox())!;
+  const side = partnerArea.x > canvas.x + canvas.width / 2 ? 0.25 : 0.75;
   await draw(page, [
     [side - 0.15, 0.2],
     [side, 0.7],
@@ -54,6 +55,7 @@ test("a full Party game: theme, drawing, voting, reveal, final results and share
     page.getByRole("heading", { name: "Vote nos melhores" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "1º" })).toHaveCount(1);
+  await expect(page.getByRole("img", { name: /^Desenho: / })).toHaveCount(1);
   await page.getByRole("button", { name: "1º" }).click();
 
   await expect(page.getByRole("heading", { name: "Revelação!" })).toBeVisible();

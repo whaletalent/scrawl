@@ -8,6 +8,7 @@ import {
   type GallerySaving,
 } from "@/components/gallery/save-button";
 import { composePartyDrawing } from "@/lib/compose-drawing";
+import { StackedDrawing } from "@/components/canvas/stacked-drawing";
 import { Authors, resultAuthors } from "@/components/account/authors";
 import { FinalHeader, PlayAgain } from "./play-again";
 
@@ -150,26 +151,13 @@ export function Scoreboard({
                     aria-hidden="true"
                     className={`absolute -top-3 left-1/2 -ml-7.5 w-15 h-6 ${TAPES[i % TAPES.length]}`}
                   />
-                  <div className="flex aspect-[4/3] bg-white border-2 border-soft-strong">
-                    <div className="w-1/2">
-                      {d.imageLeftDataUrl && (
-                        <img
-                          src={d.imageLeftDataUrl}
-                          alt=""
-                          className="w-full h-full object-fill"
-                        />
-                      )}
-                    </div>
-                    <div className="w-1/2">
-                      {d.imageRightDataUrl && (
-                        <img
-                          src={d.imageRightDataUrl}
-                          alt=""
-                          className="w-full h-full object-fill"
-                        />
-                      )}
-                    </div>
-                  </div>
+                  <StackedDrawing
+                    layers={[d.imageLeftDataUrl, d.imageRightDataUrl]}
+                    frames={d.stripFrames}
+                    size={2}
+                    alt={`Desenho de ${d.playerNames.join(" + ")}`}
+                    className="border-2 border-soft-strong"
+                  />
                   <p className="text-sm text-muted">Rodada {d.round}</p>
                   <h3 className="text-2xl leading-tight break-words">
                     "{d.themeText}"

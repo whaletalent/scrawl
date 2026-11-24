@@ -28,4 +28,5 @@ export const CREATE_LABEL: Record<GameMode, string> = {
   party: "Criar Racha-tema",
   "split-body": "Criar Monstrinho",
   "face-builder": "Criar Caricatura a dois",
+  seam: "Criar Emenda",
 };

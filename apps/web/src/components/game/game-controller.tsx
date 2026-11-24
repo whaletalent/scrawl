@@ -13,6 +13,8 @@ import { SplitDrawingPhase } from "@/components/phases/split-drawing-phase";
 import { SplitReveal } from "@/components/phases/split-reveal";
 import { FaceDrawingPhase } from "@/components/phases/face-drawing-phase";
 import { FaceReveal } from "@/components/phases/face-reveal";
+import { SeamDrawingPhase } from "@/components/phases/seam-drawing-phase";
+import { SeamFinal, SeamRoundReveal } from "@/components/phases/seam-reveal";
 import type { GallerySaving } from "@/components/gallery/save-button";
 
 type GameControllerProps = ReturnType<typeof useGameState> & {
@@ -21,8 +23,15 @@ type GameControllerProps = ReturnType<typeof useGameState> & {
 };
 
 export function GameController(props: GameControllerProps) {
-  const { roomState, playerId, pairAssignment, drawings, error, notice } =
-    props;
+  const {
+    roomState,
+    playerId,
+    pairAssignment,
+    seamRound,
+    drawings,
+    error,
+    notice,
+  } = props;
 
   if (!roomState || !playerId) {
     return (
@@ -70,13 +79,16 @@ export function GameController(props: GameControllerProps) {
     phase === "scoreboard" ||
     phase === "final-results" ||
     phase === "split-final" ||
-    phase === "face-final";
+    phase === "face-final" ||
+    phase === "seam-drawing" ||
+    phase === "seam-final";
 
   // The drawing screens carry the round and the timer in their own header.
   const ownHeader =
     (phase === "drawing" && !!pairAssignment) ||
     phase === "split-drawing" ||
-    phase === "face-drawing";
+    phase === "face-drawing" ||
+    phase === "seam-drawing";
   const me = {
     name: currentPlayer?.nickname ?? "Você",
     avatarUrl: currentPlayer?.avatarUrl,
@@ -88,13 +100,21 @@ export function GameController(props: GameControllerProps) {
     return { name: p?.nickname ?? "Parceiro", avatarUrl: p?.avatarUrl };
   };
 
+  // The pair left to right: player A ("left") is member 0.
+  const pairMembers = (a: { partnerId: string; side: "left" | "right" }) => {
+    const mine = { id: playerId, nickname: me.name };
+    const theirs = { id: a.partnerId, nickname: partnerOf(a.partnerId).name };
+    return a.side === "left" ? [mine, theirs] : [theirs, mine];
+  };
+
   return (
     <div className="min-h-screen flex flex-col gap-5 px-4 sm:px-8 lg:px-14 pt-6 pb-12">
       {phase !== "lobby" &&
         !ownHeader &&
         phase !== "final-results" &&
         phase !== "split-final" &&
-        phase !== "face-final" && (
+        phase !== "face-final" &&
+        phase !== "seam-final" && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="tag min-h-12 px-5 flex items-center font-display font-bold text-lg">
               Rodada {roomState.round} de {roomState.totalRounds}
@@ -162,6 +182,12 @@ export function GameController(props: GameControllerProps) {
               initialSubmitted={props.roundSubmitted}
               theme={pairAssignment.theme}
               side={pairAssignment.side}
+              members={pairMembers(pairAssignment)}
+              frames={props.stripFrames}
+              onStripFrame={(strip, image) =>
+                props.sendStripFrame(roomState.round, strip, image)
+              }
+              resync={pairAssignment}
               onSubmit={props.submitDrawing}
               timeUp={props.timeUp}
               mineReceived={props.mineReceived}
@@ -263,6 +289,49 @@ export function GameController(props: GameControllerProps) {
           {phase === "face-final" && (
             <FaceReveal
               drawings={props.faceDrawings}
+              players={roomState.players}
+              saving={saving}
+              isHost={isHost}
+              onPlayAgain={props.playAgain}
+            />
+          )}
+
+          {/* The canvas mounts once this round's group is known: it takes
+              its kept strip frames from the first frames it sees. */}
+          {phase === "seam-drawing" &&
+            seamRound &&
+            seamRound.round === roomState.round && (
+              <SeamDrawingPhase
+                key={`seam-${seamRound.round}`}
+                initialSubmitted={props.roundSubmitted}
+                round={seamRound.round}
+                totalRounds={seamRound.totalRounds}
+                members={seamRound.members.map((m) => ({
+                  ...m,
+                  avatarUrl: roomState.players.find((p) => p.id === m.id)
+                    ?.avatarUrl,
+                }))}
+                index={seamRound.index}
+                received={props.seamReceived}
+                frames={props.stripFrames}
+                onStripFrame={(strip, image) =>
+                  props.sendStripFrame(seamRound.round, strip, image)
+                }
+                resync={seamRound}
+                onSubmit={props.submitSeamDrawing}
+                timeUp={props.timeUp}
+                mineReceived={props.mineReceived}
+                endsAt={roomState.phaseEndsAt}
+              />
+            )}
+
+          {phase === "seam-reveal" && props.seamResults && (
+            <SeamRoundReveal drawings={props.seamResults.drawings} />
+          )}
+
+          {phase === "seam-final" && (
+            <SeamFinal
+              drawings={props.seamFinal?.drawings ?? []}
               players={roomState.players}
               saving={saving}
               isHost={isHost}

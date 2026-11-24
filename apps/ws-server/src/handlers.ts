@@ -14,12 +14,15 @@ import { config } from "./config.js";
 import { getAccounts, type Profile } from "./accounts.js";
 import { publishRooms, unwatchRooms, watchRooms } from "./public-rooms.js";
 import { handleSaveDrawing } from "./gallery.js";
+import { handleStripFrame } from "./strips.js";
 import {
   startGame,
   startSplitGame,
   handleSplitDrawingSubmit,
   startFaceGame,
   handleFaceDrawingSubmit,
+  startSeamGame,
+  handleSeamDrawingSubmit,
   handlePlayerLeft,
   resyncPlayer,
   resetForNewGame,
@@ -208,6 +211,17 @@ function handleMessage(ws: WebSocket, msg: ClientMessage) {
       if (isPngDataUrl(msg.imageDataUrl))
         handleSubmitFaceDrawing(ws, msg.imageDataUrl, msg.round);
       break;
+    case "submit-seam-drawing":
+      if (isPngDataUrl(msg.imageDataUrl))
+        handleSubmitSeamDrawing(ws, msg.imageDataUrl, msg.round);
+      break;
+    case "strip-frame": {
+      // Checked inside: phase, round, strip, PNG, size and rate.
+      const info = wsToPlayer.get(ws);
+      const room = info && getRoom(info.roomCode);
+      if (info && room) handleStripFrame(room, info.playerId, msg);
+      break;
+    }
   }
 }
 
@@ -339,6 +353,17 @@ function handleStartGame(ws: WebSocket) {
       return;
     }
     startFaceGame(room);
+  } else if (room.gameMode === "seam") {
+    if (room.players.size < 2) {
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: "O modo Emenda precisa de pelo menos 2 jogadores",
+        }),
+      );
+      return;
+    }
+    startSeamGame(room);
   } else {
     if (room.players.size < 4) {
       ws.send(
@@ -490,6 +515,17 @@ function handleSubmitFaceDrawing(
   const room = getRoom(info.roomCode);
   if (!room || room.phase !== "face-drawing") return;
   handleFaceDrawingSubmit(room, info.playerId, imageDataUrl, roundOf(round));
+}
+
+function handleSubmitSeamDrawing(
+  ws: WebSocket,
+  imageDataUrl: string,
+  round: unknown,
+) {
+  const info = wsToPlayer.get(ws);
+  const room = info && getRoom(info.roomCode);
+  if (!info || !room || room.phase !== "seam-drawing") return;
+  handleSeamDrawingSubmit(room, info.playerId, imageDataUrl, roundOf(round));
 }
 
 /** A round number from a client message; anything else counts as "not this round". */

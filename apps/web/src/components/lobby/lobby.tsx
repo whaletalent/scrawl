@@ -28,6 +28,7 @@ const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
     label: "Modo Caricatura a dois",
     toy: "mode-face-builder",
   },
+  seam: { label: "Modo Emenda", toy: "mode-seam" },
 };
 
 /** The waiting room: the invite on a taped note, who has arrived on a sheet. */
@@ -46,8 +47,9 @@ export function Lobby({
   const [copied, setCopied] = useState(false);
   const isSplitBody = gameMode === "split-body";
   const isFaceBuilder = gameMode === "face-builder";
+  const isSeam = gameMode === "seam";
   const isTwoPlayerMode = isSplitBody || isFaceBuilder;
-  const minPlayers = isTwoPlayerMode ? 2 : 4;
+  const minPlayers = isTwoPlayerMode || isSeam ? 2 : 4;
   const maxPlayers = isTwoPlayerMode ? 2 : 10;
   const canStart = isHost && players.length >= minPlayers;
 
@@ -116,7 +118,7 @@ export function Lobby({
             <p className="text-lg text-muted">
               Jogadores ({players.length}/{maxPlayers})
               {players.length < minPlayers &&
-                ` — ${isTwoPlayerMode ? "precisa de exatamente 2" : "mínimo de 4"}`}
+                ` — ${isTwoPlayerMode ? "precisa de exatamente 2" : `mínimo de ${minPlayers}`}`}
             </p>
           </div>
 
@@ -167,7 +169,9 @@ export function Lobby({
                   ? "Começar Caricatura a dois"
                   : isSplitBody
                     ? "Começar Monstrinho"
-                    : "Começar jogo"}
+                    : isSeam
+                      ? "Começar Emenda"
+                      : "Começar jogo"}
               {canStart && (
                 <ArrowRight aria-hidden="true" weight="bold" size={30} />
               )}

@@ -12,9 +12,12 @@ export type Phase =
   | "split-drawing"
   | "split-final"
   | "face-drawing"
-  | "face-final";
+  | "face-final"
+  | "seam-drawing"
+  | "seam-reveal"
+  | "seam-final";
 
-export type GameMode = "party" | "split-body" | "face-builder";
+export type GameMode = "party" | "split-body" | "face-builder" | "seam";
 
 export const SILHOUETTE_IDS = [
   "man",
@@ -73,6 +76,8 @@ export interface DrawingResult {
   /** Avatars of the two authors, in `playerNames` order; null for guests. */
   playerAvatars: [string | null, string | null];
   votes: Record<string, { first: string; second: string; third: string }>;
+  /** Latest live frame of the pair's middle strip, per member (0 = playerA, the left one). */
+  stripFrames: { strip: 0; member: 0 | 1; imageDataUrl: string }[];
 }
 
 export interface SplitDrawing {
@@ -115,6 +120,26 @@ export interface FaceDrawing {
   player2ImageDataUrl: string | null;
 }
 
+/** Emenda: one group of a round. `members` run left to right. */
+export interface SeamGroup {
+  id: string;
+  members: string[];
+}
+
+/** Emenda: one group's picture of one round. Every array is in member order. */
+export interface SeamDrawing {
+  groupId: string;
+  round: number;
+  memberIds: string[];
+  memberNames: string[];
+  /** Null for guests. */
+  memberAvatars: (string | null)[];
+  /** Each member's transparent 800×600 layer; null until it arrives (or if it never does). */
+  layers: (string | null)[];
+  /** Latest live frame of each strip, per member who drew on it. */
+  stripFrames: { strip: number; member: number; imageDataUrl: string }[];
+}
+
 export interface Room {
   code: string;
   phase: Phase;
@@ -126,6 +151,10 @@ export interface Room {
   faceTemplate: FaceTemplateOption;
   skinTone: string;
   faceDrawings: FaceDrawing[];
+  /** Emenda: the groups of the round being played. */
+  seamGroups: SeamGroup[];
+  /** Emenda: one record per group per round, from round 1 on. */
+  seamDrawings: SeamDrawing[];
   players: Map<string, Player>;
   themes: Theme[];
   pairs: Pair[];
@@ -149,6 +178,8 @@ export interface Room {
   savingDrawings: Set<string>;
   /** The drawing turn's time ran out and `time-up` went out: waiting for the last drawings. */
   collecting: boolean;
+  /** Live strips: the latest frame per drawing group, keyed "groupId:strip:member". Cleared every round. */
+  stripFrames: Map<string, string>;
   /** Counts the games played in this room ("Jogar de novo"); a save still in flight from an older game is not announced. */
   game: number;
 }
@@ -197,6 +228,9 @@ export type ClientMessage =
   /** `round` is the round the drawing belongs to; one for another round is dropped. */
   | { type: "submit-split-drawing"; imageDataUrl: string; round?: number }
   | { type: "submit-face-drawing"; imageDataUrl: string; round?: number }
+  | { type: "submit-seam-drawing"; imageDataUrl: string; round?: number }
+  /** A live snapshot of the sender's layer cropped to one strip; relayed to the neighbour across it. */
+  | { type: "strip-frame"; round: number; strip: number; imageDataUrl: string }
   | { type: "start-game" }
   | { type: "play-again" }
   | { type: "submit-theme"; text: string }

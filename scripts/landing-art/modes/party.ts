@@ -32,7 +32,12 @@ type PartyResult = {
   imageRightDataUrl: string;
   round: number;
   playerNames: [string, string];
+  stripFrames: { strip: number; member: number; imageDataUrl: string }[];
 };
+
+/** The middle strip of a pair's paper (see apps/web/src/lib/seam-geometry.ts). */
+const STRIP = { x: 350, y: 0, w: 100, h: 600 };
+const FULL = { x: 0, y: 0, w: 800, h: 600 };
 
 async function join(browser: Browser, names: string[], rounds: number) {
   const host = await enter(browser, names[0], "new", {
@@ -82,10 +87,17 @@ async function saveResults(player: Player, results: PartyResult[]) {
     const file = `drawing-party-${number}.png`;
     savePng(
       file,
-      await compose(player.page, [
-        { src: d.imageLeftDataUrl, x: 0, y: 0, w: 400, h: 600 },
-        { src: d.imageRightDataUrl, x: 400, y: 0, w: 400, h: 600 },
-      ]),
+      // Stacked like composeLayers in apps/web/src/lib/compose-drawing.ts:
+      // each member's kept strip frames, then their whole layer.
+      await compose(
+        player.page,
+        [d.imageLeftDataUrl, d.imageRightDataUrl].flatMap((src, member) => [
+          ...d.stripFrames
+            .filter((f) => f.member === member)
+            .map((f) => ({ src: f.imageDataUrl, ...STRIP })),
+          { src, ...FULL },
+        ]),
+      ),
     );
     await record({
       [file]: {

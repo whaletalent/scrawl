@@ -746,13 +746,13 @@ export function Landing({
             </div>
             <img
               className="galeria-head"
-              src={`${IMG}/mascot-head.webp`}
+              src={`${IMG}/mascot-gallery.webp`}
               alt=""
               width={600}
-              height={620}
+              height={597}
               loading="lazy"
               data-source="client"
-              data-subject="the game's mascot"
+              data-subject="the game's mascot holding framed drawings"
             />
           </div>
         </section>

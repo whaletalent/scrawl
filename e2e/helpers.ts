@@ -3,12 +3,17 @@ import { join, IMG, type TestClient } from "../apps/ws-server/test/client";
 
 export const WS_URL = "ws://localhost:8089";
 
-type Mode = "Racha-tema (4-10)" | "Monstrinho (2)" | "Caricatura a dois (2)";
+type Mode =
+  | "Racha-tema (4-10)"
+  | "Monstrinho (2)"
+  | "Caricatura a dois (2)"
+  | "Emenda (2-10)";
 
 const CREATE_BUTTON: Record<Mode, string> = {
   "Racha-tema (4-10)": "Criar Racha-tema",
   "Monstrinho (2)": "Criar Monstrinho",
   "Caricatura a dois (2)": "Criar Caricatura a dois",
+  "Emenda (2-10)": "Criar Emenda",
 };
 
 /**
@@ -112,6 +117,24 @@ export function autoplayParty(b: TestClient) {
       if (other)
         b.send({ type: "vote-drawing", pairId: other.pairId, rank: 1 });
     }
+  });
+}
+
+/**
+ * A fully transparent 1×1 PNG. Layers are stretched over the whole 800×600
+ * paper, so a bot whose layer must not tint the picture (Emenda) sends this
+ * instead of `IMG`.
+ */
+export const CLEAR =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";
+
+/** Makes an Emenda bot send a blank layer for its round when the server says time is up. */
+export function autoplaySeam(b: TestClient) {
+  let round = 0;
+  b.on((m) => {
+    if (m.type === "seam-round-start") round = m.round;
+    if (m.type === "time-up" && round === m.round)
+      b.send({ type: "submit-seam-drawing", imageDataUrl: CLEAR, round });
   });
 }
 

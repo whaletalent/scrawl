@@ -4,7 +4,13 @@
  * rebuilds what the final screen shows.
  */
 import { loadFaceTemplateImage, loadImage } from "./face-compose";
-import type { DrawingResult, FaceDrawing, SplitDrawing } from "@/types/game";
+import { drawableRects, seamLayout, type Rect } from "./seam-geometry";
+import type {
+  DrawingResult,
+  FaceDrawing,
+  SeamDrawing,
+  SplitDrawing,
+} from "@/types/game";
 
 const WIDTH = 800;
 const HEIGHT = 600;
@@ -15,6 +21,8 @@ type Part = {
   y: number;
   w: number;
   h: number;
+  /** Only these rects of the part are drawn (the whole part when absent). */
+  clip?: Rect[];
 };
 
 async function compose(
@@ -33,17 +41,76 @@ async function compose(
   for (const part of parts) {
     if (!part.src) continue; // a half that was never sent stays blank paper
     const img = await loadImage(part.src).catch(() => null);
-    if (img) ctx.drawImage(img, part.x, part.y, part.w, part.h);
+    if (!img) continue;
+    ctx.save();
+    if (part.clip) {
+      ctx.beginPath();
+      for (const r of part.clip) ctx.rect(r.x, r.y, r.width, r.height);
+      ctx.clip();
+    }
+    ctx.drawImage(img, part.x, part.y, part.w, part.h);
+    ctx.restore();
   }
   return canvas.toDataURL("image/png");
 }
 
-/** Party: the two halves side by side. */
+/** A kept live frame of a strip, drawn by the `member`-th author. */
+export interface StackedFrame {
+  strip: number;
+  member: number;
+  imageDataUrl: string;
+}
+
+/**
+ * Racha-tema and Emenda: white paper, then for each member in order their
+ * kept strip frames (in place) and their 800×600 layer, cut to their own
+ * zone and strips so a modified client can't paint over the others. The
+ * frames keep a member's strip work after a reload or after they left; where
+ * they repeat the layer's strokes, drawing them twice changes nothing.
+ * `frames` is absent from a server older than the live strips.
+ */
+export function composeLayers(
+  layers: (string | null)[],
+  frames: StackedFrame[] | undefined,
+  size: 2 | 3,
+): Promise<string> {
+  const { strips } = seamLayout(size);
+  const full = { x: 0, y: 0, w: WIDTH, h: HEIGHT };
+  return compose(
+    layers.flatMap((layer, member) => [
+      ...(frames ?? [])
+        .filter((f) => f.member === member && strips[f.strip])
+        .map((f) => {
+          const r = strips[f.strip];
+          return {
+            src: f.imageDataUrl,
+            x: r.x,
+            y: r.y,
+            w: r.width,
+            h: r.height,
+          };
+        }),
+      { src: layer, ...full, clip: drawableRects(size, member) },
+    ]),
+  );
+}
+
+/** Racha-tema: the pair's two layers (A on the left) with the middle strip. */
 export function composePartyDrawing(d: DrawingResult): Promise<string> {
-  return compose([
-    { src: d.imageLeftDataUrl, x: 0, y: 0, w: WIDTH / 2, h: HEIGHT },
-    { src: d.imageRightDataUrl, x: WIDTH / 2, y: 0, w: WIDTH / 2, h: HEIGHT },
-  ]);
+  return composeLayers(
+    [d.imageLeftDataUrl, d.imageRightDataUrl],
+    d.stripFrames,
+    2,
+  );
+}
+
+/** Emenda: the group's layers, left to right. */
+export function composeSeamDrawing(d: SeamDrawing): Promise<string> {
+  return composeLayers(
+    d.layers,
+    d.stripFrames,
+    d.memberIds.length === 3 ? 3 : 2,
+  );
 }
 
 /** Split Body: top half over bottom half. */

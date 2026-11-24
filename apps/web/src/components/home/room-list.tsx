@@ -10,6 +10,7 @@ const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
   party: { label: "Racha-tema", toy: "mode-party" },
   "split-body": { label: "Monstrinho", toy: "mode-split-body" },
   "face-builder": { label: "Caricatura a dois", toy: "mode-face-builder" },
+  seam: { label: "Emenda", toy: "mode-seam" },
 };
 
 /** Open public rooms, live from the game server. */

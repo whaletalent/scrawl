@@ -8,6 +8,7 @@ import {
   FACE_REGIONS,
   isPointInRegion,
 } from "../../../apps/web/src/lib/face-regions";
+import { drawableRects } from "../../../apps/web/src/lib/seam-geometry";
 import {
   humanize,
   oval,
@@ -42,15 +43,26 @@ export type Side = "left" | "right" | "top" | "bottom";
 export type FaceRegion =
   "hair" | "ears" | "eyes" | "nose" | "mouth" | "shoulders";
 
+/**
+ * A Racha-tema player's paper: their zone plus the shared middle strip
+ * (side by side, full height), from the game's own seam geometry.
+ */
+function pairArea(member: 0 | 1) {
+  const rects = drawableRects(2, member);
+  const x = Math.min(...rects.map((r) => r.x));
+  const right = Math.max(...rects.map((r) => r.x + r.width));
+  return { x, y: 0, w: right - x, h: 600 };
+}
+
 const AREAS: Record<Side, { x: number; y: number; w: number; h: number }> = {
-  left: { x: 0, y: 0, w: 400, h: 600 },
-  right: { x: 400, y: 0, w: 400, h: 600 },
+  left: pairArea(0),
+  right: pairArea(1),
   top: { x: 0, y: 0, w: 800, h: 300 },
   bottom: { x: 0, y: 300, w: 800, h: 300 },
 };
 
 export interface PenOptions {
-  /** Party / Split Body: the half this player may draw in. */
+  /** Party: this player's zone and the middle strip; Split Body: their half. */
   side?: Side;
   /** Face Builder: strokes are limited to the region chosen with `region()`. */
   face?: boolean;

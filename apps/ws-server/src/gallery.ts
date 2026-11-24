@@ -12,7 +12,7 @@ const PNG_PREFIX = "data:image/png;base64,";
 const DRAWING_WIDTH = 800;
 const DRAWING_HEIGHT = 600;
 
-/** Identifies one finished drawing inside a room: "round:pairId" in party, "round" otherwise. */
+/** Identifies one finished drawing inside a room: "round:pairId" in party and seam (pairId = group id), "round" otherwise. */
 export function drawingKey(ref: DrawingRef): string {
   return ref.pairId ? `${ref.round}:${ref.pairId}` : `${ref.round}`;
 }
@@ -70,6 +70,14 @@ function describe(
     const playerIds = room.resultAuthors.get(drawingKey(ref));
     if (!result || !playerIds) return null;
     return { theme: result.themeText, ...authors(playerIds) };
+  }
+  if (room.phase === "seam-final") {
+    if (!ref.pairId) return null;
+    const d = room.seamDrawings.find(
+      (s) => s.round === ref.round && s.groupId === ref.pairId,
+    );
+    if (!d) return null;
+    return { theme: null, ...authors(d.memberIds) };
   }
   if (ref.pairId) return null;
   if (room.phase === "split-final") {
