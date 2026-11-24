@@ -1,0 +1,50 @@
+{
+  "card-party-1": {
+    "text": "gato astronauta",
+    "alt": "Rodada 1: “gato astronauta”, de Caio e Bia"
+  },
+  "card-split-1": {
+    "text": "pirata com pernas de galinha",
+    "alt": "Monstrinho: “pirata com pernas de galinha”, de Bia e Léo"
+  },
+  "card-party-2": {
+    "text": "pizza com pernas",
+    "alt": "Rodada 2: “pizza com pernas”, de Ana e Duda"
+  },
+  "card-face-1": {
+    "text": "sujeito de nariz de palhaço",
+    "alt": "Caricatura a dois: “sujeito de nariz de palhaço”, de Bia e Léo"
+  },
+  "card-party-3": {
+    "text": "dinossauro de patins",
+    "alt": "Rodada 3: “dinossauro de patins”, de Léo e Rafa"
+  },
+  "card-split-2": {
+    "text": "robô com cauda de sereia",
+    "alt": "Monstrinho: “robô com cauda de sereia”, de Bia e Léo"
+  },
+  "card-party-4": {
+    "text": "polvo garçom",
+    "alt": "Rodada 1: “polvo garçom”, de Bia e Rafa"
+  },
+  "card-face-2": {
+    "text": "monstro de um olho só",
+    "alt": "Caricatura a dois: “monstro de um olho só”, de Bia e Léo"
+  },
+  "card-party-5": {
+    "text": "tubarão de bicicleta",
+    "alt": "Rodada 2: “tubarão de bicicleta”, de Caio e Duda"
+  },
+  "card-split-6": {
+    "text": "urso de suéter com foguete",
+    "alt": "Monstrinho: “urso de suéter com foguete”, de Bia e Léo"
+  },
+  "card-party-6": {
+    "text": "cacto cabeleireiro",
+    "alt": "Rodada 3: “cacto cabeleireiro”, de Léo e Ana"
+  },
+  "card-face-4": {
+    "text": "diva de cabelão",
+    "alt": "Caricatura a dois: “diva de cabelão”, de Bia e Léo"
+  }
+}

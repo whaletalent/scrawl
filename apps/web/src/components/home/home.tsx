@@ -51,9 +51,9 @@ export function Home({ profile }: { profile: Profile }) {
               className="press taped text-left flex flex-col gap-3 min-h-72 px-7 pt-10 pb-7 bg-brand text-white"
             >
               <img
-                src={art("mascot-rocket-sm")}
+                src={art("mascot-join")}
                 alt=""
-                className="self-center w-full max-w-72 h-36 object-contain"
+                className="self-center w-full max-w-48 h-36 object-contain"
               />
               <span className="font-display font-extrabold text-4xl leading-none">
                 Criar sala
@@ -68,7 +68,7 @@ export function Home({ profile }: { profile: Profile }) {
               className="press taped text-left flex flex-col gap-3 min-h-72 px-7 pt-10 pb-7 bg-amber text-ink"
             >
               <img
-                src={art("mascot-flyer-sm")}
+                src={art("mascot-code")}
                 alt=""
                 className="self-center w-full max-w-48 h-36 object-contain"
               />
