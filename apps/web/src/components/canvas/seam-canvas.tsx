@@ -1,5 +1,12 @@
 "use client";
-import { forwardRef, useImperativeHandle, useMemo } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import { useLayerCanvas } from "@/hooks/use-layer-canvas";
 import { useStripSender } from "@/hooks/use-strip-sender";
 import {
@@ -40,7 +47,8 @@ const place = (r: Rect): React.CSSProperties => ({
 /**
  * The Emenda paper. From the bottom up: white paper; in each of the
  * player's strips, the neighbour's latest frame and the player's own kept
- * frame (after a reload; it can't be erased); the dashed strip borders; the
+ * frame (after a reload; it can't be erased, and every frame sent for the
+ * strip is drawn over it so the neighbour keeps seeing it); the dashed strip borders; the
  * other players' zones in grey; the player's own transparent layer on top.
  */
 export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
@@ -60,13 +68,42 @@ export const SeamCanvas = forwardRef<SeamCanvasHandle, SeamCanvasProps>(
       onChange: (area) => sender.markDirty(area),
       onStrokeEnd: () => sender.flush(),
     });
-    const sender = useStripSender(layer.canvasRef, myStrips, onStripFrame);
+    // The player's own frames the server kept (after a reload), decoded so
+    // every frame sent for a strip is drawn over them.
+    const ownId = members[index]?.id;
+    const keptSrcs = useRef<Record<number, string>>({});
+    const keptImages = useRef(new Map<string, HTMLImageElement>());
+    useEffect(() => {
+      const srcs: Record<number, string> = {};
+      for (const { index: strip } of myStrips) {
+        const src = ownId ? frames[`${strip}:${ownId}`] : undefined;
+        if (!src) continue;
+        srcs[strip] = src;
+        if (!keptImages.current.has(src)) {
+          const img = new Image();
+          img.src = src;
+          keptImages.current.set(src, img);
+        }
+      }
+      keptSrcs.current = srcs;
+    }, [frames, ownId, myStrips]);
+    const keptFrame = useCallback((strip: number) => {
+      const src = keptSrcs.current[strip];
+      const img = src ? keptImages.current.get(src) : undefined;
+      return img && img.complete && img.naturalWidth > 0 ? img : null;
+    }, []);
+
+    const sender = useStripSender(
+      layer.canvasRef,
+      myStrips,
+      onStripFrame,
+      keptFrame,
+    );
 
     useImperativeHandle(ref, () => ({ exportLayer: layer.exportLayer }), [
       layer.exportLayer,
     ]);
 
-    const ownId = members[index]?.id;
     const stripImages = myStrips.flatMap(({ index: strip, rect }) => {
       const neighbour = neighbourAcross(size, index, strip);
       const ids = [

@@ -17,17 +17,23 @@ const overlaps = (a: Rect, b: Rect) =>
  * Sends the own layer's strips as they change. `markDirty(area)` schedules a
  * send for every strip that `area` touches (every strip when omitted);
  * `flush()` sends whatever is pending at once (call it on pointer-up).
+ * Each frame is the layer over `keptFrame(strip)`, so strokes made before a
+ * reload are not dropped by the next frame.
  */
 export function useStripSender(
   canvas: RefObject<HTMLCanvasElement | null>,
   strips: { index: number; rect: Rect }[],
   send: (strip: number, image: string) => void,
+  /** The player's own kept frame for a strip, drawn under the layer. */
+  keptFrame: (strip: number) => CanvasImageSource | null = () => null,
 ): { markDirty(area?: Rect | null): void; flush(): void } {
   const stripsRef = useRef(strips);
   const sendRef = useRef(send);
+  const keptRef = useRef(keptFrame);
   useEffect(() => {
     stripsRef.current = strips;
     sendRef.current = send;
+    keptRef.current = keptFrame;
   });
 
   const throttle = useMemo(
@@ -36,7 +42,7 @@ export function useStripSender(
         const el = canvas.current;
         const strip = stripsRef.current.find((s) => s.index === index);
         if (!el || !strip) return;
-        const image = cropStrip(el, strip.rect);
+        const image = cropStrip(el, strip.rect, keptRef.current(index));
         if (image) sendRef.current(index, image);
       }),
     [canvas],
