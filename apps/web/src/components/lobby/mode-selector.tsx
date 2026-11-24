@@ -56,8 +56,7 @@ const MODES: {
     players: "De 2 a 10 jogadores",
     count: "2-10",
     text: "Cada um desenha escondido na sua faixa. Na emenda com o vizinho, vocês se veem ao vivo. No fim, o desenho aparece inteiro.",
-    // Racha-tema's toy until Emenda has its own art.
-    toy: "mode-party",
+    toy: "mode-seam",
   },
 ];
 

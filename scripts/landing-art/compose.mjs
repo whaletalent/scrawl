@@ -226,7 +226,7 @@ async function smallCopies() {
     (n) =>
       n.endsWith(".webp") &&
       !/-sm\.webp$/.test(n) &&
-      !/^(mode-|logo|card-|note-|mascot-(join|code|head))/.test(n),
+      !/^(mode-|logo|card-|note-|mascot-(join|code|head|gallery))/.test(n),
   );
   for (const name of names) {
     const { width } = await sharp(out(name)).metadata();
@@ -310,6 +310,10 @@ async function mascots() {
       await cutout(part, { solid: true, width: 320 })
     ).toFile(out(`mode-${mode}.webp`));
   }
+  // Emenda came later, as a toy of its own (no soft halo, so not `solid`).
+  await (
+    await cutout(src("mode-seam.png"), { width: 320 })
+  ).toFile(out("mode-seam.webp"));
   // Each mode's drawing on a sticky note with a curled corner (the modes' cards).
   for (const mode of ["party", "split-body", "face-builder"])
     await (
@@ -325,6 +329,10 @@ async function mascots() {
   await (
     await cutout(src("head.png"), { width: 600 })
   ).toFile(out("mascot-head.webp"));
+  // The landing's gallery: the robot holding framed drawings.
+  await (
+    await cutout(src("gallery.png"), { width: 600 })
+  ).toFile(out("mascot-gallery.webp"));
   // The logo: the robot's head. Bare in the nav and on the wordmark; on the
   // brand orange, as a square, for the favicon and the home-screen icon.
   const APP = path.resolve(HERE, "../../apps/web/src/app");

@@ -28,8 +28,7 @@ const MODE: Record<GameMode, { label: string; toy: ArtName }> = {
     label: "Modo Caricatura a dois",
     toy: "mode-face-builder",
   },
-  // Racha-tema's toy until Emenda has its own art.
-  seam: { label: "Modo Emenda", toy: "mode-party" },
+  seam: { label: "Modo Emenda", toy: "mode-seam" },
 };
 
 /** The waiting room: the invite on a taped note, who has arrived on a sheet. */
