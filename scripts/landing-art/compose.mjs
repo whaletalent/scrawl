@@ -35,15 +35,39 @@ const KEY_ART = [
     since these follow the layout of the screen.
 */
 const CUTS = {
-  "screen-party-drawing.png": "desk",
-  "screen-split-drawing.png": "desk",
-  "screen-face-drawing.png": "desk",
+  // the drawing screens share one layout: the paper and its two rails, 16:10,
+  // without the round strip above or the player chips below
+  "screen-party-drawing.png": {
+    left: 420,
+    top: 177,
+    width: 2040,
+    height: 1275,
+  },
+  "screen-split-drawing.png": {
+    left: 420,
+    top: 177,
+    width: 2040,
+    height: 1275,
+  },
+  "screen-face-drawing.png": { left: 420, top: 177, width: 2040, height: 1275 },
   // one drawing to vote on, with its 1st / 2nd / 3rd buttons
-  "screen-party-voting.png": { left: 780, top: 414, width: 1327, height: 1197 },
+  "screen-party-voting.png": { left: 376, top: 566, width: 1046, height: 1050 },
   // the final screen's "obras-primas" paper
-  "screen-party-results.png": { left: 870, top: 28, width: 1974, height: 1154 },
-  // the lobby: the room code, the players, the start button
-  "screen-lobby.png": { left: 1010, top: 150, width: 860, height: 1360 },
+  "screen-party-results.png": {
+    left: 1012,
+    top: 234,
+    width: 1752,
+    height: 1154,
+  },
+  // the lobby: the players who arrived and the start button
+  "screen-lobby.png": {
+    left: 1184,
+    top: 226,
+    width: 1536,
+    height: 1368,
+    // the sheet's folded corner shows the desk behind it: paper over it
+    paperCorner: 108,
+  },
 };
 
 const DESK = [0xd6, 0x3c, 0x17];
@@ -104,13 +128,38 @@ async function deskCut(file) {
 
 async function toWebp() {
   const names = (await readdir(RAW)).filter((n) =>
-    /^(drawing|screen)-.*\.png$/.test(n),
+    /^(drawing|screen|card)-.*\.png$/.test(n),
   );
   for (const name of names) {
-    const width = name.startsWith("screen-") ? 1600 : 800;
+    // cards (cards.ts) are drawn by the carousel at about 300px wide: 2x is plenty
+    const width = name.startsWith("screen-")
+      ? 1600
+      : name.startsWith("card-")
+        ? 600
+        : 800;
     const how = CUTS[name];
     const cut = how === "desk" ? await deskCut(raw(name)) : how;
-    await (cut ? sharp(raw(name)).extract(cut) : sharp(raw(name)))
+    let image = cut
+      ? sharp(raw(name)).extract({
+          left: cut.left,
+          top: cut.top,
+          width: cut.width,
+          height: cut.height,
+        })
+      : sharp(raw(name));
+    if (cut?.paperCorner) {
+      const c = cut.paperCorner;
+      image = sharp(await image.png().toBuffer()).composite([
+        {
+          input: Buffer.from(
+            `<svg width="${c}" height="${c}"><rect width="${c}" height="${c}" fill="#fffdf6"/></svg>`,
+          ),
+          left: cut.width - c,
+          top: 0,
+        },
+      ]);
+    }
+    await image
       .resize({ width, withoutEnlargement: true })
       .webp({ quality: 84 })
       .toFile(out(name.replace(/\.png$/, ".webp")));
@@ -175,7 +224,9 @@ async function keyArt() {
 async function smallCopies() {
   const names = (await readdir(OUT)).filter(
     (n) =>
-      n.endsWith(".webp") && !/-sm\.webp$/.test(n) && !/^(mode-|logo)/.test(n),
+      n.endsWith(".webp") &&
+      !/-sm\.webp$/.test(n) &&
+      !/^(mode-|logo|card-|note-|mascot-(join|code|head))/.test(n),
   );
   for (const name of names) {
     const { width } = await sharp(out(name)).metadata();
@@ -259,20 +310,45 @@ async function mascots() {
       await cutout(part, { solid: true, width: 320 })
     ).toFile(out(`mode-${mode}.webp`));
   }
-  // The app icon: in the nav and the footer, and as the site's favicon.
+  // Each mode's drawing on a sticky note with a curled corner (the modes' cards).
+  for (const mode of ["party", "split-body", "face-builder"])
+    await (
+      await cutout(src(`note-${mode}.png`), { width: 520 })
+    ).toFile(out(`note-${mode}.webp`));
+  // The home's two big buttons: create a room (the door), join with a code (the ticket).
+  await (
+    await cutout(src("join.png"), { width: 480 })
+  ).toFile(out("mascot-join.webp"));
+  await (
+    await cutout(src("code.png"), { width: 480 })
+  ).toFile(out("mascot-code.webp"));
+  await (
+    await cutout(src("head.png"), { width: 600 })
+  ).toFile(out("mascot-head.webp"));
+  // The logo: the robot's head. Bare in the nav and on the wordmark; on the
+  // brand orange, as a square, for the favicon and the home-screen icon.
   const APP = path.resolve(HERE, "../../apps/web/src/app");
-  await sharp(src("icon.jpg"))
-    .resize(192)
+  const head = await sharp(src("head.png")).trim().png().toBuffer();
+  await sharp(head)
+    .resize(192, 192, { fit: "contain", background: "#0000" })
     .webp({ quality: 90 })
     .toFile(out("logo.webp"));
-  await sharp(src("icon.jpg"))
-    .resize(256)
-    .png()
-    .toFile(path.join(APP, "icon.png"));
-  await sharp(src("icon.jpg"))
-    .resize(180)
-    .png()
-    .toFile(path.join(APP, "apple-icon.png"));
+  const onOrange = async (size) =>
+    sharp({
+      create: { width: size, height: size, channels: 4, background: GROUND },
+    }).composite([
+      {
+        input: await sharp(head)
+          .resize(Math.round(size * 0.8), Math.round(size * 0.8), {
+            fit: "contain",
+            background: "#0000",
+          })
+          .toBuffer(),
+        gravity: "centre",
+      },
+    ]);
+  await (await onOrange(256)).png().toFile(path.join(APP, "icon.png"));
+  await (await onOrange(180)).png().toFile(path.join(APP, "apple-icon.png"));
 }
 
 const converted = await toWebp();

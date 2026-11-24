@@ -5,8 +5,8 @@
     "skinTone": "#E8B88A",
     "subject": "sujeito de nariz de palhaço",
     "regions": {
-      "Bia": ["nose", "shoulders", "eyes"],
-      "Léo": ["hair", "ears", "mouth"]
+      "Bia": ["eyes", "shoulders", "ears"],
+      "Léo": ["nose", "hair", "mouth"]
     }
   },
   "drawing-face-2.png": {
@@ -15,8 +15,8 @@
     "skinTone": "#6B8E23",
     "subject": "monstro de um olho só",
     "regions": {
-      "Bia": ["mouth", "hair", "ears"],
-      "Léo": ["eyes", "shoulders", "nose"]
+      "Bia": ["nose", "eyes", "mouth"],
+      "Léo": ["shoulders", "hair", "ears"]
     }
   },
   "drawing-face-3.png": {
@@ -25,8 +25,8 @@
     "skinTone": "#4682B4",
     "subject": "robô de dente quadrado",
     "regions": {
-      "Bia": ["shoulders", "mouth", "nose"],
-      "Léo": ["hair", "eyes", "ears"]
+      "Bia": ["mouth", "hair", "nose"],
+      "Léo": ["eyes", "shoulders", "ears"]
     }
   },
   "drawing-face-4.png": {
@@ -35,79 +35,79 @@
     "skinTone": "#C68642",
     "subject": "diva de cabelão",
     "regions": {
-      "Bia": ["hair", "ears", "nose"],
-      "Léo": ["shoulders", "mouth", "eyes"]
+      "Bia": ["shoulders", "ears", "nose"],
+      "Léo": ["eyes", "mouth", "hair"]
     }
   },
   "drawing-party-1.png": {
     "mode": "party",
     "theme": "gato astronauta",
-    "left": "Rafa",
+    "left": "Caio",
     "right": "Bia"
   },
   "drawing-party-2.png": {
     "mode": "party",
     "theme": "pizza com pernas",
-    "left": "Duda",
-    "right": "Caio"
+    "left": "Ana",
+    "right": "Duda"
   },
   "drawing-party-3.png": {
     "mode": "party",
     "theme": "dinossauro de patins",
     "left": "Léo",
-    "right": "Ana"
+    "right": "Rafa"
   },
   "drawing-party-4.png": {
     "mode": "party",
     "theme": "polvo garçom",
-    "left": "Caio",
-    "right": "Duda"
+    "left": "Bia",
+    "right": "Rafa"
   },
   "drawing-party-5.png": {
     "mode": "party",
     "theme": "tubarão de bicicleta",
-    "left": "Rafa",
-    "right": "Ana"
+    "left": "Caio",
+    "right": "Duda"
   },
   "drawing-party-6.png": {
     "mode": "party",
     "theme": "cacto cabeleireiro",
-    "left": "Bia",
-    "right": "Léo"
+    "left": "Léo",
+    "right": "Ana"
   },
   "drawing-split-1.png": {
     "mode": "split-body",
-    "silhouette": "child",
+    "silhouette": "man",
     "top": "pirata",
     "bottom": "pernas de galinha"
   },
   "drawing-split-2.png": {
     "mode": "split-body",
-    "silhouette": "child",
+    "silhouette": "alien",
     "top": "robô",
     "bottom": "cauda de sereia"
   },
   "drawing-split-3.png": {
     "mode": "split-body",
-    "silhouette": "woman",
+    "silhouette": "alien",
     "top": "rei bigodudo",
     "bottom": "meia com sandália"
   },
   "drawing-split-4.png": {
     "mode": "split-body",
-    "silhouette": "alien",
+    "silhouette": "man",
     "top": "alienígena",
     "bottom": "pernas de caubói"
   },
   "drawing-split-5.png": {
     "mode": "split-body",
-    "silhouette": "woman",
+    "silhouette": "child",
     "top": "menina de maria-chiquinha",
     "bottom": "tentáculos de polvo"
   },
   "drawing-split-6.png": {
     "mode": "split-body",
-    "silhouette": "woman",
+    "silhouette": "man",
     "top": "urso de suéter",
     "bottom": "foguete"
   }

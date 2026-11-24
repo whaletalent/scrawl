@@ -139,9 +139,20 @@ export function savePng(file: string, dataUrl: string) {
   console.log(`wrote ${file}`);
 }
 
+/**
+ * The landing shows these screens flat on its own sheets, so the shots leave
+ * out the game's hard shadows (and the drawing trail on the desk).
+ */
+const FLAT_CSS = `
+  *, *::before, *::after { box-shadow: none !important; }
+  [data-desk-trail] { display: none !important; }
+`;
+
 export async function screenshot(page: Page, file: string) {
   mkdirSync(OUT_DIR, { recursive: true });
+  const style = await page.addStyleTag({ content: FLAT_CSS });
   await page.screenshot({ path: path.join(OUT_DIR, file) });
+  await style.evaluate((el) => el.remove());
   console.log(`wrote ${file}`);
 }
 

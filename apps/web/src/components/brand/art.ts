@@ -12,6 +12,9 @@ export type ArtName =
   | "mascot-flyer-sm"
   | "mascot-trophy"
   | "mascot-trophy-sm"
+  | "mascot-join"
+  | "mascot-code"
+  | "mascot-head"
   | "mode-party"
   | "mode-split-body"
   | "mode-face-builder";
