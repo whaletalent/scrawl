@@ -1,6 +1,7 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
 import {
   autoplayParty,
+  autoplaySeam,
   bot,
   createRoom,
   draw,
@@ -62,6 +63,32 @@ test("a logged-in player saves the finished drawing, and everyone in the room se
   // Coming back to the room, it is still marked as saved.
   await a.page.reload();
   await expect(a.page.getByText("Salvo na galeria")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("an Emenda drawing is saved to the gallery with every author", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const a = await player(browser, "Ana");
+  const errors = failOnPageErrors(a.page);
+  const code = await createRoom(a.page, {
+    mode: "Emenda (2-10)",
+    loggedIn: true,
+    rounds: 1,
+    turnSeconds: 15,
+  });
+  const partner = await bot(code, "Robô");
+  autoplaySeam(partner);
+  await a.page.getByRole("button", { name: "Começar Emenda" }).click();
+  await expect(a.page.getByText("Fim de jogo")).toBeVisible({
+    timeout: 40_000,
+  });
+
+  const told = partner.wait(type("drawing-saved"));
+  await saveButton(a.page).click();
+  await expect(a.page.getByText("Salvo na galeria")).toBeVisible();
+  expect((await told).key).toMatch(/^1:/);
   expect(errors).toEqual([]);
 });
 
